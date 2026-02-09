@@ -1,17 +1,17 @@
 import React from 'react';
 
 interface NotificationProps {
-    message: string;
-    onClose: () => void;
+  message: string;
+  onClose: () => void;
 }
 
-const Notification: React.FC<NotificationProps> = ({message, onClose}) => {
-    return (
-        <div className="notification">
-            <p>{message}</p>
-            <button onClick={onClose}>&times;</button>
-        </div>
-    );
+const Notification: React.FC<NotificationProps> = ({ message, onClose }) => {
+  return (
+    <div className="notification">
+      <p>{message}</p>
+      <button onClick={onClose}>&times;</button>
+    </div>
+  );
 };
 
 export default Notification;

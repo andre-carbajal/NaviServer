@@ -1,57 +1,56 @@
 export interface Server {
-    id: string;
-    name: string;
-    version: string;
-    loader: string;
-    port: number;
-    ram: number;
-    status: "STOPPED" | "RUNNING" | "STARTING" | "STOPPING" | "CREATING";
-    customArgs?: string;
-    progress?: number;
-    progressMessage?: string;
-    steps?: ProgressStep[];
-    permissions?: Permission;
+  id: string;
+  name: string;
+  version: string;
+  loader: string;
+  port: number;
+  ram: number;
+  status: 'STOPPED' | 'RUNNING' | 'STARTING' | 'STOPPING' | 'CREATING';
+  customArgs?: string;
+  progress?: number;
+  progressMessage?: string;
+  steps?: ProgressStep[];
+  permissions?: Permission;
 }
 
 export interface ProgressStep {
-    label: string;
-    state: 'pending' | 'running' | 'done' | 'failed';
-    progress?: number;
+  label: string;
+  state: 'pending' | 'running' | 'done' | 'failed';
+  progress?: number;
 }
 
 export interface Backup {
-    name: string;
-    size: number;
-    status?: 'CREATING' | 'READY' | 'ERROR';
-    progress?: number;
-    requestId?: string;
-    progressMessage?: string;
+  name: string;
+  size: number;
+  status?: 'CREATING' | 'READY' | 'ERROR';
+  progress?: number;
+  requestId?: string;
+  progressMessage?: string;
 }
 
 export interface ServerStats {
-    cpu: number;
-    ram: number;
-    disk: number;
+  cpu: number;
+  ram: number;
+  disk: number;
 }
 
 export interface User {
-    id: string;
-    username: string;
-    role: string;
+  id: string;
+  username: string;
+  role: string;
 }
 
 export interface Permission {
-    userId: string;
-    serverId: string;
-    canViewConsole: boolean;
-    canControlPower: boolean;
+  userId: string;
+  serverId: string;
+  canViewConsole: boolean;
+  canControlPower: boolean;
 }
 
-
 export interface FileEntry {
-    name: string;
-    path: string;
-    isDirectory: boolean;
-    size: number;
-    lastModified: string;
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size: number;
+  lastModified: string;
 }
