@@ -623,7 +623,7 @@ func (api *Server) handleSetPortRange(w http.ResponseWriter, r *http.Request) {
 func (api *Server) handleGetLogBufferSize(w http.ResponseWriter, r *http.Request) {
 	val, err := api.Store.GetSetting("log_buffer_size")
 	if err != nil {
-		response := map[string]int{"log_buffer_size": api.Config.LogBufferSize}
+		response := map[string]int{"log_buffer_size": config.DefaultLogBufferSize}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 		return

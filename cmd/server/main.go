@@ -220,9 +220,10 @@ func startDaemonService(ctx context.Context) {
 
 	jvmMgr := jvm.NewManager(cfg.RuntimesPath)
 	srvMgr := server.NewManager(cfg.ServersPath, store)
-	bufferSize := cfg.LogBufferSize
+	bufferSize := config.DefaultLogBufferSize
 	if val, err := store.GetSetting("log_buffer_size"); err == nil {
-		if n, err := strconv.Atoi(val); err == nil && n > 0 {
+		if n, err := strconv.Atoi(val); err == nil && n >= 0 {
+			// n=0 is valid (disabled)
 			bufferSize = n
 		}
 	}

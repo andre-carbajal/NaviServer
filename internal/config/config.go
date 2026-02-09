@@ -18,16 +18,15 @@ const (
 	defaultDatabaseFile  = "manager.db"
 	defaultPort          = 23008
 	devPort              = 23009
-	defaultLogBufferSize = 1000
+	DefaultLogBufferSize = 1000
 )
 
 type Config struct {
-	ServersPath   string `json:"servers_path"`
-	BackupsPath   string `json:"backups_path"`
-	RuntimesPath  string `json:"runtimes_path"`
-	DatabasePath  string `json:"database_path"`
-	JWTSecret     string `json:"-"`
-	LogBufferSize int    `json:"log_buffer_size"`
+	ServersPath  string `json:"servers_path"`
+	BackupsPath  string `json:"backups_path"`
+	RuntimesPath string `json:"runtimes_path"`
+	DatabasePath string `json:"database_path"`
+	JWTSecret    string `json:"-"`
 }
 
 func LoadConfig(configDir string) (*Config, error) {
@@ -51,10 +50,6 @@ func LoadConfig(configDir string) (*Config, error) {
 		return nil, err
 	}
 
-	if cfg.LogBufferSize <= 0 {
-		cfg.LogBufferSize = defaultLogBufferSize
-	}
-
 	cfg.JWTSecret = LoadOrGenerateSecret(configDir)
 
 	return &cfg, nil
@@ -62,11 +57,10 @@ func LoadConfig(configDir string) (*Config, error) {
 
 func createDefaultConfig(configPath, configDir string) (*Config, error) {
 	cfg := Config{
-		ServersPath:   filepath.Join(configDir, defaultServersDir),
-		BackupsPath:   filepath.Join(configDir, defaultBackupsDir),
-		RuntimesPath:  filepath.Join(configDir, defaultRuntimesDir),
-		DatabasePath:  filepath.Join(configDir, defaultDatabaseFile),
-		LogBufferSize: defaultLogBufferSize,
+		ServersPath:  filepath.Join(configDir, defaultServersDir),
+		BackupsPath:  filepath.Join(configDir, defaultBackupsDir),
+		RuntimesPath: filepath.Join(configDir, defaultRuntimesDir),
+		DatabasePath: filepath.Join(configDir, defaultDatabaseFile),
 	}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")

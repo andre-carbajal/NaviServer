@@ -1,3 +1,1 @@
-- Add address copy button
-- Fixing issue with console 
-- The bug that displayed general statistics when a user only had access to certain servers has been fixed.
+- Move log buffer size configuration from the main config struct to a database setting with a public default, allowing a zero value.

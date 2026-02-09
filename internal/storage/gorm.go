@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"naviger/internal/config"
 	"naviger/internal/domain"
 	"os"
 	"strconv"
@@ -88,6 +89,7 @@ func (s *GormStore) initDefaultSettings() error {
 	defaults := map[string]string{
 		"port_range_start": "25565",
 		"port_range_end":   "25600",
+		"log_buffer_size":  strconv.Itoa(config.DefaultLogBufferSize),
 	}
 
 	for key, value := range defaults {
