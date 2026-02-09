@@ -1,1 +1,2 @@
 - Move log buffer size configuration from the main config struct to a database setting with a public default, allowing a zero value.
+- The problem of the registry disconnecting in the console when restarting a server has been resolved.
