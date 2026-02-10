@@ -1,15 +1,32 @@
-package api
+package handlers
 
 import (
 	"encoding/json"
 	"net/http"
 
 	"naviger/internal/domain"
+	"naviger/internal/runner"
+	"naviger/internal/server"
+	"naviger/internal/storage"
 
 	"github.com/google/uuid"
 )
 
-func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request) {
+type PublicLinkHandler struct {
+	Store      *storage.GormStore
+	Manager    *server.Manager
+	Supervisor *runner.Supervisor
+}
+
+func NewPublicLinkHandler(store *storage.GormStore, manager *server.Manager, supervisor *runner.Supervisor) *PublicLinkHandler {
+	return &PublicLinkHandler{
+		Store:      store,
+		Manager:    manager,
+		Supervisor: supervisor,
+	}
+}
+
+func (h *PublicLinkHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ServerID string `json:"serverId"`
 	}
@@ -23,7 +40,7 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	existing, err := api.Store.GetPublicLinkByServerID(req.ServerID)
+	existing, err := h.Store.GetPublicLinkByServerID(req.ServerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -41,7 +58,7 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 		Action:   "control",
 	}
 
-	if err := api.Store.CreatePublicLink(link); err != nil {
+	if err := h.Store.CreatePublicLink(link); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -50,14 +67,14 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(link)
 }
 
-func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request) {
+func (h *PublicLinkHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
 		return
 	}
 
-	if err := api.Store.DeletePublicLink(token); err != nil {
+	if err := h.Store.DeletePublicLink(token); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -65,14 +82,14 @@ func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (api *Server) handleGetPublicServerInfo(w http.ResponseWriter, r *http.Request) {
+func (h *PublicLinkHandler) GetServerInfo(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
 		return
 	}
 
-	link, err := api.Store.GetPublicLink(token)
+	link, err := h.Store.GetPublicLink(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,7 +99,7 @@ func (api *Server) handleGetPublicServerInfo(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	srv, err := api.Manager.GetServer(link.ServerID)
+	srv, err := h.Manager.GetServer(link.ServerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -106,7 +123,7 @@ func (api *Server) handleGetPublicServerInfo(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(response)
 }
 
-func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request) {
+func (h *PublicLinkHandler) Access(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
@@ -121,7 +138,7 @@ func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	link, err := api.Store.GetPublicLink(token)
+	link, err := h.Store.GetPublicLink(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -133,12 +150,12 @@ func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request
 
 	if link.Action == "control" {
 		if req.Action == "start" {
-			if err := api.Supervisor.StartServer(link.ServerID); err != nil {
+			if err := h.Supervisor.StartServer(link.ServerID); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else if req.Action == "stop" {
-			if err := api.Supervisor.StopServer(link.ServerID); err != nil {
+			if err := h.Supervisor.StopServer(link.ServerID); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -148,7 +165,7 @@ func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request
 		}
 	} else if link.Action == "start" {
 		if req.Action == "start" {
-			if err := api.Supervisor.StartServer(link.ServerID); err != nil {
+			if err := h.Supervisor.StartServer(link.ServerID); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
