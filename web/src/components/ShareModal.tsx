@@ -20,6 +20,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [publicBaseUrl, setPublicBaseUrl] = useState(window.location.origin);
 
   useEffect(() => {
     if (isOpen && serverId) {
@@ -33,8 +34,16 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const initializeLink = async () => {
     setLoading(true);
     try {
-      const res = await api.createPublicLink(serverId);
-      setToken(res.data.token);
+      const [linkRes, publicIPRes] = await Promise.all([
+        api.createPublicLink(serverId),
+        api.getPublicIP(),
+      ]);
+      setToken(linkRes.data.token);
+
+      const publicIP = publicIPRes.data?.public_ip ?? 'localhost';
+      const port = import.meta.env.VITE_API_PORT || 23008;
+      const protocol = window.location.protocol;
+      setPublicBaseUrl(`${protocol}//${publicIP}:${port}`);
     } catch (err) {
       console.error(err);
       setError('Failed to generate sharing link');
@@ -186,7 +195,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                   <input
                     type="text"
                     readOnly
-                    value={`${window.location.origin}/public/${token}`}
+                    value={`${publicBaseUrl}/public/${token}`}
                     className="form-input"
                     style={{
                       flex: 1,
@@ -198,7 +207,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     onClick={(e) => e.currentTarget.select()}
                   />
                   <CopyButton
-                    text={`${window.location.origin}/public/${token}`}
+                    text={`${publicBaseUrl}/public/${token}`}
                     variant="secondary"
                     title="Copy to clipboard"
                     className="address-copy-btn"

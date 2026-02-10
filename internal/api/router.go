@@ -15,6 +15,7 @@ import (
 	"naviger/internal/storage"
 	"naviger/internal/updater"
 	"naviger/internal/ws"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -131,7 +132,10 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("PUT /settings/port-range", protect(api.handleSetPortRange, "admin"))
 	mux.Handle("GET /settings/log-buffer-size", protect(api.handleGetLogBufferSize, "admin"))
 	mux.Handle("PUT /settings/log-buffer-size", protect(api.handleSetLogBufferSize, "admin"))
+	mux.Handle("GET /settings/public-ip", protect(api.handleGetPublicIP, "admin"))
+	mux.Handle("PUT /settings/public-ip", protect(api.handleSetPublicIP, "admin"))
 
+	mux.Handle("GET /system/interfaces", protect(api.handleGetNetworkInterfaces, "admin"))
 	mux.Handle("POST /system/restart", protect(api.handleRestartDaemon, "admin"))
 	mux.Handle("GET /updates", protect(api.handleCheckUpdates, "admin"))
 
@@ -662,6 +666,81 @@ func (api *Server) handleSetLogBufferSize(w http.ResponseWriter, r *http.Request
 	w.Write([]byte(`{"status":"updated"}`))
 }
 
+func (api *Server) handleGetNetworkInterfaces(w http.ResponseWriter, r *http.Request) {
+	var addresses []string
+
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+
+			if ip.To4() != nil {
+				addresses = append(addresses, ip.String())
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]string{"interfaces": addresses})
+}
+
+func (api *Server) handleGetPublicIP(w http.ResponseWriter, r *http.Request) {
+	val, err := api.Store.GetSetting("public_ip")
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"public_ip": "localhost"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"public_ip": val})
+}
+
+func (api *Server) handleSetPublicIP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		PublicIP string `json:"public_ip"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.PublicIP == "" {
+		http.Error(w, "public_ip cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	if err := api.Store.SetSetting("public_ip", req.PublicIP); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"updated"}`))
+}
 func (api *Server) handleConsole(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {

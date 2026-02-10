@@ -81,6 +81,12 @@ export const api = {
   getLogBufferSize: () => apiInstance.get('/settings/log-buffer-size'),
   updateLogBufferSize: (data: { log_buffer_size: number }) =>
     apiInstance.put('/settings/log-buffer-size', data),
+  getPublicIP: () =>
+    apiInstance.get<{ public_ip: string }>('/settings/public-ip'),
+  updatePublicIP: (data: { public_ip: string }) =>
+    apiInstance.put('/settings/public-ip', data),
+  getNetworkInterfaces: () =>
+    apiInstance.get<{ interfaces: string[] }>('/system/interfaces'),
   listBackups: (serverId: string) =>
     apiInstance.get<Backup[]>(`/servers/${serverId}/backups`),
   listAllBackups: () => apiInstance.get<Backup[]>('/backups'),

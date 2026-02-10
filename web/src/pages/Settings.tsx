@@ -29,6 +29,11 @@ const Settings: React.FC = () => {
   const [initialLogBufferSize, setInitialLogBufferSize] = useState(1000);
   const [isSavingLogBuffer, setIsSavingLogBuffer] = useState(false);
   const [logBufferError, setLogBufferError] = useState<string | null>(null);
+  const [publicIP, setPublicIP] = useState('localhost');
+  const [initialPublicIP, setInitialPublicIP] = useState('localhost');
+  const [networkInterfaces, setNetworkInterfaces] = useState<string[]>([]);
+  const [isSavingPublicIP, setIsSavingPublicIP] = useState(false);
+  const [publicIPWarning, setPublicIPWarning] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -40,6 +45,23 @@ const Settings: React.FC = () => {
         const size = lb.data?.log_buffer_size ?? 1000;
         setLogBufferSize(size);
         setInitialLogBufferSize(size);
+
+        const [publicIPRes, interfacesRes] = await Promise.all([
+          api.getPublicIP(),
+          api.getNetworkInterfaces(),
+        ]);
+        const savedIP = publicIPRes.data?.public_ip ?? 'localhost';
+        setPublicIP(savedIP);
+        setInitialPublicIP(savedIP);
+
+        const ifaces = interfacesRes.data?.interfaces ?? [];
+        setNetworkInterfaces(ifaces);
+
+        if (savedIP !== 'localhost' && !ifaces.includes(savedIP)) {
+          setPublicIPWarning(
+            `The configured IP "${savedIP}" is not currently available on any network interface.`,
+          );
+        }
       } catch (err) {
         console.error('Failed to fetch settings:', err);
       } finally {
@@ -113,6 +135,25 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleSavePublicIP = async () => {
+    setIsSavingPublicIP(true);
+    try {
+      await api.updatePublicIP({ public_ip: publicIP });
+      setInitialPublicIP(publicIP);
+      if (publicIP !== 'localhost' && !networkInterfaces.includes(publicIP)) {
+        setPublicIPWarning(
+          `The configured IP "${publicIP}" is not currently available on any network interface.`,
+        );
+      } else {
+        setPublicIPWarning(null);
+      }
+    } catch (err) {
+      console.error('Failed to save public IP:', err);
+    } finally {
+      setIsSavingPublicIP(false);
+    }
+  };
+
   const handleRestart = async () => {
     if (
       !confirm(
@@ -175,6 +216,59 @@ const Settings: React.FC = () => {
         <div>
           <Button onClick={handleSave} disabled={!hasChanges || isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '20px' }}>
+        <h2>Public Address</h2>
+        <p>
+          Configure the IP address or hostname displayed for server connections.
+          This address is used in the server list and public share links,
+          allowing users to connect using a specific network interface (e.g.,
+          VPN, public IP).
+        </p>
+
+        {publicIPWarning && (
+          <div
+            style={{
+              backgroundColor: 'rgba(234, 179, 8, 0.15)',
+              color: '#eab308',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              marginBottom: '16px',
+              fontSize: '0.9rem',
+            }}
+          >
+            ⚠️ {publicIPWarning}
+          </div>
+        )}
+
+        <div className="form-group">
+          <label>Public Address</label>
+          <select
+            className="form-input"
+            value={publicIP}
+            onChange={(e) => setPublicIP(e.target.value)}
+          >
+            <option value="localhost">localhost (default)</option>
+            {networkInterfaces.map((ip) => (
+              <option key={ip} value={ip}>
+                {ip}
+              </option>
+            ))}
+            {publicIP !== 'localhost' &&
+              !networkInterfaces.includes(publicIP) && (
+                <option value={publicIP}>{publicIP} (unavailable)</option>
+              )}
+          </select>
+        </div>
+        <div>
+          <Button
+            onClick={handleSavePublicIP}
+            disabled={isSavingPublicIP || publicIP === initialPublicIP}
+          >
+            {isSavingPublicIP ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { Play, Square, Terminal, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useAuth } from '../context/AuthContext';
 import { useCopy } from '../hooks/useCopy';
@@ -28,11 +28,27 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
 }) => {
   const { user } = useAuth();
   const [iconError, setIconError] = useState(false);
+  const [publicIP, setPublicIP] = useState<string>(
+    typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+  );
   const { copy } = useCopy(1200);
 
-  const hostIp =
-    typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-  const address = `${hostIp}:${server.port}`;
+  useEffect(() => {
+    const fetchPublicIP = async () => {
+      try {
+        const response = await api.getPublicIP();
+        if (response.data?.public_ip) {
+          setPublicIP(response.data.public_ip);
+        }
+      } catch (err) {
+        console.error('Failed to fetch public IP:', err);
+      }
+    };
+
+    fetchPublicIP();
+  }, []);
+
+  const address = `${publicIP}:${server.port}`;
 
   const handleCopyAddress = () => {
     copy(address);
