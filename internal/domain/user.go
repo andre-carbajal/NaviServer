@@ -1,9 +1,5 @@
 package domain
 
-type ContextKey string
-
-const UserContextKey ContextKey = "user"
-
 type User struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`

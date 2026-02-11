@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"naviger/internal/domain"
 	"net/http"
 	"strings"
 
@@ -99,31 +98,4 @@ func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secret
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func (api *Server) checkPermission(r *http.Request, serverID string, check func(*domain.Permission) bool) bool {
-	userCtx := r.Context().Value(UserContextKey)
-	if userCtx == nil {
-		return false
-	}
-	claims := userCtx.(map[string]string)
-	role := claims["role"]
-	userID := claims["id"]
-
-	if role == "admin" {
-		return true
-	}
-
-	perms, err := api.Store.GetPermissions(userID)
-	if err != nil {
-		return false
-	}
-
-	for _, p := range perms {
-		if p.ServerID == serverID {
-			return check(&p)
-		}
-	}
-
-	return false
 }

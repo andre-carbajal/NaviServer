@@ -1,30 +1,16 @@
-package handlers
+package api
 
 import (
 	"encoding/json"
 	"net/http"
 	"time"
 
-	"naviger/internal/config"
 	"naviger/internal/domain"
-	"naviger/internal/storage"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type AuthHandler struct {
-	Store  *storage.GormStore
-	Config *config.Config
-}
-
-func NewAuthHandler(store *storage.GormStore, cfg *config.Config) *AuthHandler {
-	return &AuthHandler{
-		Store:  store,
-		Config: cfg,
-	}
-}
 
 type LoginRequest struct {
 	Username string `json:"username"`
@@ -41,14 +27,14 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (api *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.Store.GetUserByUsername(req.Username)
+	user, err := api.Store.GetUserByUsername(req.Username)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -69,7 +55,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(h.Config.JWTSecret))
+	tokenString, err := token.SignedString([]byte(api.Config.JWTSecret))
 	if err != nil {
 		http.Error(w, "Error signing token", http.StatusInternalServerError)
 		return
@@ -91,7 +77,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+func (api *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
@@ -103,8 +89,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *AuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
-	users, err := h.Store.ListUsers()
+func (api *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
+	users, err := api.Store.ListUsers()
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -138,7 +124,7 @@ func (h *AuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 		Role:     "admin",
 	}
 
-	if err := h.Store.CreateUser(newUser); err != nil {
+	if err := api.Store.CreateUser(newUser); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -148,7 +134,7 @@ func (h *AuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 		"role":    newUser.Role,
 		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(),
 	})
-	tokenString, _ := token.SignedString([]byte(h.Config.JWTSecret))
+	tokenString, _ := token.SignedString([]byte(api.Config.JWTSecret))
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
@@ -166,15 +152,15 @@ func (h *AuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	ctxData, ok := r.Context().Value(domain.UserContextKey).(map[string]string)
+func (api *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	ctxData, ok := r.Context().Value(UserContextKey).(map[string]string)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	userID := ctxData["id"]
-	user, err := h.Store.GetUserByID(userID)
+	user, err := api.Store.GetUserByID(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
