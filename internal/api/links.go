@@ -23,6 +23,13 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if !api.checkPermission(r, req.ServerID, func(p *domain.Permission) bool {
+		return p.CanViewConsole
+	}) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
 	existing, err := api.Store.GetPublicLinkByServerID(req.ServerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -57,6 +64,13 @@ func (api *Server) handleGetPublicLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !api.checkPermission(r, serverID, func(p *domain.Permission) bool {
+		return p.CanViewConsole
+	}) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
 	link, err := api.Store.GetPublicLinkByServerID(serverID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -75,6 +89,23 @@ func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
+		return
+	}
+
+	link, err := api.Store.GetPublicLink(token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if link == nil {
+		http.Error(w, "Link not found", http.StatusNotFound)
+		return
+	}
+
+	if !api.checkPermission(r, link.ServerID, func(p *domain.Permission) bool {
+		return p.CanViewConsole
+	}) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 

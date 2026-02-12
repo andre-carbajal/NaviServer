@@ -88,11 +88,12 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.HandleFunc("POST /auth/setup", api.handleSetup)
 	mux.HandleFunc("POST /public-links/{token}/access", api.handleAccessPublicLink)
 	mux.HandleFunc("GET /public-links/{token}", api.handleGetPublicServerInfo)
-	mux.HandleFunc("DELETE /public-links/{token}", api.handleDeletePublicLink)
 
 	protect := func(h http.HandlerFunc, role string) http.Handler {
 		return api.AuthMiddleware(h, role, api.Config.JWTSecret)
 	}
+
+	mux.Handle("DELETE /public-links/{token}", protect(api.handleDeletePublicLink, ""))
 
 	mux.Handle("GET /auth/me", protect(api.handleMe, ""))
 
@@ -132,7 +133,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("PUT /settings/port-range", protect(api.handleSetPortRange, "admin"))
 	mux.Handle("GET /settings/log-buffer-size", protect(api.handleGetLogBufferSize, "admin"))
 	mux.Handle("PUT /settings/log-buffer-size", protect(api.handleSetLogBufferSize, "admin"))
-	mux.Handle("GET /settings/public-ip", protect(api.handleGetPublicIP, "admin"))
+	mux.Handle("GET /settings/public-ip", protect(api.handleGetPublicIP, ""))
 	mux.Handle("PUT /settings/public-ip", protect(api.handleSetPublicIP, "admin"))
 
 	mux.Handle("GET /system/interfaces", protect(api.handleGetNetworkInterfaces, "admin"))
@@ -149,8 +150,8 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("DELETE /users/{id}", protect(api.handleDeleteUser, "admin"))
 	mux.Handle("PUT /users/{id}/password", protect(api.handleUpdatePassword, ""))
 
-	mux.Handle("POST /public-links", protect(api.handleCreatePublicLink, "admin"))
-	mux.Handle("GET /servers/{id}/public-link", protect(api.handleGetPublicLink, "admin"))
+	mux.Handle("POST /public-links", protect(api.handleCreatePublicLink, ""))
+	mux.Handle("GET /servers/{id}/public-link", protect(api.handleGetPublicLink, ""))
 
 	handler := api.corsMiddleware(mux)
 
@@ -294,6 +295,47 @@ func (api *Server) handleGetServer(w http.ResponseWriter, r *http.Request) {
 	if srv == nil {
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
+	}
+
+	// Populate permissions based on user context
+	userCtx := r.Context().Value(UserContextKey)
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		role := claims["role"]
+		userID := claims["id"]
+
+		if role == "admin" {
+			srv.Permissions = &domain.Permission{
+				UserID:          userID,
+				ServerID:        srv.ID,
+				CanViewConsole:  true,
+				CanControlPower: true,
+			}
+		} else {
+			// Check user permissions
+			perms, err := api.Store.GetPermissions(userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			var userPerm *domain.Permission
+			for _, p := range perms {
+				if p.ServerID == srv.ID {
+					// Create a copy to take address of
+					perm := p
+					userPerm = &perm
+					break
+				}
+			}
+
+			if userPerm == nil {
+				// User has no permission to see this server
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+			srv.Permissions = userPerm
+		}
 	}
 
 	json.NewEncoder(w).Encode(srv)

@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+
 import React, { useEffect, useRef, useState } from 'react';
 
 import { api } from '../services/api';
@@ -72,8 +74,33 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <h2>Edit Server</h2>
-        <div className="text-sm text-gray-500 mb-4">{server?.id}</div>
+        <div
+          className="modal-header"
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'start',
+            marginBottom: '20px',
+          }}
+        >
+          <div>
+            <h2 style={{ margin: 0 }}>Edit Server</h2>
+          </div>
+          <button
+            className="icon-action"
+            onClick={onClose}
+            type="button"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Server Icon</label>

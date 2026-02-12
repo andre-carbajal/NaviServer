@@ -1,5 +1,3 @@
-- Configurable Server Connections: Added support for configurable public addresses for server connections.
-- Improved Server Visibility: Enhanced the server detail UI to include public IP displays.
-- Safe Deletion Flow: Added a confirmation modal to the user deletion process to prevent accidental removals.
-- Mobile Optimization: Refactored the layout and implemented a fully responsive design to improve the mobile experience.
-- Permission Refinement: Updated and refined access permissions for server listings.
+- Detailed Permissions: Introduced more granular control over server sharing and public link management. Administrators can now specify exactly who can view server details and create public access links.
+- Dependencies Updated: Crucial updates to core frontend libraries, including React, Vite, and other utility packages, ensuring better performance and security.
+- UI Responsiveness: Refined the user interface for a smoother experience across different device sizes, particularly improving mobile responsiveness.

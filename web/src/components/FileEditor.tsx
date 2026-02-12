@@ -139,7 +139,7 @@ const FileEditor: React.FC<FileEditorProps> = ({
           {hasChanges && (
             <span className="unsaved-badge">
               <div className="unsaved-dot"></div>
-              Unsaved Changes
+              <span className="hidden sm:inline">Unsaved Changes</span>
             </span>
           )}
           <button
@@ -154,12 +154,12 @@ const FileEditor: React.FC<FileEditorProps> = ({
             {saving ? (
               <>
                 <Loader2 className="spin" size={16} />
-                Saving...
+                <span className="hidden sm:inline">Saving...</span>
               </>
             ) : (
               <>
                 <Save size={16} />
-                Save
+                <span className="hidden sm:inline">Save</span>
               </>
             )}
           </button>

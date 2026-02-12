@@ -226,7 +226,7 @@ const ServerDetail: React.FC = () => {
               <Square size={18} /> Stop
             </Button>
           )}
-          {user?.role === 'admin' && (
+          {(user?.role === 'admin' || server.permissions?.canViewConsole) && (
             <Button
               variant="secondary"
               onClick={handleShare}

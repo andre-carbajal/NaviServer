@@ -2142,3 +2142,13 @@ nav {
     justify-content: center;
   }
 }
+
+.hidden {
+  display: none !important;
+}
+
+@media (min-width: 640px) {
+  .sm\:inline {
+    display: inline !important;
+  }
+}
