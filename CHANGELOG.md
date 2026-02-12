@@ -1,1 +1,5 @@
-- Implement configurable public address for server connectionssolved.
+- Configurable Server Connections: Added support for configurable public addresses for server connections.
+- Improved Server Visibility: Enhanced the server detail UI to include public IP displays.
+- Safe Deletion Flow: Added a confirmation modal to the user deletion process to prevent accidental removals.
+- Mobile Optimization: Refactored the layout and implemented a fully responsive design to improve the mobile experience.
+- Permission Refinement: Updated and refined access permissions for server listings.

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import ConfirmationModal from '../components/ConfirmationModal';
 import CreateBackupModal from '../components/CreateBackupModal';
 import RestoreBackupModal from '../components/RestoreBackupModal';
 import { Button } from '../components/ui/Button';
@@ -25,6 +26,7 @@ const Backups: React.FC = () => {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
+  const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
   const activeSockets = useRef<Set<string>>(new Set());
   const wsMap = useRef<Map<string, WebSocket>>(new Map());
 
@@ -164,19 +166,18 @@ const Backups: React.FC = () => {
   };
 
   const handleDelete = (backupName: string) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete the backup "${backupName}"?`,
-      )
-    ) {
-      api
-        .deleteBackup(backupName)
-        .then(() => {
-          fetchBackups();
-        })
-        .catch((error) => {
-          console.error('Failed to delete backup:', error);
-        });
+    setBackupToDelete(backupName);
+  };
+
+  const confirmDelete = async () => {
+    if (backupToDelete) {
+      try {
+        await api.deleteBackup(backupToDelete);
+        fetchBackups();
+      } catch (error) {
+        console.error('Failed to delete backup:', error);
+      }
+      setBackupToDelete(null);
     }
   };
 
@@ -199,16 +200,10 @@ const Backups: React.FC = () => {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <div className="modal-header">
         <h1>Backups</h1>
         <Button onClick={() => setCreateModalOpen(true)}>
-          <Plus size={16} /> Create Backup
+          <Plus size={20} /> Create Backup
         </Button>
       </div>
       <div className="card">
@@ -275,19 +270,24 @@ const Backups: React.FC = () => {
                 <td>{backup.name}</td>
                 <td>{(backup.size / 1024 / 1024).toFixed(2)} MB</td>
                 <td>
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <Button
-                      variant="secondary"
+                  <div
+                    className="actions-group"
+                    style={{ border: 'none', padding: 0, margin: 0 }}
+                  >
+                    <button
+                      className="icon-action"
+                      title="Restore"
                       onClick={() => handleRestoreClick(backup.name)}
                     >
-                      <RotateCcw size={16} /> Restore
-                    </Button>
-                    <Button
-                      variant="danger"
+                      <RotateCcw size={18} />
+                    </button>
+                    <button
+                      className="icon-action danger"
+                      title="Delete"
                       onClick={() => handleDelete(backup.name)}
                     >
-                      <Trash2 size={16} /> Delete
-                    </Button>
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -328,6 +328,18 @@ const Backups: React.FC = () => {
           onRestore={handleRestore}
           backupName={selectedBackup}
           servers={servers}
+        />
+      )}
+
+      {backupToDelete && (
+        <ConfirmationModal
+          isOpen={!!backupToDelete}
+          onClose={() => setBackupToDelete(null)}
+          onConfirm={confirmDelete}
+          title="Delete Backup"
+          message={`Are you sure you want to delete the backup "${backupToDelete}"? This action cannot be undone.`}
+          confirmText="Delete"
+          isDangerous={true}
         />
       )}
     </div>

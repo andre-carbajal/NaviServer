@@ -33,6 +33,23 @@ const Layout: React.FC = () => {
 
   return (
     <div className="layout">
+      <header className="mobile-header">
+        <div className="brand">
+          <img
+            src="/apple-touch-icon.png"
+            alt="Naviger"
+            style={{ width: '24px', height: '24px' }}
+          />
+          <span>Naviger</span>
+        </div>
+        <div className="user-info">
+          <span className="user-name">{user?.username}</span>
+          <span className="user-role-badge">{user?.role}</span>
+          <button onClick={logout} className="logout-btn" title="Logout">
+            <LogOut size={18} />
+          </button>
+        </div>
+      </header>
       <aside className="sidebar">
         <div className="brand">
           <img
@@ -84,6 +101,15 @@ const Layout: React.FC = () => {
             </NavLink>
           )}
         </nav>
+        <div className="sidebar-footer">
+          <div className="user-info">
+            <span className="user-name">{user?.username}</span>
+            <span className="user-role-badge">{user?.role}</span>
+            <button onClick={logout} className="logout-btn" title="Logout">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
         {updateAvailable && (
           <div className="update-notification">
             <a
@@ -93,25 +119,12 @@ const Layout: React.FC = () => {
               className="update-link"
             >
               <ArrowUpCircle size={20} />
-              <span>Update Available</span>
+              <span>Update</span>
             </a>
           </div>
         )}
       </aside>
       <main className="content">
-        <header className="topbar">
-          <div
-            className="user-info"
-            style={{ display: 'flex', alignItems: 'center', gap: '15px' }}
-          >
-            <span>
-              {user?.username} ({user?.role})
-            </span>
-            <button onClick={logout} className="icon-action" title="Logout">
-              <LogOut size={18} />
-            </button>
-          </div>
-        </header>
         <div className="page-content">
           <Outlet />
         </div>

@@ -172,6 +172,12 @@ export const api = {
       serverId: string;
       action: string;
     }>('/public-links', { serverId }),
+  getPublicLink: (serverId: string) =>
+    apiInstance.get<{
+      token: string;
+      serverId: string;
+      action: string;
+    }>(`/servers/${serverId}/public-link`),
   deletePublicLink: (token: string) =>
     apiInstance.delete(`/public-links/${token}`),
   getPublicServerInfo: (token: string) =>

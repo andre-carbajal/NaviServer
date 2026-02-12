@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+
 import React, { useEffect, useState } from 'react';
 
 import type { Server } from '../types';
@@ -56,6 +58,9 @@ const CreateBackupModal: React.FC<CreateBackupModalProps> = ({
       <div className="modal-content">
         <div className="modal-header">
           <h2 className="modal-title">Create Backup</h2>
+          <button className="icon-action" onClick={onClose}>
+            <X size={20} />
+          </button>
         </div>
         <form onSubmit={handleSubmit}>
           {showServerSelect && (

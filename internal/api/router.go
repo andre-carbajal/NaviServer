@@ -150,6 +150,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("PUT /users/{id}/password", protect(api.handleUpdatePassword, ""))
 
 	mux.Handle("POST /public-links", protect(api.handleCreatePublicLink, "admin"))
+	mux.Handle("GET /servers/{id}/public-link", protect(api.handleGetPublicLink, "admin"))
 
 	handler := api.corsMiddleware(mux)
 
@@ -413,8 +414,10 @@ func (api *Server) handleListServers(w http.ResponseWriter, r *http.Request) {
 			allowed := make(map[string]bool)
 			permsMap := make(map[string]domain.Permission)
 			for _, p := range perms {
-				allowed[p.ServerID] = true
-				permsMap[p.ServerID] = p
+				if p.CanViewConsole || p.CanControlPower {
+					allowed[p.ServerID] = true
+					permsMap[p.ServerID] = p
+				}
 			}
 
 			var filtered []domain.Server

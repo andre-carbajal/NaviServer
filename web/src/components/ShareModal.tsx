@@ -24,21 +24,26 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
   useEffect(() => {
     if (isOpen && serverId) {
-      initializeLink();
+      checkLinkStatus();
     } else {
       setToken(null);
       setError('');
     }
   }, [isOpen, serverId]);
 
-  const initializeLink = async () => {
+  const checkLinkStatus = async () => {
     setLoading(true);
     try {
       const [linkRes, publicIPRes] = await Promise.all([
-        api.createPublicLink(serverId),
+        api.getPublicLink(serverId).catch(() => ({ data: null })),
         api.getPublicIP(),
       ]);
-      setToken(linkRes.data.token);
+
+      if (linkRes.data) {
+        setToken(linkRes.data.token);
+      } else {
+        setToken(null);
+      }
 
       const publicIP = publicIPRes.data?.public_ip ?? 'localhost';
       const port = import.meta.env.VITE_API_PORT || 23008;
@@ -46,7 +51,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
       setPublicBaseUrl(`${protocol}//${publicIP}:${port}`);
     } catch (err) {
       console.error(err);
-      setError('Failed to generate sharing link');
+      setError('Failed to check sharing status');
     } finally {
       setLoading(false);
     }

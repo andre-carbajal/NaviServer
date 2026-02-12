@@ -50,6 +50,27 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(link)
 }
 
+func (api *Server) handleGetPublicLink(w http.ResponseWriter, r *http.Request) {
+	serverID := r.PathValue("id")
+	if serverID == "" {
+		http.Error(w, "ServerID required", http.StatusBadRequest)
+		return
+	}
+
+	link, err := api.Store.GetPublicLinkByServerID(serverID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if link == nil {
+		http.Error(w, "No public link found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(link)
+}
+
 func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {

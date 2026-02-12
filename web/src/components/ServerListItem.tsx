@@ -108,32 +108,44 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
           <div className="server-name-row">
             <span className="server-name">{server.name}</span>
           </div>
-          <div className="server-meta">
-            {server.loader} {server.version}
-          </div>
+          <div className="header-meta" style={{ fontSize: '0.85rem' }}>
+            <div className="meta-item">
+              <span className="meta-label">{server.loader}</span>
+              <span>{server.version}</span>
+            </div>
+            <div className="meta-dot"></div>
+            <div className="meta-item">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={handleCopyAddress}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCopyAddress();
+                  }
+                }}
+                aria-label="Copiar dirección"
+                className="meta-value"
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Click to copy"
+              >
+                {address}
+              </span>
 
-          <div className="server-meta">
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={handleCopyAddress}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleCopyAddress();
-                }
-              }}
-              aria-label="Copiar dirección"
-              className="address-text"
-            >
-              {address}
-            </span>
-
-            <CopyButton
-              text={address}
-              aria-label="Copiar dirección"
-              className="address-copy-btn"
-            />
+              <CopyButton
+                text={address}
+                aria-label="Copiar dirección"
+                variant="secondary"
+                title="Copy to clipboard"
+                className="address-copy-btn"
+              />
+            </div>
           </div>
         </div>
       </div>

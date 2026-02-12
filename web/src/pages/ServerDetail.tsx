@@ -21,6 +21,7 @@ import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
 import { useAuth } from '../context/AuthContext';
 import { useConsole } from '../hooks/useConsole';
+import { useCopy } from '../hooks/useCopy';
 import { useServerStats } from '../hooks/useServerStats';
 import { api } from '../services/api';
 import type { Server } from '../types';
@@ -36,9 +37,28 @@ const ServerDetail: React.FC = () => {
   const [iconError, setIconError] = useState(false);
   const [iconRefreshKey, setIconRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<'console' | 'files'>('console');
+  const [publicIP, setPublicIP] = useState<string>(
+    typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+  );
 
   const { logs, sendCommand, isConnected } = useConsole(id || '');
   const { stats } = useServerStats(id || '', server?.status === 'RUNNING');
+  const { copy } = useCopy(1500);
+
+  useEffect(() => {
+    const fetchPublicIP = async () => {
+      try {
+        const response = await api.getPublicIP();
+        if (response.data?.public_ip) {
+          setPublicIP(response.data.public_ip);
+        }
+      } catch (err) {
+        console.error('Failed to fetch public IP:', err);
+      }
+    };
+
+    fetchPublicIP();
+  }, []);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -129,117 +149,68 @@ const ServerDetail: React.FC = () => {
   if (loading) return <div>Loading...</div>;
   if (!server) return <div>Server not found</div>;
 
+  const address = `${publicIP}:${server.port}`;
+
   return (
     <div className="server-detail h-full flex flex-col">
-      <div className="modal-header shrink-0">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ width: '64px', height: '64px' }}>
+      <div className="server-detail-header shrink-0">
+        <div className="header-content-wrapper">
+          <div className="header-icon">
             {!iconError ? (
               <img
                 src={`${api.getServerIconUrl(server.id)}?t=${iconRefreshKey}`}
                 alt="Server Icon"
                 onError={() => setIconError(true)}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '8px',
-                  objectFit: 'contain',
-                  imageRendering: 'pixelated',
-                }}
+                className="server-icon-img"
               />
             ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '32px',
-                  color: 'var(--text-muted)',
-                }}
-              >
+              <div className="server-icon-placeholder">
                 {server.name.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
-          <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px',
-                marginBottom: '8px',
-              }}
-            >
-              <h1 style={{ margin: 0 }}>{server.name}</h1>
+          <div className="header-info">
+            <div className="header-title-row">
+              <h1>{server.name}</h1>
               <span
                 className={`status-badge status-${server.status.toLowerCase()}`}
               >
                 {server.status}
               </span>
             </div>
-            <div
-              className="text-sm text-gray-500 mb-2"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <span
-                style={{
-                  fontFamily: 'monospace',
-                  background: 'rgba(0,0,0,0.3)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                }}
-              >
-                {server.id}
-              </span>
-              <CopyButton
-                text={server.id}
-                variant="secondary"
-                className="address-copy-btn"
-                title="Copy ID"
-              />
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px',
-                color: 'var(--text-muted)',
-                fontSize: '0.9rem',
-              }}
-            >
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                  {server.loader}
-                </span>
+
+            <div className="header-meta">
+              <div className="meta-item">
+                <span className="meta-label">{server.loader}</span>
                 <span>{server.version}</span>
               </div>
-              <div
-                style={{
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--text-muted)',
-                }}
-              ></div>
-              <div>
-                Port{' '}
+              <div className="meta-dot"></div>
+              <div className="meta-item">
                 <span
-                  style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}
+                  className="meta-value"
+                  onClick={() => copy(address)}
+                  style={{
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  title="Click to copy"
                 >
-                  {server.port}
+                  {address}
                 </span>
+                <CopyButton
+                  text={address}
+                  variant="secondary"
+                  title="Copy to clipboard"
+                  className="address-copy-btn"
+                />
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="header-actions">
           {server.status === 'STOPPED' ? (
             <Button onClick={handleStart}>
               <Play size={18} /> Start
@@ -432,6 +403,7 @@ const ServerDetail: React.FC = () => {
           <form
             onSubmit={handleCommandSubmit}
             style={{ display: 'flex', gap: '10px' }}
+            className="console-input-form"
           >
             <input
               type="text"

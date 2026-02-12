@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 import '../App.css';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import CreateUserModal from '../components/CreateUserModal';
 import PermissionsModal from '../components/PermissionsModal';
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +22,7 @@ const UsersPage: React.FC = () => {
   const [changingPasswordUser, setChangingPasswordUser] = useState<User | null>(
     null,
   );
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -37,14 +39,19 @@ const UsersPage: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
+  const handleDelete = (user: User) => {
+    setUserToDelete(user);
+  };
+
+  const confirmDelete = async () => {
+    if (userToDelete) {
       try {
-        await api.deleteUser(id);
-        setUsers(users.filter((u) => u.id !== id));
+        await api.deleteUser(userToDelete.id);
+        setUsers(users.filter((u) => u.id !== userToDelete.id));
       } catch (_) {
         alert('Failed to delete user');
       }
+      setUserToDelete(null);
     }
   };
 
@@ -55,13 +62,13 @@ const UsersPage: React.FC = () => {
 
   return (
     <div className="users-page">
-      <div className="card-header">
-        <h1 className="card-title">User Management</h1>
+      <div className="modal-header">
+        <h1>User Management</h1>
         <button
           className="btn btn-primary"
           onClick={() => setShowCreateModal(true)}
         >
-          <UserPlus size={18} />
+          <UserPlus size={20} />
           <span>Create User</span>
         </button>
       </div>
@@ -121,7 +128,7 @@ const UsersPage: React.FC = () => {
                       <button
                         className="icon-action danger"
                         title="Delete"
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDelete(user)}
                         disabled={currentUser?.id === user.id}
                         style={{
                           opacity: currentUser?.id === user.id ? 0.5 : 1,
@@ -160,6 +167,18 @@ const UsersPage: React.FC = () => {
         <ChangePasswordModal
           user={changingPasswordUser}
           onClose={() => setChangingPasswordUser(null)}
+        />
+      )}
+
+      {userToDelete && (
+        <ConfirmationModal
+          isOpen={!!userToDelete}
+          onClose={() => setUserToDelete(null)}
+          onConfirm={confirmDelete}
+          title="Delete User"
+          message={`Are you sure you want to delete the user "${userToDelete.username}"? This action cannot be undone.`}
+          confirmText="Delete User"
+          isDangerous={true}
         />
       )}
     </div>
