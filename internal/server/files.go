@@ -66,7 +66,7 @@ func (m *Manager) ListFiles(serverID, requestPath string) ([]FileEntry, error) {
 		return nil, err
 	}
 
-	var files []FileEntry
+	files := make([]FileEntry, 0)
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {

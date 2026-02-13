@@ -40,7 +40,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     setError(null);
     try {
       const response = await api.listFiles(serverId, currentPath);
-      setFiles(response.data);
+      setFiles(response.data || []);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Failed to load files');
@@ -407,7 +407,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       )}
 
       <div className="file-list-container">
-        {loading && !files.length ? (
+        {loading && (!files || files.length === 0) ? (
           <div
             style={{
               display: 'flex',
@@ -442,7 +442,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                   <td></td>
                 </tr>
               )}
-              {files.map((file) => (
+              {(files || []).map((file) => (
                 <tr
                   key={file.name}
                   className="file-row"
@@ -504,7 +504,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                   </td>
                 </tr>
               ))}
-              {files.length === 0 && !loading && (
+              {(!files || files.length === 0) && !loading && (
                 <tr>
                   <td
                     colSpan={5}
