@@ -52,6 +52,17 @@ func (m *Manager) DeleteBackup(name string) error {
 	return os.Remove(backupPath)
 }
 
+func (m *Manager) GetBackupFilePath(name string) (string, error) {
+	if strings.Contains(name, "..") {
+		return "", fmt.Errorf("invalid backup name")
+	}
+	backupPath := filepath.Join(m.BackupsPath, name)
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("backup not found")
+	}
+	return backupPath, nil
+}
+
 func (m *Manager) ListAllBackups() ([]BackupInfo, error) {
 	files, err := os.ReadDir(m.BackupsPath)
 	if err != nil {

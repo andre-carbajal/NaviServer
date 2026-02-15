@@ -126,6 +126,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 
 	mux.Handle("GET /backups", protect(api.handleListAllBackups, "admin"))
 	mux.Handle("DELETE /backups/{name}", protect(api.handleDeleteBackup, "admin"))
+	mux.Handle("GET /backups/{name}/download", protect(api.handleDownloadBackup, "admin"))
 	mux.Handle("DELETE /backups/progress/{id}", protect(api.handleCancelBackup, "admin"))
 	mux.Handle("POST /backups/{name}/restore", protect(api.handleRestoreBackup, "admin"))
 
@@ -207,6 +208,23 @@ func (api *Server) handleGetLoaders(w http.ResponseWriter, r *http.Request) {
 	loaders := loader.GetAvailableLoaders()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(loaders)
+}
+
+func (api *Server) handleDownloadBackup(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		http.Error(w, "Missing backup name", http.StatusBadRequest)
+		return
+	}
+
+	path, err := api.BackupManager.GetBackupFilePath(name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", name))
+	http.ServeFile(w, r, path)
 }
 
 func (api *Server) handleDeleteBackup(w http.ResponseWriter, r *http.Request) {

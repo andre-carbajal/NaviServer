@@ -97,6 +97,8 @@ export const api = {
     }>(`/servers/${serverId}/backup`, { name, requestId }),
   deleteBackup: (backupName: string) =>
     apiInstance.delete(`/backups/${backupName}`),
+  getBackupDownloadUrl: (backupName: string) =>
+    `${API_PROTOCOL}//${API_HOST}:${API_PORT}/backups/${backupName}/download`,
   cancelBackupCreation: (requestId: string) =>
     apiInstance.delete(`/backups/progress/${requestId}`),
   restoreBackup: (

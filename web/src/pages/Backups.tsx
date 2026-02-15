@@ -1,4 +1,4 @@
-import { Loader2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { Download, Loader2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -274,6 +274,15 @@ const Backups: React.FC = () => {
                     className="actions-group"
                     style={{ border: 'none', padding: 0, margin: 0 }}
                   >
+                    <a
+                      className="icon-action"
+                      title="Download"
+                      href={api.getBackupDownloadUrl(backup.name)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Download size={18} />
+                    </a>
                     <button
                       className="icon-action"
                       title="Restore"

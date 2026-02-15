@@ -1,1 +1,1 @@
-- File Explorer Stability: Fixed a crash that occurred when navigating to empty directories in the server file manager.
+- Implement backup download functionality
