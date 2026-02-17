@@ -2152,3 +2152,43 @@ nav {
     display: inline !important;
   }
 }
+
+.backups-page {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.backups-page.dragging {
+  border: 2px dashed var(--primary);
+  border-radius: 12px;
+}
+
+.backup-actions-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .backup-actions-header {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .backup-actions-header button {
+    flex: 1;
+    justify-content: center;
+    padding: 8px;
+    min-width: 0; /* Allow shrinking */
+  }
+
+  .backup-actions-header .btn-text {
+    display: none;
+  }
+
+  .backup-actions-header button svg {
+    margin-right: 0;
+  }
+}

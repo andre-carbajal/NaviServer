@@ -183,7 +183,6 @@ func (m *Manager) SaveServerIcon(id string, img image.Image) error {
 		return fmt.Errorf("server directory not found")
 	}
 
-	// Resize to 64x64
 	dst := image.NewRGBA(image.Rect(0, 0, 64, 64))
 	draw.CatmullRom.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
 

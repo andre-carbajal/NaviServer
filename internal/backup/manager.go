@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"naviger/internal/domain"
 	"naviger/internal/server"
 	"naviger/internal/storage"
@@ -15,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gen2brain/go-unarr"
 	"github.com/google/uuid"
 )
 
@@ -36,9 +38,266 @@ func NewManager(serversPath, backupsPath string, store *storage.GormStore) *Mana
 	}
 }
 
-type BackupInfo struct {
+type Info struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+}
+
+func (m *Manager) UploadBackup(file multipart.File, filename string) error {
+	if !strings.HasSuffix(filename, ".zip") && !strings.HasSuffix(filename, ".rar") {
+		return fmt.Errorf("invalid file type, only .zip and .rar are supported")
+	}
+
+	if err := os.MkdirAll(m.BackupsPath, 0755); err != nil {
+		return fmt.Errorf("could not create backups directory: %w", err)
+	}
+
+	tempDir, err := os.MkdirTemp("", "backup-upload-")
+	if err != nil {
+		return fmt.Errorf("could not create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	tempFile, err := os.CreateTemp(tempDir, "backup-*.tmp")
+	if err != nil {
+		return fmt.Errorf("could not create temp file: %w", err)
+	}
+
+	_, err = io.Copy(tempFile, file)
+	if err != nil {
+		tempFile.Close()
+		return fmt.Errorf("could not save uploaded file: %w", err)
+	}
+	tempFilePath := tempFile.Name()
+	tempFile.Close()
+
+	backupFileName := sanitizeFileName(filename)
+	ext := filepath.Ext(backupFileName)
+	if ext == "" {
+		if strings.HasSuffix(filename, ".rar") {
+			backupFileName += ".rar"
+		} else {
+			backupFileName += ".zip"
+		}
+	}
+	backupFilePath := filepath.Join(m.BackupsPath, backupFileName)
+
+	if strings.HasSuffix(strings.ToLower(filename), ".zip") {
+		return m.processZipUpload(tempFilePath, backupFilePath)
+	}
+
+	return m.processArchiveUploadGeneric(tempFilePath, backupFilePath)
+}
+
+func (m *Manager) processZipUpload(tempFilePath, targetPath string) error {
+	r, err := zip.OpenReader(tempFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open zip file: %w", err)
+	}
+	defer r.Close()
+
+	var root string
+	files := r.File
+	if len(files) == 0 {
+		return fmt.Errorf("empty zip file")
+	}
+
+	var validFiles []*zip.File
+	for _, f := range files {
+		if strings.HasPrefix(f.Name, "__MACOSX") || strings.HasSuffix(f.Name, ".DS_Store") {
+			continue
+		}
+		validFiles = append(validFiles, f)
+	}
+
+	if len(validFiles) > 0 {
+		first := validFiles[0].Name
+		parts := strings.Split(filepath.ToSlash(first), "/")
+		if len(parts) > 1 {
+			candidateRoot := parts[0] + "/"
+			isRoot := true
+			for _, f := range validFiles {
+				if !strings.HasPrefix(filepath.ToSlash(f.Name), candidateRoot) {
+					isRoot = false
+					break
+				}
+			}
+			if isRoot {
+				root = candidateRoot
+			}
+		}
+	}
+
+	if root == "" {
+		src, err := os.Open(tempFilePath)
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		dst, err := os.Create(targetPath)
+		if err != nil {
+			return err
+		}
+		defer dst.Close()
+
+		_, err = io.Copy(dst, src)
+		return err
+	}
+
+	outFile, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("failed to create target file: %w", err)
+	}
+	defer outFile.Close()
+
+	w := zip.NewWriter(outFile)
+	defer w.Close()
+
+	for _, f := range validFiles {
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		newName := strings.TrimPrefix(filepath.ToSlash(f.Name), root)
+		if newName == "" || newName == "/" {
+			rc.Close()
+			continue
+		}
+
+		header := f.FileHeader
+		header.Name = newName
+
+		if f.FileInfo().IsDir() {
+			if !strings.HasSuffix(header.Name, "/") {
+				header.Name += "/"
+			}
+		} else {
+			header.Method = zip.Deflate
+		}
+
+		target, err := w.CreateHeader(&header)
+		if err != nil {
+			rc.Close()
+			return err
+		}
+
+		_, err = io.Copy(target, rc)
+		rc.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) processArchiveUploadGeneric(tempFilePath, targetPath string) error {
+	archive, err := unarr.NewArchive(tempFilePath)
+	if err != nil {
+		return fmt.Errorf("could not open archive: %w", err)
+	}
+	defer archive.Close()
+
+	extractDir := filepath.Dir(tempFilePath)
+	extractPath := filepath.Join(extractDir, "extracted")
+	os.MkdirAll(extractPath, 0755)
+
+	files, err := archive.List()
+	if err != nil {
+		return fmt.Errorf("could not list archive contents: %w", err)
+	}
+
+	var rootDir string
+	isSingleDir := true
+	if len(files) > 0 {
+		for _, f := range files {
+			parts := strings.Split(filepath.ToSlash(f), "/")
+			if len(parts) > 0 {
+				if rootDir == "" {
+					if len(parts) > 1 {
+						rootDir = parts[0]
+					} else {
+						isSingleDir = false
+						break
+					}
+				}
+				if !strings.HasPrefix(filepath.ToSlash(f), rootDir) {
+					isSingleDir = false
+					break
+				}
+			}
+		}
+	} else {
+		isSingleDir = false
+	}
+
+	finalExtractPath := extractPath
+	if _, err := archive.Extract(extractPath); err != nil {
+		return fmt.Errorf("could not extract archive: %w", err)
+	}
+
+	sourceDir := finalExtractPath
+	if isSingleDir && rootDir != "" {
+		sourceDir = filepath.Join(finalExtractPath, rootDir)
+	}
+
+	if !strings.HasSuffix(targetPath, ".zip") {
+		targetPath = strings.TrimSuffix(targetPath, filepath.Ext(targetPath)) + ".zip"
+	}
+
+	newZipFile, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("could not create new zip file: %w", err)
+	}
+	defer newZipFile.Close()
+
+	zipWriter := zip.NewWriter(newZipFile)
+	defer zipWriter.Close()
+
+	return filepath.Walk(sourceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == sourceDir {
+			return nil
+		}
+		relPath, err := filepath.Rel(sourceDir, path)
+		if err != nil {
+			return err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.ToSlash(relPath)
+
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Deflate
+		}
+
+		writer, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			fileToZip, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer fileToZip.Close()
+			_, err = io.Copy(writer, fileToZip)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (m *Manager) DeleteBackup(name string) error {
@@ -63,13 +322,13 @@ func (m *Manager) GetBackupFilePath(name string) (string, error) {
 	return backupPath, nil
 }
 
-func (m *Manager) ListAllBackups() ([]BackupInfo, error) {
+func (m *Manager) ListAllBackups() ([]Info, error) {
 	files, err := os.ReadDir(m.BackupsPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read backups directory: %w", err)
 	}
 
-	var backups []BackupInfo
+	var backups []Info
 	for _, file := range files {
 		if file.IsDir() || strings.HasSuffix(file.Name(), ".temp") {
 			continue
@@ -79,7 +338,7 @@ func (m *Manager) ListAllBackups() ([]BackupInfo, error) {
 		if err != nil {
 			continue
 		}
-		backups = append(backups, BackupInfo{
+		backups = append(backups, Info{
 			Name: file.Name(),
 			Size: info.Size(),
 		})
@@ -88,7 +347,7 @@ func (m *Manager) ListAllBackups() ([]BackupInfo, error) {
 	return backups, nil
 }
 
-func (m *Manager) ListBackups(serverID string) ([]BackupInfo, error) {
+func (m *Manager) ListBackups(serverID string) ([]Info, error) {
 	srv, err := m.Store.GetServerByID(serverID)
 	if err != nil {
 		return nil, fmt.Errorf("could not get server info: %w", err)
@@ -104,7 +363,7 @@ func (m *Manager) ListBackups(serverID string) ([]BackupInfo, error) {
 		return nil, fmt.Errorf("could not read backups directory: %w", err)
 	}
 
-	var backups []BackupInfo
+	var backups []Info
 	for _, file := range files {
 		if file.IsDir() || strings.HasSuffix(file.Name(), ".temp") {
 			continue
@@ -115,7 +374,7 @@ func (m *Manager) ListBackups(serverID string) ([]BackupInfo, error) {
 			if err != nil {
 				continue
 			}
-			backups = append(backups, BackupInfo{
+			backups = append(backups, Info{
 				Name: file.Name(),
 				Size: info.Size(),
 			})
@@ -352,11 +611,9 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 
 		id := uuid.New().String()
 
-		// Sanitize folder name for new server
 		folderName := sanitizeFileName(newServerName)
 		targetDir = filepath.Join(m.ServersPath, folderName)
 
-		// Check for collision and append ID if needed
 		if _, err := os.Stat(targetDir); !os.IsNotExist(err) {
 			folderName = fmt.Sprintf("%s-%s", folderName, id[:8])
 			targetDir = filepath.Join(m.ServersPath, folderName)
@@ -390,8 +647,8 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 		}
 	}
 
-	if err := unzip(backupPath, targetDir); err != nil {
-		return fmt.Errorf("failed to unzip backup: %w", err)
+	if err := unarchive(backupPath, targetDir); err != nil {
+		return fmt.Errorf("failed to unarchive backup: %w", err)
 	}
 
 	if err := server.UpdateServerProperties(targetDir, targetPort); err != nil {
@@ -401,50 +658,19 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 	return nil
 }
 
-func unzip(src, dest string) error {
-	r, err := zip.OpenReader(src)
+func unarchive(src, dest string) error {
+	archive, err := unarr.NewArchive(src)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer archive.Close()
 
-	for _, f := range r.File {
-		fpath := filepath.Join(dest, f.Name)
-
-		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return fmt.Errorf("%s: illegal file path", fpath)
-		}
-
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(fpath, os.ModePerm)
-			continue
-		}
-
-		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
-			return err
-		}
-
-		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			return err
-		}
-
-		rc, err := f.Open()
-		if err != nil {
-			outFile.Close()
-			return err
-		}
-
-		_, err = io.Copy(outFile, rc)
-
-		outFile.Close()
-		rc.Close()
-
-		if err != nil {
-			return err
-		}
+	if err := os.MkdirAll(dest, 0755); err != nil {
+		return err
 	}
-	return nil
+
+	_, err = archive.Extract(dest)
+	return err
 }
 
 func sanitizeFileName(name string) string {

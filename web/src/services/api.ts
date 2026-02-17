@@ -90,6 +90,16 @@ export const api = {
   listBackups: (serverId: string) =>
     apiInstance.get<Backup[]>(`/servers/${serverId}/backups`),
   listAllBackups: () => apiInstance.get<Backup[]>('/backups'),
+  uploadBackup: (file: File, onUploadProgress: (progressEvent: any) => void) => {
+    const formData = new FormData();
+    formData.append('backup', file);
+    return apiInstance.post('/backups/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress,
+    });
+  },
   createBackup: (serverId: string, name?: string, requestId?: string) =>
     apiInstance.post<{
       status: string;

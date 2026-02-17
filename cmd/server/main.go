@@ -223,7 +223,6 @@ func startDaemonService(ctx context.Context) {
 	bufferSize := config.DefaultLogBufferSize
 	if val, err := store.GetSetting("log_buffer_size"); err == nil {
 		if n, err := strconv.Atoi(val); err == nil && n >= 0 {
-			// n=0 is valid (disabled)
 			bufferSize = n
 		}
 	}

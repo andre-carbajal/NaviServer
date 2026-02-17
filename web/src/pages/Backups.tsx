@@ -1,4 +1,12 @@
-import { Download, Loader2, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import {
+  Download,
+  Loader2,
+  Plus,
+  RotateCcw,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,11 +25,21 @@ interface CreatingBackup extends Backup {
   serverId: string;
 }
 
+interface UploadingBackup {
+  id: string;
+  name: string;
+  progress: number;
+}
+
 const Backups: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
   const [backups, setBackups] = useState<Backup[]>([]);
   const [creatingBackups, setCreatingBackups] = useState<CreatingBackup[]>([]);
+  const [uploadingBackups, setUploadingBackups] = useState<UploadingBackup[]>(
+    [],
+  );
+  const [isDragging, setIsDragging] = useState(false);
   const { servers, refresh: refreshServers } = useServers();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
@@ -29,6 +47,29 @@ const Backups: React.FC = () => {
   const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
   const activeSockets = useRef<Set<string>>(new Set());
   const wsMap = useRef<Map<string, WebSocket>>(new Map());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    const files = event.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
 
   const fetchBackups = useCallback(() => {
     const promise =
@@ -66,10 +107,6 @@ const Backups: React.FC = () => {
       wsMap.current.delete(requestId);
     }
     activeSockets.current.delete(requestId);
-
-    api
-      .cancelBackupCreation(requestId)
-      .catch((e) => console.error('Error cancelling backup in backend:', e));
   }, []);
 
   const trackProgress = useCallback(
@@ -86,7 +123,7 @@ const Backups: React.FC = () => {
         try {
           const msgData = JSON.parse(event.data);
 
-          if (msgData.progress === 100 || msgData.progress === -1) {
+          if (msgData.progress >= 100 || msgData.progress === -1) {
             ws.close();
             removeCreatingBackup(requestId);
             fetchBackups();
@@ -165,6 +202,13 @@ const Backups: React.FC = () => {
     }
   };
 
+  const handleCancelBackup = (requestId: string) => {
+    api
+      .cancelBackupCreation(requestId)
+      .catch((e) => console.error('Error cancelling backup in backend:', e));
+    removeCreatingBackup(requestId);
+  };
+
   const handleDelete = (backupName: string) => {
     setBackupToDelete(backupName);
   };
@@ -192,6 +236,68 @@ const Backups: React.FC = () => {
     refreshServers();
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        
+        if (ext !== 'zip' && ext !== 'rar') {
+            alert(`File ${file.name} is not a valid backup file (.zip or .rar only).`);
+            continue;
+        }
+
+        const uploadId = uuidv4();
+        const newUploadingBackup: UploadingBackup = {
+          id: uploadId,
+          name: file.name,
+          progress: 0,
+        };
+        setUploadingBackups((prev) => [...prev, newUploadingBackup]);
+
+        try {
+          await api.uploadBackup(file, (progressEvent) => {
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
+            );
+            setUploadingBackups((prev) =>
+              prev.map((b) =>
+                b.id === uploadId ? { ...b, progress: progress } : b,
+              ),
+            );
+          });
+        } catch (error) {
+          console.error(`Failed to upload backup ${file.name}:`, error);
+          alert(`Failed to upload backup ${file.name}.`);
+          try {
+            await api.deleteBackup(file.name);
+          } catch (e) {
+            console.warn('Failed to cleanup failed backup upload:', e);
+          }
+        } finally {
+            setUploadingBackups((prev) => prev.filter((b) => b.id !== uploadId));
+        }
+    }
+    fetchBackups();
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
+
   const isGlobalView = !id || id === 'all';
 
   const visibleCreatingBackups = creatingBackups.filter(
@@ -199,14 +305,71 @@ const Backups: React.FC = () => {
   );
 
   return (
-    <div>
+    <div
+      className={`backups-page ${isDragging ? 'dragging' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        position: 'relative',
+        borderColor: isDragging ? '#646cff' : 'transparent',
+        boxShadow: isDragging ? '0 0 0 2px rgba(100, 108, 255, 0.2)' : 'none',
+      }}
+    >
       <div className="modal-header">
         <h1>Backups</h1>
-        <Button onClick={() => setCreateModalOpen(true)}>
-          <Plus size={20} /> Create Backup
-        </Button>
+        <div className="backup-actions-header">
+          <Button onClick={handleUploadClick} variant="secondary">
+            <Upload size={20} /> <span className="btn-text">Upload Backup</span>
+          </Button>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus size={20} /> <span className="btn-text">Create Backup</span>
+          </Button>
+        </div>
       </div>
+      {isDragging && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(100, 108, 255, 0.1)',
+            backdropFilter: 'blur(2px)',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            borderRadius: '12px',
+          }}
+        >
+          <div
+            style={{
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '1.2rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+          >
+            <Upload size={48} />
+            <span>Drop backups to upload (.zip, .rar)</span>
+          </div>
+        </div>
+      )}
       <div className="card">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+          accept=".zip,.rar"
+          multiple
+        />
         <table className="data-table">
           <thead>
             <tr>
@@ -216,6 +379,43 @@ const Backups: React.FC = () => {
             </tr>
           </thead>
           <tbody>
+            {uploadingBackups.map((upload) => (
+              <tr key={upload.id}>
+                <td>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Loader2 className="spin" size={16} />
+                    <div>
+                      <div>{upload.name}</div>
+                      <div
+                        style={{
+                          fontSize: '0.8em',
+                          color: 'var(--text-muted)',
+                        }}
+                      >
+                        Uploading...
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="progress-bar-container"
+                    style={{ marginTop: '4px', height: '4px' }}
+                  >
+                    <div
+                      className="progress-bar-fill"
+                      style={{ width: `${upload.progress}%` }}
+                    />
+                  </div>
+                </td>
+                <td>-</td>
+                <td>-</td>
+              </tr>
+            ))}
             {visibleCreatingBackups.map((backup) => (
               <tr key={backup.requestId}>
                 <td>
@@ -256,7 +456,7 @@ const Backups: React.FC = () => {
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <Button
                       variant="secondary"
-                      onClick={() => removeCreatingBackup(backup.requestId!)}
+                      onClick={() => handleCancelBackup(backup.requestId!)}
                       title="Dismiss / Cancel"
                     >
                       <X size={16} /> Cancel
@@ -301,20 +501,22 @@ const Backups: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {backups.length === 0 && visibleCreatingBackups.length === 0 && (
-              <tr>
-                <td
-                  colSpan={3}
-                  style={{
-                    textAlign: 'center',
-                    padding: '20px',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  No backups found.
-                </td>
-              </tr>
-            )}
+            {backups.length === 0 &&
+              visibleCreatingBackups.length === 0 &&
+              uploadingBackups.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={3}
+                    style={{
+                      textAlign: 'center',
+                      padding: '20px',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    No backups found.
+                  </td>
+                </tr>
+              )}
           </tbody>
         </table>
       </div>

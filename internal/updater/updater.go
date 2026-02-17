@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	CurrentVersion = "v1.10.2"
+	CurrentVersion = "v1.11.0"
 	RepoOwner      = "andre-carbajal"
 	RepoName       = "naviger"
 )

@@ -39,6 +39,8 @@ github.com/emersion/go-autostart v0.0.0-20250403115856-34830d6457d2 h1:CgF8+TNFv
 github.com/emersion/go-autostart v0.0.0-20250403115856-34830d6457d2/go.mod h1:buzQsO8HHkZX2Q45fdfGH1xejPjuDQaXH8btcYMFzPM=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
+github.com/gen2brain/go-unarr v0.2.4 h1:Iu2kqtGfkLBSQoTFwMkSCmp0g3GrEM/XMVWzo9TQr/Y=
+github.com/gen2brain/go-unarr v0.2.4/go.mod h1:0kdy3HtjKBcEaewifXZguHCvt4qD9V8iJCx4FPEOWT8=
 github.com/getlantern/context v0.0.0-20190109183933-c447772a6520/go.mod h1:L+mq6/vvYHKjCX2oez0CgEAJmbq1fbb/oNJIWQkBybY=
 github.com/getlantern/context v0.0.0-20220418194847-3d5e7a086201 h1:oEZYEpZo28Wdx+5FZo4aU7JFXu0WG/4wJWese5reQSA=
 github.com/getlantern/context v0.0.0-20220418194847-3d5e7a086201/go.mod h1:Y9WZUHEb+mpra02CbQ/QczLUe6f0Dezxaw5DCJlJQGo=

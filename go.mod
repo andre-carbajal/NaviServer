@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/emersion/go-autostart v0.0.0-20250403115856-34830d6457d2
+	github.com/gen2brain/go-unarr v0.2.4
 	github.com/getlantern/systray v1.2.2
 	github.com/glebarez/sqlite v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.1

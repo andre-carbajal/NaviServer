@@ -125,6 +125,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("GET /servers/{id}/backups", protect(api.handleListBackupsByServer, ""))
 
 	mux.Handle("GET /backups", protect(api.handleListAllBackups, "admin"))
+	mux.Handle("POST /backups/upload", protect(api.handleUploadBackup, "admin"))
 	mux.Handle("DELETE /backups/{name}", protect(api.handleDeleteBackup, "admin"))
 	mux.Handle("GET /backups/{name}/download", protect(api.handleDownloadBackup, "admin"))
 	mux.Handle("DELETE /backups/progress/{id}", protect(api.handleCancelBackup, "admin"))
@@ -208,6 +209,27 @@ func (api *Server) handleGetLoaders(w http.ResponseWriter, r *http.Request) {
 	loaders := loader.GetAvailableLoaders()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(loaders)
+}
+
+func (api *Server) handleUploadBackup(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	file, handler, err := r.FormFile("backup")
+	if err != nil {
+		http.Error(w, "Error Retrieving the File", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	if err := api.BackupManager.UploadBackup(file, handler.Filename); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (api *Server) handleDownloadBackup(w http.ResponseWriter, r *http.Request) {
@@ -315,7 +337,6 @@ func (api *Server) handleGetServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Populate permissions based on user context
 	userCtx := r.Context().Value(UserContextKey)
 	if userCtx != nil {
 		claims := userCtx.(map[string]string)
@@ -330,7 +351,6 @@ func (api *Server) handleGetServer(w http.ResponseWriter, r *http.Request) {
 				CanControlPower: true,
 			}
 		} else {
-			// Check user permissions
 			perms, err := api.Store.GetPermissions(userID)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -340,7 +360,6 @@ func (api *Server) handleGetServer(w http.ResponseWriter, r *http.Request) {
 			var userPerm *domain.Permission
 			for _, p := range perms {
 				if p.ServerID == srv.ID {
-					// Create a copy to take address of
 					perm := p
 					userPerm = &perm
 					break
@@ -348,7 +367,6 @@ func (api *Server) handleGetServer(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if userPerm == nil {
-				// User has no permission to see this server
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
