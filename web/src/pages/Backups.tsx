@@ -244,48 +244,50 @@ const Backups: React.FC = () => {
     if (!files || files.length === 0) return;
 
     for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const ext = file.name.split('.').pop()?.toLowerCase();
-        
-        if (ext !== 'zip' && ext !== 'rar') {
-            alert(`File ${file.name} is not a valid backup file (.zip or .rar only).`);
-            continue;
-        }
+      const file = files[i];
+      const ext = file.name.split('.').pop()?.toLowerCase();
 
-        const uploadId = uuidv4();
-        const newUploadingBackup: UploadingBackup = {
-          id: uploadId,
-          name: file.name,
-          progress: 0,
-        };
-        setUploadingBackups((prev) => [...prev, newUploadingBackup]);
+      if (ext !== 'zip' && ext !== 'rar') {
+        alert(
+          `File ${file.name} is not a valid backup file (.zip or .rar only).`,
+        );
+        continue;
+      }
 
+      const uploadId = uuidv4();
+      const newUploadingBackup: UploadingBackup = {
+        id: uploadId,
+        name: file.name,
+        progress: 0,
+      };
+      setUploadingBackups((prev) => [...prev, newUploadingBackup]);
+
+      try {
+        await api.uploadBackup(file, (progressEvent) => {
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
+          );
+          setUploadingBackups((prev) =>
+            prev.map((b) =>
+              b.id === uploadId ? { ...b, progress: progress } : b,
+            ),
+          );
+        });
+      } catch (error) {
+        console.error(`Failed to upload backup ${file.name}:`, error);
+        alert(`Failed to upload backup ${file.name}.`);
         try {
-          await api.uploadBackup(file, (progressEvent) => {
-            const progress = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
-            );
-            setUploadingBackups((prev) =>
-              prev.map((b) =>
-                b.id === uploadId ? { ...b, progress: progress } : b,
-              ),
-            );
-          });
-        } catch (error) {
-          console.error(`Failed to upload backup ${file.name}:`, error);
-          alert(`Failed to upload backup ${file.name}.`);
-          try {
-            await api.deleteBackup(file.name);
-          } catch (e) {
-            console.warn('Failed to cleanup failed backup upload:', e);
-          }
-        } finally {
-            setUploadingBackups((prev) => prev.filter((b) => b.id !== uploadId));
+          await api.deleteBackup(file.name);
+        } catch (e) {
+          console.warn('Failed to cleanup failed backup upload:', e);
         }
+      } finally {
+        setUploadingBackups((prev) => prev.filter((b) => b.id !== uploadId));
+      }
     }
     fetchBackups();
     if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      fileInputRef.current.value = '';
     }
   };
 

@@ -1159,28 +1159,6 @@ nav {
   border-radius: 4px;
 }
 
-.update-notification {
-  padding: 15px;
-  border-top: 1px solid var(--border-color);
-}
-
-.update-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background-color: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.update-link:hover {
-  background-color: rgba(255, 193, 7, 0.2);
-}
-
 .server-list {
   display: flex;
   flex-direction: column;
@@ -2154,9 +2132,9 @@ nav {
 }
 
 .backups-page {
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .backups-page.dragging {

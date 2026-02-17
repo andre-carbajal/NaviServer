@@ -1,2 +1,1 @@
-- Implement backup download functionality
-- Implement backup upload functionality
+- Implement API and UI for displaying application version and improve update notification presentation.

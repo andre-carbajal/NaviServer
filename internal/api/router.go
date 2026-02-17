@@ -141,6 +141,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("GET /system/interfaces", protect(api.handleGetNetworkInterfaces, "admin"))
 	mux.Handle("POST /system/restart", protect(api.handleRestartDaemon, "admin"))
 	mux.Handle("GET /updates", protect(api.handleCheckUpdates, "admin"))
+	mux.Handle("GET /version", protect(api.handleGetVersion, ""))
 
 	mux.Handle("GET /ws/servers/{id}/console", protect(api.handleConsole, ""))
 	mux.Handle("GET /ws/progress/{id}", protect(api.handleProgress, ""))
@@ -798,6 +799,13 @@ func (api *Server) handleGetPublicIP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"public_ip": val})
+}
+
+func (api *Server) handleGetVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"version": updater.CurrentVersion,
+	})
 }
 
 func (api *Server) handleSetPublicIP(w http.ResponseWriter, r *http.Request) {

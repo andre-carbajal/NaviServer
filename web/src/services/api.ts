@@ -90,7 +90,10 @@ export const api = {
   listBackups: (serverId: string) =>
     apiInstance.get<Backup[]>(`/servers/${serverId}/backups`),
   listAllBackups: () => apiInstance.get<Backup[]>('/backups'),
-  uploadBackup: (file: File, onUploadProgress: (progressEvent: any) => void) => {
+  uploadBackup: (
+    file: File,
+    onUploadProgress: (progressEvent: any) => void,
+  ) => {
     const formData = new FormData();
     formData.append('backup', file);
     return apiInstance.post('/backups/upload', formData, {
@@ -128,6 +131,7 @@ export const api = {
       update_available: boolean;
       release_url: string;
     }>('/updates'),
+  getVersion: () => apiInstance.get<{ version: string }>('/version'),
   restartDaemon: () => apiInstance.post('/system/restart'),
   listFiles: (serverId: string, path: string) =>
     apiInstance.get<FileEntry[]>(`/servers/${serverId}/files`, {
