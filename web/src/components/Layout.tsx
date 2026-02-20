@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  ArrowUpCircle,
   DatabaseBackup,
   LayoutDashboard,
   LogOut,
@@ -180,7 +179,7 @@ const Layout: React.FC = () => {
                     title="Update Available"
                     style={{
                       fontSize: '0.75rem',
-                      color: '#fbbf24', // Amber-400
+                      color: '#fbbf24',
                       textDecoration: 'none',
                       backgroundColor: 'rgba(251, 191, 36, 0.1)',
                       padding: '2px 6px',

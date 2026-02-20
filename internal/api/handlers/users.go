@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"encoding/json"
@@ -10,8 +10,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (api *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := api.Store.ListUsers()
+type UsersHandler struct {
+	*BaseHandler
+}
+
+func (h *UsersHandler) HandleListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.Store.ListUsers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -21,7 +25,7 @@ func (api *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
-func (api *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -33,7 +37,7 @@ func (api *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := api.Store.GetUserByUsername(req.Username)
+	existing, err := h.Store.GetUserByUsername(req.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -56,7 +60,7 @@ func (api *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Role:     "user",
 	}
 
-	if err := api.Store.CreateUser(newUser); err != nil {
+	if err := h.Store.CreateUser(newUser); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -65,14 +69,14 @@ func (api *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(newUser)
 }
 
-func (api *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHandler) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "Missing ID", http.StatusBadRequest)
 		return
 	}
 
-	userCtx := r.Context().Value(UserContextKey)
+	userCtx := r.Context().Value(domain.UserContextKey)
 	if userCtx != nil {
 		claims := userCtx.(map[string]string)
 		if claims["id"] == id {
@@ -81,7 +85,7 @@ func (api *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := api.Store.DeleteUser(id); err != nil {
+	if err := h.Store.DeleteUser(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -89,7 +93,7 @@ func (api *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (api *Server) handleUpdatePermissions(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHandler) HandleUpdatePermissions(w http.ResponseWriter, r *http.Request) {
 	var req []domain.Permission
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -102,7 +106,7 @@ func (api *Server) handleUpdatePermissions(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if err := api.Store.SetPermissions(req); err != nil {
+	if err := h.Store.SetPermissions(req); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -110,14 +114,14 @@ func (api *Server) handleUpdatePermissions(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
-func (api *Server) handleGetPermissions(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHandler) HandleGetPermissions(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "Missing ID", http.StatusBadRequest)
 		return
 	}
 
-	perms, err := api.Store.GetPermissions(id)
+	perms, err := h.Store.GetPermissions(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -127,14 +131,14 @@ func (api *Server) handleGetPermissions(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(perms)
 }
 
-func (api *Server) handleUpdatePassword(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHandler) HandleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "Missing ID", http.StatusBadRequest)
 		return
 	}
 
-	userCtx := r.Context().Value(UserContextKey)
+	userCtx := r.Context().Value(domain.UserContextKey)
 	if userCtx == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -164,7 +168,7 @@ func (api *Server) handleUpdatePassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := api.Store.UpdatePassword(id, string(hashedPassword)); err != nil {
+	if err := h.Store.UpdatePassword(id, string(hashedPassword)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

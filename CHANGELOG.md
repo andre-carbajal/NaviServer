@@ -1,1 +1,2 @@
 - Implement API and UI for displaying application version and improve update notification presentation.
+- Modularize API handlers and improve frontend auth state

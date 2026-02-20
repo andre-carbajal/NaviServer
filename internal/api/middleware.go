@@ -6,13 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"naviger/internal/domain"
+
 	"github.com/golang-jwt/jwt/v5"
-)
-
-type ContextKey string
-
-const (
-	UserContextKey ContextKey = "user"
 )
 
 func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secretKey string) http.Handler {
@@ -20,7 +16,7 @@ func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secret
 		if r.Header.Get("X-Naviger-Client") == "CLI" {
 			remoteAddr := r.RemoteAddr
 			if strings.HasPrefix(remoteAddr, "127.0.0.1") || strings.HasPrefix(remoteAddr, "[::1]") {
-				ctx := context.WithValue(r.Context(), UserContextKey, map[string]string{
+				ctx := context.WithValue(r.Context(), domain.UserContextKey, map[string]string{
 					"id":   "cli",
 					"role": "admin",
 				})
@@ -91,7 +87,7 @@ func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secret
 			}
 		}
 
-		ctx := context.WithValue(r.Context(), UserContextKey, map[string]string{
+		ctx := context.WithValue(r.Context(), domain.UserContextKey, map[string]string{
 			"id":   userID,
 			"role": role,
 		})

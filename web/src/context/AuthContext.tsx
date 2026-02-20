@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   loading: boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,25 +27,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+    const checkAuth = async () => {
       try {
         const response = await api.getMe();
         setUser(response.data);
-        setToken('valid');
+        setToken('authenticated');
       } catch (error: any) {
         if (error.response?.status !== 401) {
           console.error('Auth check failed', error);
         }
         setUser(null);
         setToken(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    initAuth();
+
+    checkAuth();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkAuth();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const login = (_newToken: string, newUser: User) => {
-    setToken('valid');
+    setToken('authenticated');
     setUser(newUser);
   };
 
@@ -58,8 +70,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
   };
 
+  const isAuthenticated = token !== null && user !== null;
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

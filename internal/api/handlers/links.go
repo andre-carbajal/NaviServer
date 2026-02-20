@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"encoding/json"
@@ -9,7 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request) {
+type LinksHandler struct {
+	*BaseHandler
+}
+
+func (h *LinksHandler) HandleCreatePublicLink(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ServerID string `json:"serverId"`
 	}
@@ -23,14 +27,14 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !api.checkPermission(r, req.ServerID, func(p *domain.Permission) bool {
+	if !h.checkPermission(r, req.ServerID, func(p *domain.Permission) bool {
 		return p.CanViewConsole
 	}) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
-	existing, err := api.Store.GetPublicLinkByServerID(req.ServerID)
+	existing, err := h.Store.GetPublicLinkByServerID(req.ServerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -48,7 +52,7 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 		Action:   "control",
 	}
 
-	if err := api.Store.CreatePublicLink(link); err != nil {
+	if err := h.Store.CreatePublicLink(link); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -57,21 +61,21 @@ func (api *Server) handleCreatePublicLink(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(link)
 }
 
-func (api *Server) handleGetPublicLink(w http.ResponseWriter, r *http.Request) {
+func (h *LinksHandler) HandleGetPublicLink(w http.ResponseWriter, r *http.Request) {
 	serverID := r.PathValue("id")
 	if serverID == "" {
 		http.Error(w, "ServerID required", http.StatusBadRequest)
 		return
 	}
 
-	if !api.checkPermission(r, serverID, func(p *domain.Permission) bool {
+	if !h.checkPermission(r, serverID, func(p *domain.Permission) bool {
 		return p.CanViewConsole
 	}) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
-	link, err := api.Store.GetPublicLinkByServerID(serverID)
+	link, err := h.Store.GetPublicLinkByServerID(serverID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -85,14 +89,14 @@ func (api *Server) handleGetPublicLink(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(link)
 }
 
-func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request) {
+func (h *LinksHandler) HandleDeletePublicLink(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
 		return
 	}
 
-	link, err := api.Store.GetPublicLink(token)
+	link, err := h.Store.GetPublicLink(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -102,14 +106,14 @@ func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if !api.checkPermission(r, link.ServerID, func(p *domain.Permission) bool {
+	if !h.checkPermission(r, link.ServerID, func(p *domain.Permission) bool {
 		return p.CanViewConsole
 	}) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
-	if err := api.Store.DeletePublicLink(token); err != nil {
+	if err := h.Store.DeletePublicLink(token); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -117,14 +121,14 @@ func (api *Server) handleDeletePublicLink(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (api *Server) handleGetPublicServerInfo(w http.ResponseWriter, r *http.Request) {
+func (h *LinksHandler) HandleGetPublicServerInfo(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
 		return
 	}
 
-	link, err := api.Store.GetPublicLink(token)
+	link, err := h.Store.GetPublicLink(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -134,7 +138,7 @@ func (api *Server) handleGetPublicServerInfo(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	srv, err := api.Manager.GetServer(link.ServerID)
+	srv, err := h.Manager.GetServer(link.ServerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -158,7 +162,7 @@ func (api *Server) handleGetPublicServerInfo(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(response)
 }
 
-func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request) {
+func (h *LinksHandler) HandleAccessPublicLink(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" {
 		http.Error(w, "Missing Token", http.StatusBadRequest)
@@ -173,7 +177,7 @@ func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	link, err := api.Store.GetPublicLink(token)
+	link, err := h.Store.GetPublicLink(token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -185,12 +189,12 @@ func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request
 
 	if link.Action == "control" {
 		if req.Action == "start" {
-			if err := api.Supervisor.StartServer(link.ServerID); err != nil {
+			if err := h.Supervisor.StartServer(link.ServerID); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else if req.Action == "stop" {
-			if err := api.Supervisor.StopServer(link.ServerID); err != nil {
+			if err := h.Supervisor.StopServer(link.ServerID); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -200,7 +204,7 @@ func (api *Server) handleAccessPublicLink(w http.ResponseWriter, r *http.Request
 		}
 	} else if link.Action == "start" {
 		if req.Action == "start" {
-			if err := api.Supervisor.StartServer(link.ServerID); err != nil {
+			if err := h.Supervisor.StartServer(link.ServerID); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

@@ -211,22 +211,24 @@ const ServerDetail: React.FC = () => {
         </div>
 
         <div className="header-actions">
-          {server.status === 'STOPPED' ? (
-            <Button onClick={handleStart}>
-              <Play size={18} /> Start
-            </Button>
-          ) : (
-            <Button
-              variant="danger"
-              onClick={handleStop}
-              disabled={
-                server.status === 'STARTING' || server.status === 'STOPPING'
-              }
-            >
-              <Square size={18} /> Stop
-            </Button>
+          {(server.permissions?.canControlPower || server.permissions?.canViewConsole) && (
+            server.status === 'STOPPED' ? (
+              <Button onClick={handleStart}>
+                <Play size={18} /> Start
+              </Button>
+            ) : (
+              <Button
+                variant="danger"
+                onClick={handleStop}
+                disabled={
+                  server.status === 'STARTING' || server.status === 'STOPPING'
+                }
+              >
+                <Square size={18} /> Stop
+              </Button>
+            )
           )}
-          {(user?.role === 'admin' || server.permissions?.canViewConsole) && (
+          {server.permissions?.canViewConsole && (
             <Button
               variant="secondary"
               onClick={handleShare}
@@ -235,9 +237,11 @@ const ServerDetail: React.FC = () => {
               <Share2 size={18} />
             </Button>
           )}
-          <Button variant="secondary" onClick={() => setIsEditModalOpen(true)}>
-            <Settings size={18} />
-          </Button>
+          {user?.role === 'admin' && (
+            <Button variant="secondary" onClick={() => setIsEditModalOpen(true)}>
+              <Settings size={18} />
+            </Button>
+          )}
         </div>
       </div>
 
