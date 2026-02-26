@@ -44,3 +44,5 @@ dist-ssr
 
 DS_Store
 .agents/*
+
+out/*
