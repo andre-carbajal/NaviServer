@@ -52,7 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const login = (_newToken: string, newUser: User) => {
@@ -73,7 +74,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const isAuthenticated = token !== null && user !== null;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, isAuthenticated }}>
+    <AuthContext.Provider
+      value={{ user, token, login, logout, loading, isAuthenticated }}
+    >
       {children}
     </AuthContext.Provider>
   );

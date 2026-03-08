@@ -211,8 +211,9 @@ const ServerDetail: React.FC = () => {
         </div>
 
         <div className="header-actions">
-          {(server.permissions?.canControlPower || server.permissions?.canViewConsole) && (
-            server.status === 'STOPPED' ? (
+          {(server.permissions?.canControlPower ||
+            server.permissions?.canViewConsole) &&
+            (server.status === 'STOPPED' ? (
               <Button onClick={handleStart}>
                 <Play size={18} /> Start
               </Button>
@@ -226,8 +227,7 @@ const ServerDetail: React.FC = () => {
               >
                 <Square size={18} /> Stop
               </Button>
-            )
-          )}
+            ))}
           {server.permissions?.canViewConsole && (
             <Button
               variant="secondary"
@@ -238,7 +238,10 @@ const ServerDetail: React.FC = () => {
             </Button>
           )}
           {user?.role === 'admin' && (
-            <Button variant="secondary" onClick={() => setIsEditModalOpen(true)}>
+            <Button
+              variant="secondary"
+              onClick={() => setIsEditModalOpen(true)}
+            >
               <Settings size={18} />
             </Button>
           )}

@@ -171,6 +171,7 @@ export const api = {
   logout: () => apiInstance.post('/auth/logout'),
   setup: (username: string, password: string) =>
     apiInstance.post('/auth/setup', { username, password }),
+  checkSetup: () => apiInstance.get<{ setup_needed: boolean }>('/auth/setup'),
   getMe: () => apiInstance.get('/auth/me'),
   listUsers: () => apiInstance.get('/users'),
   createUser: (data: { username: string; password?: string }) =>

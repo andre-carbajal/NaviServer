@@ -158,6 +158,19 @@ func (h *AuthHandler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *AuthHandler) HandleCheckSetup(w http.ResponseWriter, r *http.Request) {
+	users, err := h.Store.ListUsers()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{
+		"setup_needed": len(users) == 0,
+	})
+}
+
 func (h *AuthHandler) HandleMe(w http.ResponseWriter, r *http.Request) {
 	ctxData, ok := r.Context().Value(domain.UserContextKey).(map[string]string)
 	if !ok {

@@ -91,6 +91,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.HandleFunc("POST /auth/login", authHandler.HandleLogin)
 	mux.HandleFunc("POST /auth/logout", authHandler.HandleLogout)
 	mux.HandleFunc("POST /auth/setup", authHandler.HandleSetup)
+	mux.HandleFunc("GET /auth/setup", authHandler.HandleCheckSetup)
 	mux.HandleFunc("POST /public-links/{token}/access", linksHandler.HandleAccessPublicLink)
 	mux.HandleFunc("GET /public-links/{token}", linksHandler.HandleGetPublicServerInfo)
 
