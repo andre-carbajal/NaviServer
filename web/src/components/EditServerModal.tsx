@@ -35,14 +35,20 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
 
   useEffect(() => {
     if (isOpen && server) {
-      setName(server.name);
-      setRam(server.ram);
-      setCustomArgs(server.customArgs || '');
+      setName((prev) => (prev === '' ? server.name : prev));
+      setRam((prev) => (prev === 0 ? server.ram : prev));
+      setCustomArgs((prev) => (prev === '' ? server.customArgs || '' : prev));
+    }
+
+    if (!isOpen) {
+      setName('');
+      setRam(0);
+      setCustomArgs('');
       setSelectedIcon(null);
       setIconPreview(null);
       setImageError(false);
     }
-  }, [isOpen, server]);
+  }, [isOpen, server?.id]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -126,7 +132,8 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
                     style={{
                       width: '100%',
                       height: '100%',
-                      objectFit: 'contain',
+                      objectFit: 'fill',
+                      imageRendering: 'pixelated',
                     }}
                   />
                 ) : !imageError && server ? (

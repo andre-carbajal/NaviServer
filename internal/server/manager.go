@@ -184,7 +184,7 @@ func (m *Manager) SaveServerIcon(id string, img image.Image) error {
 	}
 
 	dst := image.NewRGBA(image.Rect(0, 0, 64, 64))
-	draw.CatmullRom.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
+	draw.BiLinear.Scale(dst, dst.Bounds(), img, img.Bounds(), draw.Over, nil)
 
 	outFile, err := os.Create(filepath.Join(serverDir, "server-icon.png"))
 	if err != nil {

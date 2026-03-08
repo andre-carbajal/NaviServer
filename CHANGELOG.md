@@ -14,3 +14,5 @@
   - The folder structure is preserved upon upload using `webkitRelativePath` or recursive traversal for drag & drop.
   - Added a "Folder Up" icon for the new folder upload button in the toolbar.
   - Enabled drag & drop for folders, preserving the entire directory structure.
+- Server icon upload:
+  - Added automatic high-quality resizing to 64x64 on the backend, allowing users to upload images of any resolution as server icons.
