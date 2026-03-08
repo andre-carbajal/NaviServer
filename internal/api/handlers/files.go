@@ -142,6 +142,31 @@ func (h *FilesHandler) HandleDownloadFile(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	isDir := false
+	entries, err := h.Manager.ListFiles(id, filepath.Dir(path))
+	if err == nil {
+		_, name := filepath.Split(path)
+		for _, e := range entries {
+			if e.Name == name && e.IsDirectory {
+				isDir = true
+				break
+			}
+		}
+	}
+
+	_, filename := filepath.Split(path)
+
+	if isDir {
+		w.Header().Set("Content-Disposition", "attachment; filename="+filename+".zip")
+		w.Header().Set("Content-Type", "application/zip")
+		err := h.Manager.DownloadDirectory(id, path, w)
+		if err != nil {
+			// Too late for http.Error headers, but we can log it
+			return
+		}
+		return
+	}
+
 	fileReader, err := h.Manager.DownloadFile(id, path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -149,7 +174,6 @@ func (h *FilesHandler) HandleDownloadFile(w http.ResponseWriter, r *http.Request
 	}
 	defer fileReader.Close()
 
-	_, filename := filepath.Split(path)
 	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
 	w.Header().Set("Content-Type", "application/octet-stream")
 

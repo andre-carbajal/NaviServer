@@ -1,6 +1,7 @@
 package server
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"os"
@@ -174,6 +175,53 @@ func (m *Manager) DownloadFile(serverID, requestPath string) (io.ReadCloser, err
 	}
 
 	return os.Open(fullPath)
+}
+
+func (m *Manager) DownloadDirectory(serverID, requestPath string, w io.Writer) error {
+	fullPath, err := m.sanitizePath(serverID, requestPath)
+	if err != nil {
+		return err
+	}
+
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("path is not a directory")
+	}
+
+	archive := zip.NewWriter(w)
+	defer archive.Close()
+
+	return filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(fullPath, path)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		zipFile, err := archive.Create(relPath)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(zipFile, f)
+		return err
+	})
 }
 
 func (m *Manager) UploadFile(serverID, requestPath string, content io.Reader) error {

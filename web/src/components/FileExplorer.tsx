@@ -341,12 +341,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', file.name);
+      const downloadName = file.isDirectory ? `${file.name}.zip` : file.name;
+      link.setAttribute('download', downloadName);
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch {
-      alert('Failed to download file');
+      alert('Failed to download');
     }
   };
 
@@ -624,15 +625,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                           <Edit2 size={14} />
                         </button>
                       )}
-                      {!file.isDirectory && (
-                        <button
-                          onClick={() => handleDownload(file)}
-                          className="file-manage-btn"
-                          title="Download"
-                        >
-                          <Download size={14} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDownload(file)}
+                        className="file-manage-btn"
+                        title="Download"
+                      >
+                        <Download size={14} />
+                      </button>
                       <button
                         onClick={() => handleDelete(file)}
                         className="file-manage-btn delete"
