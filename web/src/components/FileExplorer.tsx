@@ -6,6 +6,7 @@ import {
   Edit2,
   File as FileIcon,
   Folder,
+  FolderUp,
   Home,
   Loader2,
   Plus,
@@ -34,6 +35,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   const [newDirName, setNewDirName] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const folderInputRef = React.useRef<HTMLInputElement>(null);
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -156,13 +158,42 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const uploadFiles = async (files: FileList | File[]) => {
-    if (!files.length) return;
+  const uploadFiles = async (filesToUpload: FileList | File[]) => {
+    if (!filesToUpload.length) return;
+
+    // Check if we are uploading a folder (using button)
+    const foldersToUpload = new Set<string>();
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const relativePath = (filesToUpload[i] as any).webkitRelativePath;
+      if (relativePath) {
+        const rootFolder = relativePath.split('/')[0];
+        if (rootFolder) foldersToUpload.add(rootFolder);
+      }
+    }
+
+    for (const folderName of foldersToUpload) {
+      // Use the 'files' state (existing files) to check for duplicates
+      if (files.some((f) => f.name === folderName && f.isDirectory)) {
+        alert(
+          `A folder named "${folderName}" already exists. Please delete it or rename it before uploading.`,
+        );
+        return;
+      }
+    }
+
+    const confirmMessage =
+      filesToUpload.length === 1
+        ? `Are you sure you want to upload ${filesToUpload[0].name}?`
+        : `Are you sure you want to upload ${filesToUpload.length} items?`;
+
+    if (!confirm(confirmMessage)) return;
+
     setUploading(true);
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        await api.uploadFile(serverId, currentPath, file);
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        const relativePath = (file as any).webkitRelativePath;
+        await api.uploadFile(serverId, currentPath, file, relativePath);
       }
       loadFiles();
     } catch (err: unknown) {
@@ -183,10 +214,21 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     fileInputRef.current?.click();
   };
 
+  const handleFolderClick = () => {
+    folderInputRef.current?.click();
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       await uploadFiles(e.target.files);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFolderChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) {
+      await uploadFiles(e.target.files);
+      if (folderInputRef.current) folderInputRef.current.value = '';
     }
   };
 
@@ -207,8 +249,87 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     e.stopPropagation();
     setIsDragging(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      await uploadFiles(e.dataTransfer.files);
+    const items = e.dataTransfer.items;
+    if (!items) return;
+
+    // Check for existing folders before processing
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry();
+      if (entry && entry.isDirectory) {
+        if (files.some((f) => f.name === entry.name && f.isDirectory)) {
+          alert(
+            `A folder named "${entry.name}" already exists. Please delete it or rename it before uploading.`,
+          );
+          return;
+        }
+      }
+    }
+
+    const confirmMessage =
+      items.length === 1
+        ? `Are you sure you want to upload the dropped item?`
+        : `Are you sure you want to upload ${items.length} dropped items?`;
+
+    if (!confirm(confirmMessage)) return;
+
+    const filesToUpload: { file: File; relativePath?: string }[] = [];
+
+    const traverseFileTree = async (entry: any, path: string = '') => {
+      if (entry.isFile) {
+        const file = await new Promise<File>((resolve) => entry.file(resolve));
+        filesToUpload.push({
+          file,
+          relativePath: path ? `${path}/${file.name}` : undefined,
+        });
+      } else if (entry.isDirectory) {
+        const dirReader = entry.createReader();
+        const entries = await new Promise<any[]>((resolve) => {
+          dirReader.readEntries(resolve);
+        });
+        for (const childEntry of entries) {
+          await traverseFileTree(
+            childEntry,
+            path ? `${path}/${entry.name}` : entry.name,
+          );
+        }
+      }
+    };
+
+    const promises = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+          promises.push(traverseFileTree(entry));
+        }
+      }
+    }
+
+    setUploading(true);
+    await Promise.all(promises);
+
+    try {
+      for (const item of filesToUpload) {
+        await api.uploadFile(
+          serverId,
+          currentPath,
+          item.file,
+          item.relativePath,
+        );
+      }
+      loadFiles();
+    } catch (err: unknown) {
+      let errorMessage = 'Failed to upload files';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as AxiosError<string>;
+        errorMessage = axiosError.response?.data || errorMessage;
+      }
+      alert(errorMessage);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -350,11 +471,30 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
               <Upload size={16} />
             )}
           </button>
+          <button
+            onClick={handleFolderClick}
+            className="toolbar-btn"
+            title="Upload Folder"
+            disabled={uploading}
+          >
+            {uploading ? (
+              <Loader2 size={16} className="spin" />
+            ) : (
+              <FolderUp size={16} />
+            )}
+          </button>
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
             style={{ display: 'none' }}
+          />
+          <input
+            type="file"
+            ref={folderInputRef}
+            onChange={handleFolderChange}
+            style={{ display: 'none' }}
+            {...({ webkitdirectory: '', directory: '' } as any)}
           />
         </div>
       </div>

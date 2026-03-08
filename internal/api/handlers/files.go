@@ -182,6 +182,10 @@ func (h *FilesHandler) HandleUploadFile(w http.ResponseWriter, r *http.Request) 
 	defer file.Close()
 
 	targetPath := filepath.Join(dirPath, header.Filename)
+	relativePath := r.URL.Query().Get("relative_path")
+	if relativePath != "" {
+		targetPath = filepath.Join(dirPath, relativePath)
+	}
 
 	if err := h.Manager.UploadFile(id, targetPath, file); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

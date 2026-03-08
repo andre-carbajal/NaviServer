@@ -156,11 +156,16 @@ export const api = {
       params: { path },
       responseType: 'blob',
     }),
-  uploadFile: (serverId: string, path: string, file: File) => {
+  uploadFile: (
+    serverId: string,
+    path: string,
+    file: File,
+    relativePath?: string,
+  ) => {
     const formData = new FormData();
     formData.append('file', file);
     return apiInstance.post(`/servers/${serverId}/files/upload`, formData, {
-      params: { path },
+      params: { path, relative_path: relativePath },
       headers: {
         'Content-Type': 'multipart/form-data',
       },
