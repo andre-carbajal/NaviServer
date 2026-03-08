@@ -13,8 +13,17 @@ const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (username.includes(' ')) {
+      setUsernameError('Username cannot contain spaces');
+    } else {
+      setUsernameError('');
+    }
+  }, [username]);
 
   useEffect(() => {
     const checkSetupStatus = async () => {
@@ -39,6 +48,11 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (username.includes(' ')) {
+      setError('Username cannot contain spaces');
+      return;
+    }
 
     try {
       let response;
@@ -77,6 +91,11 @@ const Login: React.FC = () => {
               onChange={(e) => setUsername(e.target.value)}
               required
             />
+            {usernameError && (
+              <div className="error-message" style={{ marginTop: '5px' }}>
+                {usernameError}
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label>Password</label>
@@ -87,7 +106,11 @@ const Login: React.FC = () => {
               required
             />
           </div>
-          <button type="submit" className="btn-primary">
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={!!usernameError}
+          >
             {isSetup ? 'Create Admin Account' : 'Login'}
           </button>
         </form>

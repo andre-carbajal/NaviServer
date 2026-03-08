@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"naviger/internal/domain"
@@ -114,6 +115,11 @@ func (h *AuthHandler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 
 	if req.Username == "" || req.Password == "" {
 		http.Error(w, "Username and password required", http.StatusBadRequest)
+		return
+	}
+
+	if strings.Contains(req.Username, " ") {
+		http.Error(w, "Username cannot contain spaces", http.StatusBadRequest)
 		return
 	}
 

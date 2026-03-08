@@ -14,11 +14,26 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (username.includes(' ')) {
+      setUsernameError('Username cannot contain spaces');
+    } else {
+      setUsernameError('');
+    }
+  }, [username]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (username.includes(' ')) {
+      setError('Username cannot contain spaces');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,6 +70,11 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
               onChange={(e) => setUsername(e.target.value)}
               required
             />
+            {usernameError && (
+              <div className="error-message" style={{ marginTop: '5px' }}>
+                {usernameError}
+              </div>
+            )}
           </div>
           <div className="form-group">
             <label>Password</label>
@@ -79,7 +99,7 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loading}
+              disabled={loading || !!usernameError}
             >
               {loading ? 'Creating...' : 'Create User'}
             </button>
