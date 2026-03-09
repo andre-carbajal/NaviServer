@@ -30,6 +30,19 @@ instances easy through an intuitive web interface, a powerful CLI, and clean ope
 - Performance Statistics: Monitoring of CPU and RAM usage per server.
 - Cross-Platform: Runs on Windows, macOS, and Linux.
 
+## 📥 Installation
+
+### macOS (Homebrew Cask)
+
+```bash
+brew tap andre-carbajal/homebrew-tap
+brew install --cask naviger
+```
+
+### Other Platforms
+
+Download the release asset for your platform from GitHub Releases and follow the bundled installer or launch the binary.
+
 ## 🐞 Bugs & Feedback
 
 If you encounter any issues or have suggestions for improvements, please visit
