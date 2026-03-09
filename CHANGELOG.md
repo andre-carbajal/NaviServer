@@ -20,6 +20,8 @@
   - Added command history in the server console: users can now navigate through previously entered commands using the Up and Down arrow keys (note: this history is local to the current session and is lost upon reloading or leaving the page).
   - Implemented automatic log buffer clearing in the backend when a server stops, ensuring a clean state for the next session.
   - The command history is automatically cleared when the server is stopped for enhanced security and session isolation.
+- Dashboard Improvements:
+  - Enhanced RAM usage display in the server list: now shows both current usage and maximum allocated memory (e.g., "1.2 GB / 4.0 GB") even when the server is stopped.
 
 ### Fixed
 - Server icon upload: Added automatic high-quality resizing to 64x64 on the backend, allowing users to upload images of any resolution as server icons.
