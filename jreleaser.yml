@@ -55,3 +55,4 @@ files:
   artifacts:
     - path: build/Naviger-{{projectVersion}}-linux.zip
     - path: build/Naviger-{{projectVersion}}-macos.zip
+    - path: build/Naviger-{{projectVersion}}-windows.zip

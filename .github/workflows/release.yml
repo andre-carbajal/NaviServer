@@ -90,6 +90,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path build
           Copy-Item "Output/Naviger-${{ env.MYAPP_VERSION }}-windows.exe" "build/Naviger-${VERSION}-windows.exe"
 
+          # Create ZIP archive for Windows
+          $ZIP_NAME = "Naviger-${VERSION}-windows.zip"
+          Compress-Archive -Path "dist/*" -DestinationPath "build/$ZIP_NAME" -Force
+
       - name: Create Zip Archive (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
