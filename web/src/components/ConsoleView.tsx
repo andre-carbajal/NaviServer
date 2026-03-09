@@ -2,7 +2,7 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface ConsoleViewProps {
   logs: string[];
@@ -12,6 +12,7 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ logs }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const [terminalReady, setTerminalReady] = useState(false);
 
   const lastLogIndexRef = useRef(0);
 
@@ -34,54 +35,65 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ logs }) => {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
 
-    term.open(terminalRef.current);
-    xtermRef.current = term;
-    fitAddonRef.current = fitAddon;
+    let isOpened = false;
 
-    const performFit = () => {
-      if (!xtermRef.current || !terminalRef.current) return;
+    const openTerminal = () => {
+      if (isOpened || !terminalRef.current) return;
 
-      if (terminalRef.current.clientHeight === 0) return;
-
-      fitAddon.fit();
+      if (
+        terminalRef.current.clientWidth > 0 &&
+        terminalRef.current.clientHeight > 0
+      ) {
+        try {
+          term.open(terminalRef.current);
+          fitAddon.fit();
+          xtermRef.current = term;
+          fitAddonRef.current = fitAddon;
+          setTerminalReady(true);
+          isOpened = true;
+        } catch (e) {
+          console.error('Failed to open terminal:', e);
+        }
+      }
     };
 
-    const resizeObserver = new ResizeObserver(() => {
-      requestAnimationFrame(() => performFit());
+    const ro = new ResizeObserver(() => {
+      if (!isOpened) {
+        openTerminal();
+      } else {
+        try {
+          fitAddon.fit();
+        } catch (e) {}
+      }
     });
-    resizeObserver.observe(terminalRef.current);
+    ro.observe(terminalRef.current);
 
-    const handleWindowResize = () => performFit();
-    window.addEventListener('resize', handleWindowResize);
-
-    setTimeout(() => performFit(), 50);
+    const timer = setTimeout(openTerminal, 50);
 
     return () => {
-      window.removeEventListener('resize', handleWindowResize);
-      resizeObserver.disconnect();
-
+      clearTimeout(timer);
+      ro.disconnect();
       xtermRef.current = null;
       fitAddonRef.current = null;
-
       try {
         term.dispose();
-      } catch (e) {
-        console.warn('Error disposing terminal:', e);
-      }
+      } catch (e) {}
     };
   }, []);
 
   useEffect(() => {
     const term = xtermRef.current;
-    if (!term) return;
+    if (!term || !terminalReady) return;
 
-    const newLogs = logs.slice(lastLogIndexRef.current);
-    if (newLogs.length > 0) {
-      newLogs.forEach((line) => term.writeln(line));
-
+    if (logs.length > lastLogIndexRef.current) {
+      const newLogs = logs.slice(lastLogIndexRef.current);
+      newLogs.forEach((line) => {
+        term.writeln(line);
+      });
       lastLogIndexRef.current = logs.length;
+      term.scrollToBottom();
     }
-  }, [logs]);
+  }, [logs, terminalReady]);
 
   return (
     <div className="console-view">

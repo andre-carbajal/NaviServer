@@ -34,6 +34,8 @@ const ServerDetail: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [commandInput, setCommandInput] = useState('');
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const [iconError, setIconError] = useState(false);
   const [iconRefreshKey, setIconRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<'console' | 'files'>('console');
@@ -89,6 +91,13 @@ const ServerDetail: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchServer]);
 
+  useEffect(() => {
+    if (server?.status === 'STOPPED') {
+      setCommandHistory([]);
+      setHistoryIndex(-1);
+    }
+  }, [server?.status]);
+
   const handleStart = async () => {
     if (!server) return;
     try {
@@ -142,8 +151,34 @@ const ServerDetail: React.FC = () => {
   const handleCommandSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
+
+    // Add to history
+    setCommandHistory((prev) => [commandInput, ...prev]);
+    setHistoryIndex(-1);
+
     sendCommand(commandInput);
     setCommandInput('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (historyIndex < commandHistory.length - 1) {
+        const nextIndex = historyIndex + 1;
+        setHistoryIndex(nextIndex);
+        setCommandInput(commandHistory[nextIndex]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const nextIndex = historyIndex - 1;
+        setHistoryIndex(nextIndex);
+        setCommandInput(commandHistory[nextIndex]);
+      } else if (historyIndex === 0) {
+        setHistoryIndex(-1);
+        setCommandInput('');
+      }
+    }
   };
 
   if (loading) return <div>Loading...</div>;
@@ -269,7 +304,7 @@ const ServerDetail: React.FC = () => {
 
       <div
         style={{
-          display: activeTab === 'console' ? 'block' : 'none',
+          display: activeTab === 'console' ? 'flex' : 'none',
           flex: 1,
           flexDirection: 'column',
           gap: '15px',
@@ -416,6 +451,7 @@ const ServerDetail: React.FC = () => {
               type="text"
               value={commandInput}
               onChange={(e) => setCommandInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="form-input"
               placeholder="Type a command..."
               disabled={!isConnected}

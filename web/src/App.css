@@ -529,6 +529,7 @@ nav {
 .console-view {
   height: 100%;
   width: 100%;
+  min-height: 300px;
   background-color: #1e1e1e;
   padding: 10px;
   border-radius: 8px;

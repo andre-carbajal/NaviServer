@@ -12,6 +12,8 @@ export const useConsole = (serverId: string) => {
   useEffect(() => {
     if (!serverId || !token) return;
 
+    setLogs([]);
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${WS_HOST}/ws/servers/${serverId}/console?token=${token}`;
 
@@ -24,7 +26,11 @@ export const useConsole = (serverId: string) => {
     };
 
     ws.current.onmessage = (event) => {
-      setLogs((prev) => [...prev, event.data]);
+      const data = event.data;
+      if (typeof data === 'string') {
+        const lines = data.split(/\r?\n/).filter((line) => line.length > 0);
+        setLogs((prev) => [...prev, ...lines]);
+      }
     };
 
     ws.current.onclose = () => {
@@ -38,7 +44,15 @@ export const useConsole = (serverId: string) => {
     };
 
     return () => {
-      ws.current?.close(1000, 'Component unmounted');
+      if (ws.current) {
+        if (ws.current.readyState === WebSocket.CONNECTING) {
+          const currentWs = ws.current;
+          currentWs.onopen = () => currentWs.close(1000, 'Cleanup');
+        } else {
+          ws.current.close(1000, 'Component unmounted');
+        }
+        ws.current = null;
+      }
     };
   }, [serverId, token]);
 
