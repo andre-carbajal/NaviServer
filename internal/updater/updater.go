@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-const (
-	CurrentVersion = "v1.13.0"
+var (
+	CurrentVersion = "dev"
 	RepoOwner      = "andre-carbajal"
 	RepoName       = "naviger"
 )

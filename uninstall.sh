@@ -18,9 +18,7 @@ Options:
   -y, --yes    Don't prompt, run non-interactively
   -h, --help   Show this help message
 
-This script must be run as root (use sudo).
-It will attempt to stop and remove the Naviger systemd service (Linux) or launchd agent (macOS),
-remove installation directory (${INSTALL_DIR}), and remove symlinks in ${BIN_DIR}.
+This script will request sudo only when required to remove system files.
 EOF
 }
 
@@ -34,10 +32,13 @@ for arg in "$@"; do
   esac
 done
 
-if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-  echo "This script must be run as root. Use sudo ./uninstall.sh"
-  exit 1
-fi
+run_sudo() {
+  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
 
 REAL_USER="${SUDO_USER:-$USER}"
 if [ -z "$REAL_USER" ]; then
@@ -67,54 +68,45 @@ if [ "$OS_TYPE" = "linux" ]; then
   if command -v systemctl >/dev/null 2>&1; then
     if systemctl is-active --quiet naviger; then
       echo "Stopping naviger service..."
-      systemctl stop naviger || true
+      run_sudo systemctl stop naviger || true
     fi
 
     if systemctl is-enabled --quiet naviger 2>/dev/null; then
       echo "Disabling naviger service..."
-      systemctl disable naviger || true
+      run_sudo systemctl disable naviger || true
     fi
 
     if [ -f "$SERVICE_FILE" ]; then
       echo "Removing systemd service file ${SERVICE_FILE}..."
-      rm -f "$SERVICE_FILE"
+      run_sudo rm -f "$SERVICE_FILE"
       echo "Reloading systemd daemon..."
-      systemctl daemon-reload || true
+      run_sudo systemctl daemon-reload || true
     fi
 
     # Also check for user service just in case
-    if sudo -u "$REAL_USER" systemctl --user is-active --quiet naviger 2>/dev/null; then
+    if systemctl --user is-active --quiet naviger 2>/dev/null; then
         echo "Stopping user service..."
-        sudo -u "$REAL_USER" systemctl --user stop naviger || true
-        sudo -u "$REAL_USER" systemctl --user disable naviger || true
+        systemctl --user stop naviger || true
+        systemctl --user disable naviger || true
     fi
   else
     echo "systemctl not found; skipping systemd cleanup."
   fi
 
-  # Remove desktop entry if it exists
-  DESKTOP_FILE="/home/$REAL_USER/.local/share/applications/naviger.desktop"
+  # Remove desktop entry if it exists (user-owned, no sudo needed)
+  DESKTOP_FILE="$HOME/.local/share/applications/naviger.desktop"
   if [ -f "$DESKTOP_FILE" ]; then
       echo "Removing desktop entry..."
       rm -f "$DESKTOP_FILE"
   fi
 
 elif [ "$OS_TYPE" = "macos" ]; then
-  # Determine user's home (when run as sudo the SUDO_USER is the original user)
-  if [ "$REAL_USER" = "root" ]; then
-    USER_HOME="/var/root"
-  else
-    USER_HOME="/Users/$REAL_USER"
-  fi
+  USER_HOME="$HOME"
   PLIST_FILE="$USER_HOME/Library/LaunchAgents/${PLIST_NAME}"
 
   if [ -f "$PLIST_FILE" ]; then
     echo "Unloading launchd agent $PLIST_FILE..."
-    if [ "$REAL_USER" != "root" ]; then
-      sudo -u "$REAL_USER" launchctl unload "$PLIST_FILE" 2>/dev/null || true
-    else
-      launchctl unload "$PLIST_FILE" 2>/dev/null || true
-    fi
+    launchctl unload "$PLIST_FILE" 2>/dev/null || true
 
     echo "Removing plist file..."
     rm -f "$PLIST_FILE"
@@ -122,47 +114,64 @@ elif [ "$OS_TYPE" = "macos" ]; then
     echo "No launchd agent plist found at $PLIST_FILE"
   fi
 
-  # Remove App Bundle if installed in Applications
+  # Remove App Bundle from system Applications (needs sudo)
   APP_PATH="/Applications/Naviger.app"
   if [ -d "$APP_PATH" ]; then
-      echo "Removing Naviger.app from Applications..."
-      rm -rf "$APP_PATH"
+      echo "Removing Naviger.app from /Applications (requires sudo)..."
+      run_sudo rm -rf "$APP_PATH"
   fi
 
+  # Remove App Bundle from user Applications (no sudo needed)
   USER_APP_PATH="$USER_HOME/Applications/Naviger.app"
   if [ -d "$USER_APP_PATH" ]; then
       echo "Removing Naviger.app from user Applications..."
       rm -rf "$USER_APP_PATH"
   fi
+
+  # Remove naviger-cli from /usr/local/bin (needs sudo)
+  if [ -f "${BIN_DIR}/naviger-cli" ] || [ -L "${BIN_DIR}/naviger-cli" ]; then
+      echo "Removing ${BIN_DIR}/naviger-cli (requires sudo)..."
+      run_sudo rm -f "${BIN_DIR}/naviger-cli" || true
+  fi
+
+  # Remove PATH entry added by PKG (needs sudo)
+  if [ -f "/etc/paths.d/naviger" ]; then
+      echo "Removing /etc/paths.d/naviger (requires sudo)..."
+      run_sudo rm -f "/etc/paths.d/naviger" || true
+  fi
+
+  # Forget PKG receipt (needs sudo)
+  PKG_ID="com.naviger.server"
+  if pkgutil --pkg-info "$PKG_ID" >/dev/null 2>&1; then
+      echo "Removing PKG receipt for ${PKG_ID} (requires sudo)..."
+      run_sudo pkgutil --forget "$PKG_ID" || true
+  fi
 fi
 
-# Remove symlinks (only if they point to the install dir or exist)
-echo "Removing symlinks in ${BIN_DIR}..."
-if [ -L "${BIN_DIR}/naviger-cli" ] || [ -e "${BIN_DIR}/naviger-cli" ]; then
-  rm -f "${BIN_DIR}/naviger-cli" || true
-  echo "Removed ${BIN_DIR}/naviger-cli"
-fi
-if [ -L "${BIN_DIR}/naviger-server" ] || [ -e "${BIN_DIR}/naviger-server" ]; then
-  rm -f "${BIN_DIR}/naviger-server" || true
-  echo "Removed ${BIN_DIR}/naviger-server"
+# Remove symlinks in BIN_DIR (Linux only; needs sudo)
+if [ "$OS_TYPE" = "linux" ]; then
+  echo "Removing symlinks in ${BIN_DIR} (requires sudo)..."
+  if [ -L "${BIN_DIR}/naviger-cli" ] || [ -e "${BIN_DIR}/naviger-cli" ]; then
+    run_sudo rm -f "${BIN_DIR}/naviger-cli" || true
+    echo "Removed ${BIN_DIR}/naviger-cli"
+  fi
+  if [ -L "${BIN_DIR}/naviger-server" ] || [ -e "${BIN_DIR}/naviger-server" ]; then
+    run_sudo rm -f "${BIN_DIR}/naviger-server" || true
+    echo "Removed ${BIN_DIR}/naviger-server"
+  fi
 fi
 
-# Remove installation directory
+# Remove installation directory (needs sudo)
 if [ -d "$INSTALL_DIR" ]; then
-  echo "Removing installation directory ${INSTALL_DIR}..."
-  rm -rf "$INSTALL_DIR" || true
+  echo "Removing installation directory ${INSTALL_DIR} (requires sudo)..."
+  run_sudo rm -rf "$INSTALL_DIR" || true
   echo "Removed ${INSTALL_DIR}"
 else
   echo "No installation directory found at ${INSTALL_DIR}"
 fi
 
-# Additional cleanup: logs in /tmp
-if [ -f "/tmp/naviger.out" ]; then
-  rm -f /tmp/naviger.out || true
-fi
-if [ -f "/tmp/naviger.err" ]; then
-  rm -f /tmp/naviger.err || true
-fi
+# Additional cleanup: logs in /tmp (user-owned, no sudo needed)
+rm -f /tmp/naviger.out /tmp/naviger.err 2>/dev/null || true
 
 echo "Uninstall complete."
 

@@ -16,10 +16,8 @@ jobs:
             name: linux
           - os: windows-latest
             name: windows
-          - os: macos-15-intel
-            name: macos-x64
           - os: macos-latest
-            name: macos-arm64
+            name: macos
 
     steps:
       - name: Checkout code
@@ -28,34 +26,45 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.6'
+          go-version: "1.25.6"
           check-latest: true
 
       - name: Install Linux Dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc libgtk-3-dev libayatana-appindicator3-dev
+          sudo apt-get install -y gcc libgtk-3-dev libayatana-appindicator3-dev dpkg
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: web/package-lock.json
 
       - name: Vet Go code
+        env:
+          CGO_ENABLED: 1
         run: go vet ./...
 
       - name: Build (Linux/macOS)
         if: runner.os != 'Windows'
+        env:
+          CGO_ENABLED: 1
         run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          export NAVIGER_VERSION="${VERSION}"
           chmod +x build.sh
           ./build.sh
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
-        run: .\build.bat
+        run: |
+          set VERSION=${{ github.ref_name }}
+          set VERSION=%VERSION:v=%
+          set NAVIGER_VERSION=%VERSION%
+          .\build.bat
         env:
           CGO_ENABLED: 1
         shell: cmd
@@ -80,31 +89,47 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $VERSION = "${{ github.event.inputs.version || github.ref_name }}"
+          $VERSION = "${{ github.ref_name }}"
+          if ($VERSION -like 'v*') { $VERSION = $VERSION.Substring(1) }
           New-Item -ItemType Directory -Force -Path build
           Copy-Item "Output/Naviger-${{ env.MYAPP_VERSION }}-windows.exe" "build/Naviger-${VERSION}-windows.exe"
+          $ZIP_NAME = "Naviger-${VERSION}-windows.zip"
+          Compress-Archive -Path "dist/*" -DestinationPath "build/$ZIP_NAME" -Force
 
       - name: Create Zip Archive (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          
-          mkdir -p "build/${{ matrix.name }}"
-          cp -r dist/* "build/${{ matrix.name }}/"
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          mkdir -p "build/binaries"
 
-          BUILD_DIR="build/${{ matrix.name }}"
+          if [ "${{ matrix.name }}" = "macos" ]; then
+            if ls dist/*.pkg >/dev/null 2>&1; then
+              cp dist/*.pkg build/
+            fi
+            cp -R dist/Naviger.app "build/binaries/"
+            cp dist/naviger-cli "build/binaries/" 2>/dev/null || true
+            cp dist/naviger-server "build/binaries/" 2>/dev/null || true
+            cp -R dist/web_dist "build/binaries/" 2>/dev/null || true
+          elif [ "${{ matrix.name }}" = "linux" ]; then
+            if ls dist/*.deb >/dev/null 2>&1; then
+              cp dist/*.deb build/
+            fi
+            find dist -maxdepth 1 ! -name "*.deb" ! -name "dist" | xargs -I{} cp -r {} "build/binaries/"
+          else
+            cp -r dist/* "build/binaries/"
+          fi
+
           ZIP_NAME="Naviger-${VERSION}-${{ matrix.name }}.zip"
-          
-          cd "$BUILD_DIR"
-          zip -r "../../build/${ZIP_NAME}" ./*
+          cd "build/binaries"
+          zip -r "../${ZIP_NAME}" ./*
         shell: bash
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-build
-          path: |
-            build/Naviger-*.*
+          path: build/Naviger-*.*
 
   release:
     needs: build-native
@@ -119,14 +144,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: build
+          merge-multiple: true
 
-      - name: Upload Release Assets
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/**/*-build/Naviger-*.zip
-            build/**/*-build/Naviger-*.exe
-          tag_name: ${{ github.event.inputs.version || github.ref_name }}
-          name: Naviger ${{ github.event.inputs.version || github.ref_name }}
-          body_path: CHANGELOG.md
-          token: ${{ secrets.GITHUB_TOKEN }}
+          files: build/Naviger-*.*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
