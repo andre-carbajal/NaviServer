@@ -129,7 +129,7 @@ EOF
 
         PKG_NAME="Naviger-${VERSION}-macos.pkg"
         echo "Creating PKG ${PKG_NAME}..."
-        pkgbuild --root "${PKG_ROOT}" --install-location / --identifier "com.naviger.server" --version "${VERSION}" "dist/${PKG_NAME}" > /dev/null
+        pkgbuild --root "${PKG_ROOT}" --install-location / --identifier "com.naviger.server" --version "${VERSION}" "dist/${PKG_NAME}"
 
         rm -rf "${PKG_ROOT}"
     fi
