@@ -170,4 +170,5 @@ jobs:
           arguments: full-release
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          JRELEASER_PROJECT_VERSION: ${{ steps.version.outputs.VERSION }}
           SNAPCRAFT_BUILD_ENVIRONMENT: host

@@ -57,6 +57,7 @@ distributions:
         platform: windows-x86_64
         extraProperties:
           skipWinget: true
+          skipScoop: false
 
     brew:
       active: ALWAYS
@@ -94,15 +95,6 @@ distributions:
         name: AndreCarbajal
         url: https://github.com/andre-carbajal
         supportUrl: https://github.com/andre-carbajal/Naviger/issues
-      repository:
-        owner: andre-carbajal
-        name: packages
-
-    chocolatey:
-      active: ALWAYS
-      remoteBuild: false
-      title: Naviger
-      iconUrl: https://raw.githubusercontent.com/andre-carbajal/Naviger/main/cmd/server/icon.png
       repository:
         owner: andre-carbajal
         name: packages
