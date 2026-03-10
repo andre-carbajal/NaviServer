@@ -3,6 +3,7 @@ project:
   version: 1.12.1
   description: Modern Minecraft Server Manager
   longDescription: Naviger is a lightweight, cross-platform Minecraft server manager with Web UI, CLI, and native integration.
+  copyright: 2026 Andre Carbajal
   links:
     homepage: https://github.com/andre-carbajal/Naviger
     license: https://github.com/andre-carbajal/Naviger/blob/main/LICENSE
@@ -61,6 +62,9 @@ distributions:
 
     brew:
       active: ALWAYS
+      extraProperties:
+        skipCaskDisplayNameTransform: true
+      formulaName: Naviger
       repository:
         owner: andre-carbajal
         name: packages
@@ -68,6 +72,7 @@ distributions:
         enabled: true
         name: naviger
         displayName: Naviger
+        appName: Naviger.app
         pkgName: Naviger-{{projectVersion}}-macos.pkg
         uninstall:
           pkgutil:
