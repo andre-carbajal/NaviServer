@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+      dry_run:
+        description: 'Dry run (do not upload/publish)'
+        type: boolean
+        default: true
 
 jobs:
   build-native:
@@ -69,7 +78,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REF_NAME: ${{ github.event.inputs.version || github.ref_name }}
         run: |
           $v = $env:GITHUB_REF_NAME
           if ($v -like 'v*') { $v = $v.Substring(1) }
@@ -162,9 +171,21 @@ jobs:
       - name: Set release version
         id: version
         run: |
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
           VERSION="${VERSION#v}"
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Install Snapcraft
+        run: |
+          sudo snap install snapcraft --classic
+          sudo snap install core22
+
+      - name: Write Snapcraft credentials
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          printf '%s' "$SNAPCRAFT_STORE_CREDENTIALS" > /tmp/snapcraft.login
+          chmod 600 /tmp/snapcraft.login
 
       - name: Build packages
         uses: jreleaser/release-action@v2
@@ -172,10 +193,12 @@ jobs:
           arguments: package
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          SNAPCRAFT_BUILD_ENVIRONMENT: host
 
       - name: Release and publish
         uses: jreleaser/release-action@v2
         with:
-          arguments: full-release
+          arguments: ${{ (github.event.inputs.dry_run == 'true' || github.event.inputs.dry_run == true) && 'release --dry-run' || 'full-release' }}
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          SNAPCRAFT_BUILD_ENVIRONMENT: host

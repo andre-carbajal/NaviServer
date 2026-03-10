@@ -10,7 +10,7 @@ project:
   authors:
     - Andre Carbajal
   license: MIT
-  inceptionYear: "2026"
+  inceptionYear: 2026
   languages:
     java:
       enabled: false
@@ -30,6 +30,12 @@ release:
 distributions:
   naviger:
     type: NATIVE_PACKAGE
+    tags:
+      - minecraft
+      - server-manager
+      - admin-tool
+      - go
+      - react
     artifacts:
       - path: build/Naviger-{{projectVersion}}-linux.deb
         platform: linux-x86_64
@@ -37,11 +43,26 @@ distributions:
         platform: osx
       - path: build/Naviger-{{projectVersion}}-windows.exe
         platform: windows-x86_64
+        extraProperties:
+          skipScoop: true
+      - path: build/Naviger-{{projectVersion}}-linux.zip
+        platform: linux-x86_64
+        extraProperties:
+          skipSnap: true
+      - path: build/Naviger-{{projectVersion}}-macos.zip
+        platform: osx
+        extraProperties:
+          skipBrew: true
+      - path: build/Naviger-{{projectVersion}}-windows.zip
+        platform: windows-x86_64
+        extraProperties:
+          skipWinget: true
+
     brew:
       active: ALWAYS
       repository:
         owner: andre-carbajal
-        name: homebrew-tap
+        name: packages
       cask:
         enabled: true
         name: naviger
@@ -50,9 +71,73 @@ distributions:
         uninstall:
           pkgutil:
             - com.naviger.server
+        zap:
+          trash:
+            - /Applications/Naviger.app
+            - /usr/local/bin/naviger-cli
+            - /etc/paths.d/naviger
+            - ~/Library/Logs/Naviger
+            - "~/Library/Application Support/Naviger"
 
-files:
-  artifacts:
-    - path: build/Naviger-{{projectVersion}}-linux.zip
-    - path: build/Naviger-{{projectVersion}}-macos.zip
-    - path: build/Naviger-{{projectVersion}}-windows.zip
+    scoop:
+      active: ALWAYS
+      repository:
+        owner: andre-carbajal
+        name: packages
+
+    winget:
+      active: ALWAYS
+      package:
+        identifier: AndreCarbajal.Naviger
+        name: Naviger
+      publisher:
+        name: AndreCarbajal
+        url: https://github.com/andre-carbajal
+        supportUrl: https://github.com/andre-carbajal/Naviger/issues
+      repository:
+        owner: andre-carbajal
+        name: packages
+
+    chocolatey:
+      active: ALWAYS
+      remoteBuild: false
+      title: Naviger
+      iconUrl: https://raw.githubusercontent.com/andre-carbajal/Naviger/main/cmd/server/icon.png
+      repository:
+        owner: andre-carbajal
+        name: packages
+
+    snap:
+      active: ALWAYS
+      packageName: naviger
+      base: core22
+      grade: stable
+      confinement: strict
+      localPlugs:
+        - network
+        - home
+      exportedLogin: /tmp/snapcraft.login
+      repository:
+        owner: andre-carbajal
+        name: packages
+
+    flatpak:
+      active: ALWAYS
+      componentId: com.naviger.Naviger
+      developerName: Andre Carbajal
+      runtime: FREEDESKTOP
+      runtimeVersion: "23.08"
+      finishArgs:
+        - --share=network
+        - --share=ipc
+        - --socket=fallback-x11
+        - --socket=wayland
+        - --device=dri
+        - --filesystem=home
+      icons:
+        - url: https://raw.githubusercontent.com/andre-carbajal/Naviger/main/cmd/server/icon.png
+          width: 512
+          height: 512
+      repository:
+        owner: andre-carbajal
+        name: packages
