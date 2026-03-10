@@ -145,17 +145,12 @@ jobs:
           path: build
           merge-multiple: true
 
-      - name: Set release version
-        id: version
+      - name: Sychronize Version
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Debug Artifacts
-        run: |
-          echo "Listing build directory contents:"
-          ls -R build
+          echo "Updating jreleaser.yml version to ${VERSION}"
+          sed -i "s/version: .*/version: ${VERSION}/" jreleaser.yml
 
       - name: Install Snapcraft
         run: |
@@ -175,5 +170,4 @@ jobs:
           arguments: full-release
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
-          JRELEASER_PROJECT_VERSION: ${{ steps.version.outputs.VERSION }}
           SNAPCRAFT_BUILD_ENVIRONMENT: host
