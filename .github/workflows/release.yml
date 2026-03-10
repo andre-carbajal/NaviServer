@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release'
+        description: 'Version to release (e.g. 1.12.1)'
         required: true
+        default: '1.12.1'
       dry_run:
         description: 'Dry run (do not upload/publish)'
         type: boolean
@@ -98,8 +99,6 @@ jobs:
           if ($VERSION -like 'v*') { $VERSION = $VERSION.Substring(1) }
           New-Item -ItemType Directory -Force -Path build
           Copy-Item "Output/Naviger-${{ env.MYAPP_VERSION }}-windows.exe" "build/Naviger-${VERSION}-windows.exe"
-
-          # Create ZIP archive for Windows
           $ZIP_NAME = "Naviger-${VERSION}-windows.zip"
           Compress-Archive -Path "dist/*" -DestinationPath "build/$ZIP_NAME" -Force
 
@@ -111,34 +110,23 @@ jobs:
           mkdir -p "build/binaries"
 
           if [ "${{ matrix.name }}" = "macos" ]; then
-            # Copiar .pkg a build/ por separado
             if ls dist/*.pkg >/dev/null 2>&1; then
               cp dist/*.pkg build/
             fi
-            # El ZIP incluye el .app bundle (que ya contiene web_dist dentro) y el CLI
             cp -R dist/Naviger.app "build/binaries/"
-            if [ -f dist/naviger-cli ]; then
-              cp dist/naviger-cli "build/binaries/"
-            fi
-            if [ -f dist/naviger-server ]; then
-              cp dist/naviger-server "build/binaries/"
-            fi
-            if [ -d dist/web_dist ]; then
-              cp -R dist/web_dist "build/binaries/"
-            fi
+            cp dist/naviger-cli "build/binaries/" 2>/dev/null || true
+            cp dist/naviger-server "build/binaries/" 2>/dev/null || true
+            cp -R dist/web_dist "build/binaries/" 2>/dev/null || true
           elif [ "${{ matrix.name }}" = "linux" ]; then
-            # Copiar .deb a build/ por separado
             if ls dist/*.deb >/dev/null 2>&1; then
               cp dist/*.deb build/
             fi
-            # El ZIP incluye los binarios y archivos de Linux (sin el .deb)
             find dist -maxdepth 1 ! -name "*.deb" ! -name "dist" | xargs -I{} cp -r {} "build/binaries/"
           else
             cp -r dist/* "build/binaries/"
           fi
 
           ZIP_NAME="Naviger-${VERSION}-${{ matrix.name }}.zip"
-
           cd "build/binaries"
           zip -r "../${ZIP_NAME}" ./*
         shell: bash
@@ -147,8 +135,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-build
-          path: |
-            build/Naviger-*.*
+          path: build/Naviger-*.*
 
   release:
     needs: build-native
@@ -175,6 +162,11 @@ jobs:
           VERSION="${VERSION#v}"
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
 
+      - name: Debug Artifacts
+        run: |
+          echo "Listing build directory contents:"
+          ls -R build
+
       - name: Install Snapcraft
         run: |
           sudo snap install snapcraft --classic
@@ -193,6 +185,7 @@ jobs:
           arguments: package
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          JRELEASER_PROJECT_VERSION: ${{ steps.version.outputs.VERSION }}
           SNAPCRAFT_BUILD_ENVIRONMENT: host
 
       - name: Release and publish
@@ -201,4 +194,5 @@ jobs:
           arguments: ${{ (github.event.inputs.dry_run == 'true' || github.event.inputs.dry_run == true) && 'release --dry-run' || 'full-release' }}
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          JRELEASER_PROJECT_VERSION: ${{ steps.version.outputs.VERSION }}
           SNAPCRAFT_BUILD_ENVIRONMENT: host
