@@ -32,6 +32,8 @@ export interface ServerStats {
   cpu: number;
   ram: number;
   disk: number;
+  onlinePlayers: number;
+  maxPlayers: number;
 }
 
 export interface User {

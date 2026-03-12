@@ -46,8 +46,7 @@ func (h *ServerHandler) HandleListServers(w http.ResponseWriter, r *http.Request
 			var filtered []domain.Server
 			for _, s := range servers {
 				if allowed[s.ID] {
-					perm := permsMap[s.ID]
-					s.Permissions = &perm
+					s.Permissions = new(permsMap[s.ID])
 					filtered = append(filtered, s)
 				}
 			}
@@ -148,8 +147,7 @@ func (h *ServerHandler) HandleGetServer(w http.ResponseWriter, r *http.Request) 
 			var userPerm *domain.Permission
 			for _, p := range perms {
 				if p.ServerID == srv.ID {
-					perm := p
-					userPerm = &perm
+					userPerm = new(p)
 					break
 				}
 			}

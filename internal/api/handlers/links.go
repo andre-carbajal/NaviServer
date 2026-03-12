@@ -151,11 +151,22 @@ func (h *LinksHandler) HandleGetPublicServerInfo(w http.ResponseWriter, r *http.
 	status := srv.Status
 
 	response := map[string]interface{}{
-		"name":    srv.Name,
-		"version": srv.Version,
-		"loader":  srv.Loader,
-		"status":  status,
-		"id":      srv.ID,
+		"name":          srv.Name,
+		"version":       srv.Version,
+		"loader":        srv.Loader,
+		"status":        status,
+		"id":            srv.ID,
+		"port":          srv.Port,
+		"onlinePlayers": 0,
+		"maxPlayers":    0,
+	}
+
+	if status == "RUNNING" {
+		stats, err := h.Supervisor.GetServerStats(srv.ID)
+		if err == nil && stats != nil {
+			response["onlinePlayers"] = stats.OnlinePlayers
+			response["maxPlayers"] = stats.MaxPlayers
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

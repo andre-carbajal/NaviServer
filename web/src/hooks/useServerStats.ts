@@ -4,7 +4,13 @@ import { api } from '../services/api';
 import type { ServerStats } from '../types';
 
 export const useServerStats = (serverId: string, isRunning: boolean) => {
-  const [stats, setStats] = useState<ServerStats>({ cpu: 0, ram: 0, disk: 0 });
+  const [stats, setStats] = useState<ServerStats>({
+    cpu: 0,
+    ram: 0,
+    disk: 0,
+    onlinePlayers: 0,
+    maxPlayers: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

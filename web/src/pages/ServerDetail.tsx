@@ -8,6 +8,7 @@ import {
   Share2,
   Square,
   Terminal,
+  Users,
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
@@ -405,6 +406,37 @@ const ServerDetail: React.FC = () => {
               </div>
               <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
                 {formatBytes(stats.disk)}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="card"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              padding: '15px',
+            }}
+          >
+            <div
+              style={{
+                padding: '10px',
+                borderRadius: '8px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                color: '#10b981',
+              }}
+            >
+              <Users size={24} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Players
+              </div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+                {server.status === 'RUNNING'
+                  ? `${stats.onlinePlayers} / ${stats.maxPlayers}`
+                  : 'Offline'}
               </div>
             </div>
           </div>

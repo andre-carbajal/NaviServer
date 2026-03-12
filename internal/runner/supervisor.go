@@ -21,6 +21,7 @@ import (
 
 	"naviger/internal/domain"
 
+	"github.com/andre-carbajal/go-mcstatus"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -204,8 +205,7 @@ func (s *Supervisor) StartServer(serverID string) error {
 			return
 		}
 
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			_ = exitErr.ExitCode()
 			if uerr := s.Store.UpdateStatus(id, "STOPPED"); uerr != nil {
 				slog.Warn("could not update status to STOPPED", "error", uerr)
@@ -275,6 +275,18 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 	}
 
 	if !exists {
+		if srv != nil && srv.Status == "RUNNING" {
+			mcServer, err := mcstatus.NewJavaServer(fmt.Sprintf("127.0.0.1:%d", srv.Port))
+			if err == nil {
+				status, err := mcServer.Status()
+				if err == nil {
+					if s, ok := status.(*mcstatus.JavaStatusResponse); ok {
+						stats.OnlinePlayers = s.Players.Online
+						stats.MaxPlayers = s.Players.Max
+					}
+				}
+			}
+		}
 		return stats, nil
 	}
 
@@ -286,6 +298,17 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 			}
 			if mem, err := p.MemoryInfo(); err == nil {
 				stats.RAM = mem.RSS
+			}
+		}
+	}
+
+	mcServer, err := mcstatus.NewJavaServer(fmt.Sprintf("127.0.0.1:%d", srv.Port))
+	if err == nil {
+		status, err := mcServer.Status()
+		if err == nil {
+			if s, ok := status.(*mcstatus.JavaStatusResponse); ok {
+				stats.OnlinePlayers = s.Players.Online
+				stats.MaxPlayers = s.Players.Max
 			}
 		}
 	}

@@ -30,7 +30,9 @@ type ProgressEvent struct {
 }
 
 type ServerStats struct {
-	CPU  float64 `json:"cpu"`
-	RAM  uint64  `json:"ram"`
-	Disk int64   `json:"disk"`
+	CPU           float64 `json:"cpu"`
+	RAM           uint64  `json:"ram"`
+	Disk          int64   `json:"disk"`
+	OnlinePlayers int     `json:"onlinePlayers"`
+	MaxPlayers    int     `json:"maxPlayers"`
 }

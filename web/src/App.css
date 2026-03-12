@@ -709,7 +709,7 @@ nav {
     margin-left: 0;
 
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
 
     padding-top: 12px;
@@ -1879,7 +1879,7 @@ nav {
     width: 100%;
     margin-left: 0;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--border-color);

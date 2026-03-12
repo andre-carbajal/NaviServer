@@ -174,6 +174,15 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
           </div>
         </div>
 
+        <div className="stat-group">
+          <div className="stat-label">Players</div>
+          <div className="stat-value">
+            {isRunning && stats
+              ? `${stats.onlinePlayers} / ${stats.maxPlayers}`
+              : '0 / 0'}
+          </div>
+        </div>
+
         <div className="actions-group">
           {(server.permissions?.canControlPower ||
             server.permissions?.canViewConsole) &&

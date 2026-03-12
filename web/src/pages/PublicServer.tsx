@@ -20,6 +20,8 @@ interface PublicServerInfo {
   loader: string;
   status: string;
   id: string;
+  onlinePlayers: number;
+  maxPlayers: number;
 }
 
 const PublicServer: React.FC = () => {
@@ -138,7 +140,7 @@ const PublicServer: React.FC = () => {
           </div>
 
           <div
-            className={`status-badge status-${info.status.toLowerCase()} mb-6`}
+            className={`status-badge status-${info.status.toLowerCase()} mb-4`}
             style={{ fontSize: '0.9rem', padding: '6px 16px' }}
           >
             {info.status === 'RUNNING' ? (
@@ -148,6 +150,31 @@ const PublicServer: React.FC = () => {
             )}
             {info.status}
           </div>
+
+          {info.status === 'RUNNING' && (
+            <div
+              className="text-sm text-gray-400 mb-6 flex items-center gap-2"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                padding: '4px 12px',
+                borderRadius: '999px',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#22c55e',
+                }}
+              ></div>
+              <span className="text-white font-medium">
+                {info.onlinePlayers || 0} / {info.maxPlayers || 0}
+              </span>
+              <span>Players Online</span>
+            </div>
+          )}
         </div>
 
         {message && (
@@ -182,7 +209,10 @@ const PublicServer: React.FC = () => {
           </div>
         )}
 
-        <div className="flex gap-3 justify-center mt-6">
+        <div
+          className="flex gap-3 justify-center"
+          style={{ marginTop: '24px' }}
+        >
           {info.status === 'OFFLINE' || info.status === 'STOPPED' ? (
             <button
               className="btn btn-primary"
