@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from 'axios';
 import axios from 'axios';
 
 import type {
@@ -92,7 +93,7 @@ export const api = {
   listAllBackups: () => apiInstance.get<Backup[]>('/backups'),
   uploadBackup: (
     file: File,
-    onUploadProgress: (progressEvent: any) => void,
+    onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
   ) => {
     const formData = new FormData();
     formData.append('backup', file);

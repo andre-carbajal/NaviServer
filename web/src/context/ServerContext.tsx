@@ -27,6 +27,7 @@ interface ServerContextType {
   refresh: () => Promise<void>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ServerContext = createContext<ServerContextType | undefined>(
   undefined,
 );

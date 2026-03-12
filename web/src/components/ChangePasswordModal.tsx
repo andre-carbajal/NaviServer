@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Lock, X } from 'lucide-react';
 
 import React, { useState } from 'react';
@@ -32,8 +33,12 @@ const ChangePasswordModal: React.FC<Props> = ({ user, onClose }) => {
     try {
       await api.updatePassword(user.id, password);
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data || 'Failed to update password');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data || 'Failed to update password');
+      } else {
+        setError('An unexpected error occurred');
+      }
       setSaving(false);
     }
   };

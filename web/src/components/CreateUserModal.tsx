@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { UserPlus, X } from 'lucide-react';
 
 import React, { useState } from 'react';
@@ -39,8 +40,12 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
     try {
       const response = await api.createUser({ username, password });
       onCreated(response.data);
-    } catch (err: any) {
-      setError(err.response?.data || 'Failed to create user');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data || 'Failed to create user');
+      } else {
+        setError('An unexpected error occurred');
+      }
       setLoading(false);
     }
   };

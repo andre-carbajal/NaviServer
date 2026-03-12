@@ -36,7 +36,7 @@ const PermissionsModal: React.FC<Props> = ({ user, onClose }) => {
         setPermissions(permsMap);
 
         setLoading(false);
-      } catch (err) {
+      } catch {
         setError('Failed to fetch data');
         setLoading(false);
       }
@@ -79,7 +79,7 @@ const PermissionsModal: React.FC<Props> = ({ user, onClose }) => {
       const permsArray = Object.values(permissions);
       await api.updatePermissions(permsArray);
       onClose();
-    } catch (err) {
+    } catch {
       setError('Failed to save permissions');
       setSaving(false);
     }

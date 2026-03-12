@@ -12,6 +12,7 @@ export const useConsole = (serverId: string) => {
   useEffect(() => {
     if (!serverId || !token) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLogs([]);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

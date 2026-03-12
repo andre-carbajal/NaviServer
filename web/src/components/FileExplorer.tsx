@@ -25,6 +25,21 @@ interface FileExplorerProps {
   serverId: string;
 }
 
+interface ExtendedFile extends File {
+  webkitRelativePath: string;
+}
+
+interface FileSystemEntry {
+  isFile: boolean;
+  isDirectory: boolean;
+  name: string;
+  fullPath: string;
+  file: (callback: (file: File) => void) => void;
+  createReader: () => {
+    readEntries: (callback: (entries: FileSystemEntry[]) => void) => void;
+  };
+}
+
 const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   const [currentPath, setCurrentPath] = useState('/');
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -164,7 +179,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     // Check if we are uploading a folder (using button)
     const foldersToUpload = new Set<string>();
     for (let i = 0; i < filesToUpload.length; i++) {
-      const relativePath = (filesToUpload[i] as any).webkitRelativePath;
+      const relativePath = (filesToUpload[i] as ExtendedFile)
+        .webkitRelativePath;
       if (relativePath) {
         const rootFolder = relativePath.split('/')[0];
         if (rootFolder) foldersToUpload.add(rootFolder);
@@ -192,7 +208,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     try {
       for (let i = 0; i < filesToUpload.length; i++) {
         const file = filesToUpload[i];
-        const relativePath = (file as any).webkitRelativePath;
+        const relativePath = (file as ExtendedFile).webkitRelativePath;
         await api.uploadFile(serverId, currentPath, file, relativePath);
       }
       loadFiles();
@@ -254,7 +270,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
     // Check for existing folders before processing
     for (let i = 0; i < items.length; i++) {
-      const entry = items[i].webkitGetAsEntry();
+      const entry = items[i].webkitGetAsEntry() as FileSystemEntry | null;
       if (entry && entry.isDirectory) {
         if (files.some((f) => f.name === entry.name && f.isDirectory)) {
           alert(
@@ -274,7 +290,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
     const filesToUpload: { file: File; relativePath?: string }[] = [];
 
-    const traverseFileTree = async (entry: any, path: string = '') => {
+    const traverseFileTree = async (
+      entry: FileSystemEntry,
+      path: string = '',
+    ) => {
       if (entry.isFile) {
         const file = await new Promise<File>((resolve) => entry.file(resolve));
         filesToUpload.push({
@@ -283,7 +302,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         });
       } else if (entry.isDirectory) {
         const dirReader = entry.createReader();
-        const entries = await new Promise<any[]>((resolve) => {
+        const entries = await new Promise<FileSystemEntry[]>((resolve) => {
           dirReader.readEntries(resolve);
         });
         for (const childEntry of entries) {
@@ -299,7 +318,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === 'file') {
-        const entry = item.webkitGetAsEntry();
+        const entry = item.webkitGetAsEntry() as FileSystemEntry | null;
         if (entry) {
           promises.push(traverseFileTree(entry));
         }
@@ -495,7 +514,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             ref={folderInputRef}
             onChange={handleFolderChange}
             style={{ display: 'none' }}
-            {...({ webkitdirectory: '', directory: '' } as any)}
+            {...({
+              webkitdirectory: '',
+              directory: '',
+            } as React.InputHTMLAttributes<HTMLInputElement> & {
+              webkitdirectory?: string;
+            })}
           />
         </div>
       </div>

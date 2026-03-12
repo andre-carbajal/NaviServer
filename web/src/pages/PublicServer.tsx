@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   AlertCircle,
   Check,
@@ -9,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import '../App.css';
 import { api } from '../services/api';
@@ -33,24 +34,28 @@ const PublicServer: React.FC = () => {
   const [message, setMessage] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchInfo = async () => {
+  const fetchInfo = useCallback(async () => {
     if (!token) return;
     try {
       const res = await api.getPublicServerInfo(token);
-      setInfo(res.data);
+      setInfo(res.data as unknown as PublicServerInfo);
       setError('');
-    } catch (err: any) {
-      setError(err.response?.data || 'Failed to load server info');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data || 'Failed to load server info');
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchInfo();
     const interval = setInterval(fetchInfo, 5000);
     return () => clearInterval(interval);
-  }, [token, refreshKey]);
+  }, [fetchInfo, refreshKey]);
 
   const handleAction = async (action: 'start' | 'stop') => {
     if (!token) return;
@@ -60,8 +65,12 @@ const PublicServer: React.FC = () => {
       await api.accessPublicLink(token, action);
       setMessage(`Server ${action} command sent!`);
       setTimeout(() => setRefreshKey((prev) => prev + 1), 1000);
-    } catch (err: any) {
-      setError(err.response?.data || `Failed to ${action} server`);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data || `Failed to ${action} server`);
+      } else {
+        setError(`Failed to ${action} server`);
+      }
     } finally {
       setActionLoading(false);
     }

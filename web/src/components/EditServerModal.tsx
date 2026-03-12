@@ -48,7 +48,7 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
       setIconPreview(null);
       setImageError(false);
     }
-  }, [isOpen, server?.id]);
+  }, [isOpen, server]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

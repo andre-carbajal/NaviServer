@@ -10,3 +10,4 @@
   - Implemented version injection using Go `ldflags` in both `build.sh` and `build.bat`.
   - Set the default version in the source code to `"dev"` to clearly distinguish development builds from official releases.
   - Updated GitHub Actions to automatically inject the release tag version into the binary, ensuring consistency across all platforms.
+- Improve error handling and type definitions across components

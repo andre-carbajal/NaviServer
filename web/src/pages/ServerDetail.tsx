@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   Cpu,
   Folder,
@@ -78,7 +79,7 @@ const ServerDetail: React.FC = () => {
       setServer(res.data);
     } catch (err) {
       console.error('Failed to fetch server:', err);
-      if ((err as any).response?.status === 404) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
         setServer(null);
       }
     } finally {

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 import React, { useEffect, useState } from 'react';
@@ -13,17 +14,12 @@ const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [usernameError, setUsernameError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (username.includes(' ')) {
-      setUsernameError('Username cannot contain spaces');
-    } else {
-      setUsernameError('');
-    }
-  }, [username]);
+  const usernameError = username.includes(' ')
+    ? 'Username cannot contain spaces'
+    : '';
 
   useEffect(() => {
     const checkSetupStatus = async () => {
@@ -65,10 +61,14 @@ const Login: React.FC = () => {
       const data = response.data;
       login('', data.user);
       navigate('/');
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      const msg =
-        err.response?.data?.trim() || err.message || 'Authentication failed';
+      let msg = 'Authentication failed';
+      if (axios.isAxiosError(err)) {
+        msg = err.response?.data?.trim() || err.message || msg;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setError(msg);
     }
   };

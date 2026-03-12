@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { api } from '../services/api';
@@ -32,8 +34,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const response = await api.getMe();
         setUser(response.data);
         setToken('authenticated');
-      } catch (error: any) {
-        if (error.response?.status !== 401) {
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          if (error.response?.status !== 401) {
+            console.error('Auth check failed', error);
+          }
+        } else {
           console.error('Auth check failed', error);
         }
         setUser(null);
@@ -82,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

@@ -4,10 +4,18 @@ import { api } from '../services/api.ts';
 import type { Server } from '../types';
 import { Button } from './ui/Button';
 
+export interface RestoreData {
+  targetServerId?: string;
+  newServerName?: string;
+  newServerRam?: number;
+  newServerLoader?: string;
+  newServerVersion?: string;
+}
+
 interface RestoreBackupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRestore: (backupName: string, data: any) => Promise<void>;
+  onRestore: (backupName: string, data: RestoreData) => Promise<void>;
   backupName: string;
   servers: Server[];
 }
@@ -76,7 +84,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
-    const data: any = {};
+    const data: RestoreData = {};
     if (mode === 'existing') {
       if (!selectedServer) return;
       data.targetServerId = selectedServer;

@@ -63,7 +63,9 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ logs }) => {
       } else {
         try {
           fitAddon.fit();
-        } catch (e) {}
+        } catch {
+          // Ignore fit errors on hidden elements
+        }
       }
     });
     ro.observe(terminalRef.current);
@@ -77,7 +79,9 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ logs }) => {
       fitAddonRef.current = null;
       try {
         term.dispose();
-      } catch (e) {}
+      } catch {
+        // Ignore terminal disposal errors
+      }
     };
   }, []);
 

@@ -1,6 +1,6 @@
 import { Key, Lock, Trash2, UserPlus } from 'lucide-react';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import '../App.css';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -24,20 +24,21 @@ const UsersPage: React.FC = () => {
   );
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await api.listUsers();
       setUsers(response.data);
       setLoading(false);
-    } catch (_) {
+    } catch {
       setError('Failed to fetch users');
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   const handleDelete = (user: User) => {
     setUserToDelete(user);
@@ -48,7 +49,7 @@ const UsersPage: React.FC = () => {
       try {
         await api.deleteUser(userToDelete.id);
         setUsers(users.filter((u) => u.id !== userToDelete.id));
-      } catch (_) {
+      } catch {
         alert('Failed to delete user');
       }
       setUserToDelete(null);

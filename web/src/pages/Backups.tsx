@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmationModal from '../components/ConfirmationModal';
 import CreateBackupModal from '../components/CreateBackupModal';
 import RestoreBackupModal from '../components/RestoreBackupModal';
+import type { RestoreData } from '../components/RestoreBackupModal';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useServers } from '../hooks/useServers';
@@ -96,8 +97,8 @@ const Backups: React.FC = () => {
         const list: CreatingBackup[] = JSON.parse(stored);
         const newList = list.filter((b) => b.requestId !== requestId);
         localStorage.setItem('creating_backups', JSON.stringify(newList));
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // Ignore JSON parse errors
       }
     }
 
@@ -230,7 +231,7 @@ const Backups: React.FC = () => {
     setRestoreModalOpen(true);
   };
 
-  const handleRestore = async (backupName: string, data: any) => {
+  const handleRestore = async (backupName: string, data: RestoreData) => {
     await api.restoreBackup(backupName, data);
     alert('Backup restored successfully!');
     refreshServers();

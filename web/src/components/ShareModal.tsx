@@ -1,6 +1,6 @@
 import { Globe, Loader2, X } from 'lucide-react';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../services/api';
 import { Button } from './ui/Button';
@@ -22,16 +22,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const [error, setError] = useState('');
   const [publicBaseUrl, setPublicBaseUrl] = useState(window.location.origin);
 
-  useEffect(() => {
-    if (isOpen && serverId) {
-      checkLinkStatus();
-    } else {
-      setToken(null);
-      setError('');
-    }
-  }, [isOpen, serverId]);
-
-  const checkLinkStatus = async () => {
+  const checkLinkStatus = useCallback(async () => {
     setLoading(true);
     try {
       const [linkRes, publicIPRes] = await Promise.all([
@@ -55,7 +46,16 @@ const ShareModal: React.FC<ShareModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [serverId]);
+
+  useEffect(() => {
+    if (isOpen && serverId) {
+      checkLinkStatus();
+    } else {
+      setToken(null);
+      setError('');
+    }
+  }, [isOpen, serverId, checkLinkStatus]);
 
   const handleDeactivate = async () => {
     if (!token) return;
@@ -77,7 +77,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
       const res = await api.createPublicLink(serverId);
       setToken(res.data.token);
       setError('');
-    } catch (err) {
+    } catch {
       setError('Failed to activate link');
     } finally {
       setLoading(false);
