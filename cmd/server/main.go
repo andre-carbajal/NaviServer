@@ -230,6 +230,10 @@ func startDaemonService(ctx context.Context) {
 	supervisor := runner.NewSupervisor(store, jvmMgr, hubManager, cfg.ServersPath)
 	backupManager := backup.NewManager(cfg.ServersPath, cfg.BackupsPath, store)
 
+	if err := backupManager.SyncBackups(); err != nil {
+		log.Printf("Warning syncing backups: %v", err)
+	}
+
 	if err := supervisor.ResetRunningStates(); err != nil {
 		log.Printf("Warning resetting states: %v", err)
 	}

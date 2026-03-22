@@ -1,5 +1,12 @@
 # Changelog
 
+- Database-driven backup management and enhanced security:
+  - Implemented a new `Backup` model in the database to track files, server associations, and user ownership.
+  - Added automatic synchronization in `BackupManager` to discover existing files and register them in the database on startup.
+  - Restructured API handlers in `internal/api/handlers/backup.go` to enforce server-based permissions for users.
+  - Users can now only manage backups for servers they are authorized to handle; orphaned backups are now restricted to administrators.
+  - Introduced a new `UploadBackupModal` in the frontend to allow associating uploaded files with specific servers.
+  - Updated the backup creation process to calculate and store the final compressed file size in the database.
 - Added real-time Minecraft server player monitoring:
   - Integrated [go-mcstatus](https://github.com/andre-carbajal/go-mcstatus) library to query server status.
   - Displaying online and max player counts in the server list.

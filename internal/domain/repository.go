@@ -35,9 +35,18 @@ type PublicLinkRepository interface {
 	DeletePublicLink(token string) error
 }
 
+type BackupRepository interface {
+	SaveBackup(backup *Backup) error
+	ListBackups(serverID string, userID string, role string) ([]Backup, error)
+	GetBackupByName(name string) (*Backup, error)
+	DeleteBackup(name string) error
+	ListAllBackups() ([]Backup, error)
+}
+
 type Repository interface {
 	ServerRepository
 	UserRepository
 	SettingRepository
 	PublicLinkRepository
+	BackupRepository
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"naviger/internal/domain"
 	"naviger/internal/server"
@@ -43,7 +44,7 @@ type Info struct {
 	Size int64  `json:"size"`
 }
 
-func (m *Manager) UploadBackup(file multipart.File, filename string) error {
+func (m *Manager) UploadBackup(file multipart.File, filename string, serverID string, userID string) error {
 	if !strings.HasSuffix(filename, ".zip") && !strings.HasSuffix(filename, ".rar") {
 		return fmt.Errorf("invalid file type, only .zip and .rar are supported")
 	}
@@ -83,10 +84,31 @@ func (m *Manager) UploadBackup(file multipart.File, filename string) error {
 	backupFilePath := filepath.Join(m.BackupsPath, backupFileName)
 
 	if strings.HasSuffix(strings.ToLower(filename), ".zip") {
-		return m.processZipUpload(tempFilePath, backupFilePath)
+		if err := m.processZipUpload(tempFilePath, backupFilePath); err != nil {
+			return err
+		}
+	} else {
+		if err := m.processArchiveUploadGeneric(tempFilePath, backupFilePath); err != nil {
+			return err
+		}
 	}
 
-	return m.processArchiveUploadGeneric(tempFilePath, backupFilePath)
+	info, err := os.Stat(backupFilePath)
+	if err != nil {
+		return err
+	}
+
+	backup := &domain.Backup{
+		ID:        uuid.New().String(),
+		Name:      backupFileName,
+		FileName:  backupFileName,
+		ServerID:  serverID,
+		Size:      info.Size(),
+		CreatedAt: time.Now(),
+		CreatedBy: userID,
+	}
+
+	return m.Store.SaveBackup(backup)
 }
 
 func (m *Manager) processZipUpload(tempFilePath, targetPath string) error {
@@ -306,9 +328,15 @@ func (m *Manager) DeleteBackup(name string) error {
 	}
 	backupPath := filepath.Join(m.BackupsPath, name)
 	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-		return fmt.Errorf("backup not found")
+		_ = m.Store.DeleteBackup(name)
+		return fmt.Errorf("backup file not found")
 	}
-	return os.Remove(backupPath)
+
+	if err := os.Remove(backupPath); err != nil {
+		return err
+	}
+
+	return m.Store.DeleteBackup(name)
 }
 
 func (m *Manager) GetBackupFilePath(name string) (string, error) {
@@ -322,15 +350,45 @@ func (m *Manager) GetBackupFilePath(name string) (string, error) {
 	return backupPath, nil
 }
 
-func (m *Manager) ListAllBackups() ([]Info, error) {
-	files, err := os.ReadDir(m.BackupsPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not read backups directory: %w", err)
+func (m *Manager) ListAllBackups(userID string, role string) ([]domain.Backup, error) {
+	return m.Store.ListBackups("", userID, role)
+}
+
+func (m *Manager) ListBackups(serverID string, userID string, role string) ([]domain.Backup, error) {
+	return m.Store.ListBackups(serverID, userID, role)
+}
+
+func (m *Manager) SyncBackups() error {
+	if err := os.MkdirAll(m.BackupsPath, 0755); err != nil {
+		return err
 	}
 
-	var backups []Info
+	files, err := os.ReadDir(m.BackupsPath)
+	if err != nil {
+		return err
+	}
+
+	dbBackups, err := m.Store.ListAllBackups()
+	if err != nil {
+		return err
+	}
+
+	dbMap := make(map[string]bool)
+	for _, b := range dbBackups {
+		dbMap[b.FileName] = true
+	}
+
+	servers, err := m.Store.ListServers()
+	if err != nil {
+		return err
+	}
+
 	for _, file := range files {
 		if file.IsDir() || strings.HasSuffix(file.Name(), ".temp") {
+			continue
+		}
+
+		if dbMap[file.Name()] {
 			continue
 		}
 
@@ -338,53 +396,35 @@ func (m *Manager) ListAllBackups() ([]Info, error) {
 		if err != nil {
 			continue
 		}
-		backups = append(backups, Info{
-			Name: file.Name(),
-			Size: info.Size(),
-		})
-	}
 
-	return backups, nil
-}
-
-func (m *Manager) ListBackups(serverID string) ([]Info, error) {
-	srv, err := m.Store.GetServerByID(serverID)
-	if err != nil {
-		return nil, fmt.Errorf("could not get server info: %w", err)
-	}
-	if srv == nil {
-		return nil, fmt.Errorf("server with ID '%s' not found in database", serverID)
-	}
-
-	safeName := sanitizeFileName(srv.Name)
-
-	files, err := os.ReadDir(m.BackupsPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not read backups directory: %w", err)
-	}
-
-	var backups []Info
-	for _, file := range files {
-		if file.IsDir() || strings.HasSuffix(file.Name(), ".temp") {
-			continue
-		}
-
-		if strings.HasPrefix(file.Name(), safeName) {
-			info, err := file.Info()
-			if err != nil {
-				continue
+		var serverID string
+		for _, srv := range servers {
+			safeName := sanitizeFileName(srv.Name)
+			if strings.HasPrefix(file.Name(), safeName) {
+				serverID = srv.ID
+				break
 			}
-			backups = append(backups, Info{
-				Name: file.Name(),
-				Size: info.Size(),
-			})
+		}
+
+		backup := &domain.Backup{
+			ID:        uuid.New().String(),
+			Name:      file.Name(),
+			FileName:  file.Name(),
+			ServerID:  serverID,
+			Size:      info.Size(),
+			CreatedAt: info.ModTime(),
+			CreatedBy: "system",
+		}
+
+		if err := m.Store.SaveBackup(backup); err != nil {
+			log.Printf("Failed to sync backup %s: %v", file.Name(), err)
 		}
 	}
 
-	return backups, nil
+	return nil
 }
 
-func (m *Manager) StartBackupJob(serverID, backupName, requestID string, progressChan chan<- domain.ProgressEvent) {
+func (m *Manager) StartBackupJob(serverID, backupName, requestID, userID string, progressChan chan<- domain.ProgressEvent) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m.activeBackupsMu.Lock()
@@ -399,7 +439,7 @@ func (m *Manager) StartBackupJob(serverID, backupName, requestID string, progres
 			m.activeBackupsMu.Unlock()
 		}()
 
-		_, err := m.CreateBackup(ctx, serverID, backupName, progressChan)
+		_, err := m.CreateBackup(ctx, serverID, backupName, userID, progressChan)
 		if err != nil {
 			event := domain.ProgressEvent{
 				ServerID: serverID,
@@ -432,7 +472,7 @@ func (m *Manager) CancelBackup(requestID string) {
 	}
 }
 
-func (m *Manager) CreateBackup(ctx context.Context, serverID string, backupName string, progressChan chan<- domain.ProgressEvent) (string, error) {
+func (m *Manager) CreateBackup(ctx context.Context, serverID string, backupName string, userID string, progressChan chan<- domain.ProgressEvent) (string, error) {
 	srv, err := m.Store.GetServerByID(serverID)
 	if err != nil {
 		return "", fmt.Errorf("could not get server info: %w", err)
@@ -564,6 +604,18 @@ func (m *Manager) CreateBackup(ctx context.Context, serverID string, backupName 
 	if err := os.Rename(tempBackupFilePath, backupFilePath); err != nil {
 		return "", fmt.Errorf("error renaming temp file: %w", err)
 	}
+
+	info, _ := os.Stat(backupFilePath)
+	backup := &domain.Backup{
+		ID:        uuid.New().String(),
+		Name:      backupFileName,
+		FileName:  backupFileName,
+		ServerID:  serverID,
+		Size:      info.Size(),
+		CreatedAt: time.Now(),
+		CreatedBy: userID,
+	}
+	m.Store.SaveBackup(backup)
 
 	return backupFilePath, nil
 }

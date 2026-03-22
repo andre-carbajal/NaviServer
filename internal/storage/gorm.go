@@ -53,6 +53,17 @@ type PublicLink struct {
 	Action   string
 }
 
+type Backup struct {
+	ID         string `gorm:"primaryKey"`
+	Name       string `gorm:"uniqueIndex"`
+	FileName   string
+	ServerID   string `gorm:"index"`
+	ServerName string `gorm:"column:server_name;->"`
+	Size       int64
+	CreatedAt  time.Time
+	CreatedBy  string
+}
+
 type GormStore struct {
 	db *gorm.DB
 }
@@ -71,7 +82,7 @@ func NewGormStore(path string) (*GormStore, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&Server{}, &Setting{}, &User{}, &Permission{}, &PublicLink{})
+	err = db.AutoMigrate(&Server{}, &Setting{}, &User{}, &Permission{}, &PublicLink{}, &Backup{})
 	if err != nil {
 		return nil, fmt.Errorf("error migrating database: %w", err)
 	}
@@ -435,4 +446,117 @@ func (s *GormStore) SetLogBufferSize(size int) error {
 		return fmt.Errorf("invalid log buffer size: %d", size)
 	}
 	return s.SetSetting("log_buffer_size", fmt.Sprintf("%d", size))
+}
+
+func (s *GormStore) SaveBackup(backup *domain.Backup) error {
+	gormBackup := &Backup{
+		ID:        backup.ID,
+		Name:      backup.Name,
+		FileName:  backup.FileName,
+		ServerID:  backup.ServerID,
+		Size:      backup.Size,
+		CreatedAt: backup.CreatedAt,
+		CreatedBy: backup.CreatedBy,
+	}
+	return s.db.Save(gormBackup).Error
+}
+
+func (s *GormStore) ListBackups(serverID string, userID string, role string) ([]domain.Backup, error) {
+	var gormBackups []Backup
+	query := s.db.Model(&Backup{}).
+		Select("backups.*, servers.name as server_name").
+		Joins("left join servers on backups.server_id = servers.id")
+
+	if role != "admin" {
+		var permittedServerIDs []string
+		s.db.Model(&Permission{}).Where("user_id = ? AND can_control_power = ?", userID, true).Pluck("server_id", &permittedServerIDs)
+
+		if serverID != "" {
+			isPermitted := false
+			for _, id := range permittedServerIDs {
+				if id == serverID {
+					isPermitted = true
+					break
+				}
+			}
+			if !isPermitted {
+				return []domain.Backup{}, nil
+			}
+			query = query.Where("backups.server_id = ?", serverID)
+		} else {
+			query = query.Where("backups.server_id IN ?", permittedServerIDs)
+		}
+	} else {
+		if serverID != "" {
+			query = query.Where("backups.server_id = ?", serverID)
+		}
+	}
+
+	if err := query.Scan(&gormBackups).Error; err != nil {
+		return nil, err
+	}
+
+	var backups []domain.Backup
+	for _, b := range gormBackups {
+		backups = append(backups, domain.Backup{
+			ID:         b.ID,
+			Name:       b.Name,
+			FileName:   b.FileName,
+			ServerID:   b.ServerID,
+			ServerName: b.ServerName,
+			Size:       b.Size,
+			CreatedAt:  b.CreatedAt,
+			CreatedBy:  b.CreatedBy,
+		})
+	}
+	return backups, nil
+}
+
+func (s *GormStore) GetBackupByName(name string) (*domain.Backup, error) {
+	var b Backup
+	if err := s.db.Where("name = ?", name).First(&b).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &domain.Backup{
+		ID:        b.ID,
+		Name:      b.Name,
+		FileName:  b.FileName,
+		ServerID:  b.ServerID,
+		Size:      b.Size,
+		CreatedAt: b.CreatedAt,
+		CreatedBy: b.CreatedBy,
+	}, nil
+}
+
+func (s *GormStore) DeleteBackup(name string) error {
+	return s.db.Delete(&Backup{}, "name = ?", name).Error
+}
+
+func (s *GormStore) ListAllBackups() ([]domain.Backup, error) {
+	var gormBackups []Backup
+	err := s.db.Model(&Backup{}).
+		Select("backups.*, servers.name as server_name").
+		Joins("left join servers on backups.server_id = servers.id").
+		Scan(&gormBackups).Error
+
+	if err != nil {
+		return nil, err
+	}
+	var backups []domain.Backup
+	for _, b := range gormBackups {
+		backups = append(backups, domain.Backup{
+			ID:         b.ID,
+			Name:       b.Name,
+			FileName:   b.FileName,
+			ServerID:   b.ServerID,
+			ServerName: b.ServerName,
+			Size:       b.Size,
+			CreatedAt:  b.CreatedAt,
+			CreatedBy:  b.CreatedBy,
+		})
+	}
+	return backups, nil
 }

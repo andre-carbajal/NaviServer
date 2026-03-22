@@ -16,6 +16,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import CreateBackupModal from '../components/CreateBackupModal';
 import RestoreBackupModal from '../components/RestoreBackupModal';
 import type { RestoreData } from '../components/RestoreBackupModal';
+import UploadBackupModal from '../components/UploadBackupModal';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useServers } from '../hooks/useServers';
@@ -43,6 +44,7 @@ const Backups: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const { servers, refresh: refreshServers } = useServers();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [isUploadModalOpen, setUploadModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
   const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
@@ -68,7 +70,7 @@ const Backups: React.FC = () => {
     setIsDragging(false);
     const files = event.dataTransfer.files;
     if (files && files.length > 0) {
-      await uploadFiles(files);
+      await uploadFiles(files, id && id !== 'all' ? id : undefined);
     }
   };
 
@@ -238,10 +240,10 @@ const Backups: React.FC = () => {
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current?.click();
+    setUploadModalOpen(true);
   };
 
-  const uploadFiles = async (files: FileList | File[]) => {
+  const uploadFiles = async (files: FileList | File[], serverId?: string) => {
     if (!files || files.length === 0) return;
 
     for (let i = 0; i < files.length; i++) {
@@ -264,16 +266,20 @@ const Backups: React.FC = () => {
       setUploadingBackups((prev) => [...prev, newUploadingBackup]);
 
       try {
-        await api.uploadBackup(file, (progressEvent) => {
-          const progress = Math.round(
-            (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
-          );
-          setUploadingBackups((prev) =>
-            prev.map((b) =>
-              b.id === uploadId ? { ...b, progress: progress } : b,
-            ),
-          );
-        });
+        await api.uploadBackup(
+          file,
+          (progressEvent) => {
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
+            );
+            setUploadingBackups((prev) =>
+              prev.map((b) =>
+                b.id === uploadId ? { ...b, progress: progress } : b,
+              ),
+            );
+          },
+          serverId,
+        );
       } catch (error) {
         console.error(`Failed to upload backup ${file.name}:`, error);
         alert(`Failed to upload backup ${file.name}.`);
@@ -297,7 +303,7 @@ const Backups: React.FC = () => {
   ) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      await uploadFiles(files);
+      await uploadFiles(files, id && id !== 'all' ? id : undefined);
     }
   };
 
@@ -377,6 +383,7 @@ const Backups: React.FC = () => {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Server</th>
               <th>Size</th>
               <th>Actions</th>
             </tr>
@@ -417,6 +424,7 @@ const Backups: React.FC = () => {
                 </td>
                 <td>-</td>
                 <td>-</td>
+                <td>-</td>
               </tr>
             ))}
             {visibleCreatingBackups.map((backup) => (
@@ -454,6 +462,7 @@ const Backups: React.FC = () => {
                     </div>
                   )}
                 </td>
+                <td>{backup.serverName || '-'}</td>
                 <td>-</td>
                 <td>
                   <div style={{ display: 'flex', gap: '5px' }}>
@@ -471,6 +480,11 @@ const Backups: React.FC = () => {
             {backups.map((backup) => (
               <tr key={backup.name}>
                 <td>{backup.name}</td>
+                <td>
+                  {backup.serverName || (
+                    <span className="text-muted">None</span>
+                  )}
+                </td>
                 <td>{(backup.size / 1024 / 1024).toFixed(2)} MB</td>
                 <td>
                   <div
@@ -528,6 +542,14 @@ const Backups: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setCreateModalOpen(false)}
         onCreate={handleCreateBackup}
+        servers={servers}
+        defaultServerId={!isGlobalView ? id : undefined}
+      />
+
+      <UploadBackupModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onUpload={(file, serverId) => uploadFiles([file], serverId)}
         servers={servers}
         defaultServerId={!isGlobalView ? id : undefined}
       />

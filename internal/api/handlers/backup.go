@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"naviger/internal/domain"
 	"net/http"
 )
 
@@ -23,7 +24,15 @@ func (h *BackupHandler) HandleUploadBackup(w http.ResponseWriter, r *http.Reques
 	}
 	defer file.Close()
 
-	if err := h.BackupManager.UploadBackup(file, handler.Filename); err != nil {
+	serverID := r.FormValue("serverId")
+	var userID string
+	userCtx := r.Context().Value(domain.UserContextKey)
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		userID = claims["id"]
+	}
+
+	if err := h.BackupManager.UploadBackup(file, handler.Filename, serverID, userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -36,6 +45,45 @@ func (h *BackupHandler) HandleDownloadBackup(w http.ResponseWriter, r *http.Requ
 	if name == "" {
 		http.Error(w, "Missing backup name", http.StatusBadRequest)
 		return
+	}
+
+	userCtx := r.Context().Value(domain.UserContextKey)
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		role := claims["role"]
+		userID := claims["id"]
+
+		if role != "admin" {
+			backup, err := h.Store.GetBackupByName(name)
+			if err != nil || backup == nil {
+				http.Error(w, "Backup not found", http.StatusNotFound)
+				return
+			}
+
+			if backup.ServerID == "" {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+
+			perms, err := h.Store.GetPermissions(userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			allowed := false
+			for _, p := range perms {
+				if p.ServerID == backup.ServerID && p.CanControlPower {
+					allowed = true
+					break
+				}
+			}
+
+			if !allowed {
+				http.Error(w, "Forbidden: No permission to manage backups for this server", http.StatusForbidden)
+				return
+			}
+		}
 	}
 
 	path, err := h.BackupManager.GetBackupFilePath(name)
@@ -53,6 +101,45 @@ func (h *BackupHandler) HandleDeleteBackup(w http.ResponseWriter, r *http.Reques
 	if name == "" {
 		http.Error(w, "Missing backup name", http.StatusBadRequest)
 		return
+	}
+
+	userCtx := r.Context().Value(domain.UserContextKey)
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		role := claims["role"]
+		userID := claims["id"]
+
+		if role != "admin" {
+			backup, err := h.Store.GetBackupByName(name)
+			if err != nil || backup == nil {
+				http.Error(w, "Backup not found", http.StatusNotFound)
+				return
+			}
+
+			if backup.ServerID == "" {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+
+			perms, err := h.Store.GetPermissions(userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			allowed := false
+			for _, p := range perms {
+				if p.ServerID == backup.ServerID && p.CanControlPower {
+					allowed = true
+					break
+				}
+			}
+
+			if !allowed {
+				http.Error(w, "Forbidden: No permission to manage backups for this server", http.StatusForbidden)
+				return
+			}
+		}
 	}
 
 	if err := h.BackupManager.DeleteBackup(name); err != nil {
@@ -82,6 +169,62 @@ func (h *BackupHandler) HandleRestoreBackup(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	userCtx := r.Context().Value(domain.UserContextKey)
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		role := claims["role"]
+		userID := claims["id"]
+
+		if role != "admin" {
+			backup, err := h.Store.GetBackupByName(name)
+			if err != nil || backup == nil {
+				http.Error(w, "Backup not found", http.StatusNotFound)
+				return
+			}
+
+			if backup.ServerID == "" {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+
+			perms, err := h.Store.GetPermissions(userID)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			allowed := false
+			for _, p := range perms {
+				if p.ServerID == backup.ServerID && p.CanControlPower {
+					allowed = true
+					break
+				}
+			}
+
+			if !allowed {
+				http.Error(w, "Forbidden: No permission for this backup", http.StatusForbidden)
+				return
+			}
+
+			if req.TargetServerID != "" {
+				targetAllowed := false
+				for _, p := range perms {
+					if p.ServerID == req.TargetServerID && p.CanControlPower {
+						targetAllowed = true
+						break
+					}
+				}
+				if !targetAllowed {
+					http.Error(w, "Forbidden: No permission for target server", http.StatusForbidden)
+					return
+				}
+			} else {
+				http.Error(w, "Only administrators can create new servers from backups", http.StatusForbidden)
+				return
+			}
+		}
+	}
+
 	if err := h.BackupManager.RestoreBackup(name, req.TargetServerID, req.NewServerName, req.NewServerRAM, req.NewServerLoader, req.NewServerVersion); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -98,7 +241,16 @@ func (h *BackupHandler) HandleListBackupsByServer(w http.ResponseWriter, r *http
 		return
 	}
 
-	backups, err := h.BackupManager.ListBackups(id)
+	userCtx := r.Context().Value(domain.UserContextKey)
+	userID := ""
+	role := ""
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		role = claims["role"]
+		userID = claims["id"]
+	}
+
+	backups, err := h.BackupManager.ListBackups(id, userID, role)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -109,7 +261,16 @@ func (h *BackupHandler) HandleListBackupsByServer(w http.ResponseWriter, r *http
 }
 
 func (h *BackupHandler) HandleListAllBackups(w http.ResponseWriter, r *http.Request) {
-	backups, err := h.BackupManager.ListAllBackups()
+	userCtx := r.Context().Value(domain.UserContextKey)
+	userID := ""
+	role := ""
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		role = claims["role"]
+		userID = claims["id"]
+	}
+
+	backups, err := h.BackupManager.ListAllBackups(userID, role)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

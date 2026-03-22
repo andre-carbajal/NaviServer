@@ -130,12 +130,12 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("POST /servers/{id}/backup", protect(serverHandler.HandleBackupServer, ""))
 	mux.Handle("GET /servers/{id}/backups", protect(backupHandler.HandleListBackupsByServer, ""))
 
-	mux.Handle("GET /backups", protect(backupHandler.HandleListAllBackups, "admin"))
-	mux.Handle("POST /backups/upload", protect(backupHandler.HandleUploadBackup, "admin"))
-	mux.Handle("DELETE /backups/{name}", protect(backupHandler.HandleDeleteBackup, "admin"))
-	mux.Handle("GET /backups/{name}/download", protect(backupHandler.HandleDownloadBackup, "admin"))
-	mux.Handle("DELETE /backups/progress/{id}", protect(backupHandler.HandleCancelBackup, "admin"))
-	mux.Handle("POST /backups/{name}/restore", protect(backupHandler.HandleRestoreBackup, "admin"))
+	mux.Handle("GET /backups", protect(backupHandler.HandleListAllBackups, ""))
+	mux.Handle("POST /backups/upload", protect(backupHandler.HandleUploadBackup, ""))
+	mux.Handle("DELETE /backups/{name}", protect(backupHandler.HandleDeleteBackup, ""))
+	mux.Handle("GET /backups/{name}/download", protect(backupHandler.HandleDownloadBackup, ""))
+	mux.Handle("DELETE /backups/progress/{id}", protect(backupHandler.HandleCancelBackup, ""))
+	mux.Handle("POST /backups/{name}/restore", protect(backupHandler.HandleRestoreBackup, ""))
 
 	mux.Handle("GET /settings/port-range", protect(settingsHandler.HandleGetPortRange, "admin"))
 	mux.Handle("PUT /settings/port-range", protect(settingsHandler.HandleSetPortRange, "admin"))

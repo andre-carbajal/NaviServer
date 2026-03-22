@@ -335,6 +335,13 @@ func (h *ServerHandler) HandleBackupServer(w http.ResponseWriter, r *http.Reques
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
+	userCtx := r.Context().Value(domain.UserContextKey)
+	var userID string
+	if userCtx != nil {
+		claims := userCtx.(map[string]string)
+		userID = claims["id"]
+	}
+
 	progressChan := make(chan domain.ProgressEvent)
 	hubID := req.RequestID
 	if hubID == "" {
@@ -352,7 +359,7 @@ func (h *ServerHandler) HandleBackupServer(w http.ResponseWriter, r *http.Reques
 		}
 	}()
 
-	h.BackupManager.StartBackupJob(id, req.Name, req.RequestID, progressChan)
+	h.BackupManager.StartBackupJob(id, req.Name, req.RequestID, userID, progressChan)
 
 	response := map[string]string{
 		"status": "creating",

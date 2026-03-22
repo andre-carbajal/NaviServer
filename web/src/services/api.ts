@@ -94,9 +94,13 @@ export const api = {
   uploadBackup: (
     file: File,
     onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
+    serverId?: string,
   ) => {
     const formData = new FormData();
     formData.append('backup', file);
+    if (serverId) {
+      formData.append('serverId', serverId);
+    }
     return apiInstance.post('/backups/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
