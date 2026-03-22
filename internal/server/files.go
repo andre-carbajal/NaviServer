@@ -41,7 +41,7 @@ func (m *Manager) sanitizePath(serverID, requestPath string) (string, error) {
 
 	fullPath := filepath.Join(serverRoot, cleanRequestPath)
 
-	if !strings.HasPrefix(fullPath, serverRoot) {
+	if !strings.HasPrefix(fullPath, serverRoot+string(os.PathSeparator)) && fullPath != serverRoot {
 		return "", fmt.Errorf("access denied: path outside server directory")
 	}
 

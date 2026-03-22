@@ -25,6 +25,16 @@ func (h *BackupHandler) HandleUploadBackup(w http.ResponseWriter, r *http.Reques
 	defer file.Close()
 
 	serverID := r.FormValue("serverId")
+
+	if serverID != "" {
+		if !h.checkPermission(r, serverID, func(p *domain.Permission) bool {
+			return p.CanControlPower
+		}) {
+			http.Error(w, "Forbidden: No permission to manage backups for this server", http.StatusForbidden)
+			return
+		}
+	}
+
 	var userID string
 	userCtx := r.Context().Value(domain.UserContextKey)
 	if userCtx != nil {

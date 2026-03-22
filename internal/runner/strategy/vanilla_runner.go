@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 type VanillaRunner struct {
@@ -32,7 +31,7 @@ func (r *VanillaRunner) BuildCommand(javaPath string, absServerDir string, ram i
 	}
 
 	if customArgs != "" {
-		args = append(args, strings.Fields(customArgs)...)
+		args = append(args, FilterJVMArgs(customArgs)...)
 	}
 
 	args = append(args, "-jar", jarPath, "nogui")

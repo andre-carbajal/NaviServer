@@ -256,6 +256,13 @@ func (m *Manager) processArchiveUploadGeneric(tempFilePath, targetPath string) e
 	}
 
 	finalExtractPath := extractPath
+	for _, f := range files {
+		cleanName := filepath.Clean(f)
+		if strings.Contains(cleanName, "..") || filepath.IsAbs(cleanName) {
+			return fmt.Errorf("malicious archive entry: %s", f)
+		}
+	}
+
 	if _, err := archive.Extract(extractPath); err != nil {
 		return fmt.Errorf("could not extract archive: %w", err)
 	}
@@ -717,12 +724,46 @@ func unarchive(src, dest string) error {
 	}
 	defer archive.Close()
 
-	if err := os.MkdirAll(dest, 0755); err != nil {
+	destClean := filepath.Clean(dest)
+	if err := os.MkdirAll(destClean, 0755); err != nil {
 		return err
 	}
 
-	_, err = archive.Extract(dest)
-	return err
+	for {
+		err := archive.Entry()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		name := archive.Name()
+		target := filepath.Join(destClean, name)
+
+		if !strings.HasPrefix(target, destClean+string(os.PathSeparator)) && target != destClean {
+			return fmt.Errorf("illegal archive entry: %s", name)
+		}
+
+		if strings.HasSuffix(name, "/") {
+			os.MkdirAll(target, 0755)
+			continue
+		}
+
+		os.MkdirAll(filepath.Dir(target), 0755)
+		f, err := os.Create(target)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(f, archive)
+		f.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func sanitizeFileName(name string) string {

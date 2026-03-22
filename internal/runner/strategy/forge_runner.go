@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 type ForgeRunner struct{}
@@ -53,7 +52,7 @@ func (r *ForgeRunner) BuildCommand(javaPath string, absServerDir string, ram int
 	}
 
 	if customArgs != "" {
-		args = append(args, strings.Fields(customArgs)...)
+		args = append(args, FilterJVMArgs(customArgs)...)
 	}
 
 	args = append(args, fmt.Sprintf("@%s", argsFile))
