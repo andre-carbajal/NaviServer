@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"naviger/internal/updater"
+	"naviserver/internal/updater"
 	"net"
 	"net/http"
 	"os"

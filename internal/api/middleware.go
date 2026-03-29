@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secretKey string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Naviger-Client") == "CLI" {
+		if r.Header.Get("X-NaviServer-Client") == "CLI" {
 			remoteAddr := r.RemoteAddr
 			if strings.HasPrefix(remoteAddr, "127.0.0.1") || strings.HasPrefix(remoteAddr, "[::1]") {
 				ctx := context.WithValue(r.Context(), domain.UserContextKey, map[string]string{

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 )
 
 type FilesHandler struct {

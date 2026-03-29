@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 	"net/http"
 	"os"
 	"os/exec"

@@ -17,15 +17,15 @@ import (
 	"syscall"
 	"time"
 
-	"naviger/internal/api"
-	"naviger/internal/backup"
-	"naviger/internal/config"
-	"naviger/internal/jvm"
-	"naviger/internal/runner"
-	"naviger/internal/server"
-	"naviger/internal/storage"
-	"naviger/internal/updater"
-	"naviger/internal/ws"
+	"naviserver/internal/api"
+	"naviserver/internal/backup"
+	"naviserver/internal/config"
+	"naviserver/internal/jvm"
+	"naviserver/internal/runner"
+	"naviserver/internal/server"
+	"naviserver/internal/storage"
+	"naviserver/internal/updater"
+	"naviserver/internal/ws"
 
 	"github.com/emersion/go-autostart"
 	"github.com/getlantern/systray"
@@ -56,7 +56,7 @@ func runDesktop() {
 }
 
 func onReady() {
-	systray.SetTooltip("Naviger Daemon")
+	systray.SetTooltip("NaviServer Daemon")
 	if runtime.GOOS == "windows" {
 		systray.SetIcon(iconIcoData)
 	} else {
@@ -77,7 +77,7 @@ func onReady() {
 	go func() {
 		info, err := updater.CheckForUpdates()
 		if err == nil && info.UpdateAvailable {
-			mVersion.SetTitle(fmt.Sprintf("Update Available: %s ⚠️", info.LatestVersion))
+			mVersion.SetTitle(fmt.Sprintf("Update Available: %s ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â", info.LatestVersion))
 			mVersion.SetTooltip("Click to open release page")
 			mVersion.Enable()
 		}
@@ -90,8 +90,8 @@ func onReady() {
 	var appAutoStart *autostart.App
 	if err == nil {
 		appAutoStart = &autostart.App{
-			Name:        "Naviger",
-			DisplayName: "Naviger Daemon",
+			Name:        "naviserver",
+			DisplayName: "NaviServer Daemon",
 			Exec:        []string{executable},
 		}
 		if appAutoStart.IsEnabled() {
@@ -188,7 +188,7 @@ func runHeadless() {
 }
 
 func startDaemonService(ctx context.Context) {
-	fmt.Println("Starting Naviger Daemon...")
+	fmt.Println("Starting NaviServer Daemon...")
 
 	userConfigDir, err := os.UserConfigDir()
 	if err != nil {
@@ -196,9 +196,9 @@ func startDaemonService(ctx context.Context) {
 		return
 	}
 
-	appName := "naviger"
+	appName := "naviserver"
 	if config.IsDev() {
-		appName = "naviger-dev"
+		appName = "naviserver-dev"
 	}
 	configDir := filepath.Join(userConfigDir, appName)
 

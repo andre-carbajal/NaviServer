@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"naviger/internal/cli/ui"
-	"naviger/pkg/sdk"
+	"naviserver/internal/cli/ui"
+	"naviserver/pkg/sdk"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -15,8 +15,8 @@ var (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "naviger-cli",
-	Short: "CLI for Naviger Server Manager",
+	Use:   "naviserver-cli",
+	Short: "CLI for NaviServer Server Manager",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		Client = sdk.NewClient(BaseURL)
 	},
@@ -34,7 +34,7 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute(port int) {
-	RootCmd.PersistentFlags().StringVar(&BaseURL, "url", fmt.Sprintf("http://localhost:%d", port), "URL of the Naviger Daemon")
+	RootCmd.PersistentFlags().StringVar(&BaseURL, "url", fmt.Sprintf("http://localhost:%d", port), "URL of the NaviServer Daemon")
 
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)

@@ -45,10 +45,10 @@ const Layout: React.FC = () => {
         <div className="brand">
           <img
             src="/apple-touch-icon.png"
-            alt="Naviger"
+            alt="NaviServer"
             style={{ width: '24px', height: '24px' }}
           />
-          <span>Naviger</span>
+          <span>NaviServer</span>
         </div>
         <div className="user-info">
           <div
@@ -102,10 +102,10 @@ const Layout: React.FC = () => {
         <div className="brand">
           <img
             src="/apple-touch-icon.png"
-            alt="Naviger"
+            alt="NaviServer"
             style={{ width: '24px', height: '24px' }}
           />
-          <span>Naviger</span>
+          <span>NaviServer</span>
         </div>
         <nav>
           <NavLink

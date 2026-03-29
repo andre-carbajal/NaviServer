@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from 'vite';
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const isDev = env.NAVIGER_DEV === 'true' || env.NAVIGER_DEV === '1';
+  const isDev = env.NAVISERVER_DEV === 'true' || env.NAVISERVER_DEV === '1';
   const apiPort = isDev ? 23009 : 23008;
 
   return {

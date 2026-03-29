@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"naviger/internal/cli/ui"
+	"naviserver/internal/cli/ui"
 
 	"github.com/spf13/cobra"
 )

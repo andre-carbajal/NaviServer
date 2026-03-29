@@ -1,4 +1,4 @@
-#define MyAppName "Naviger"
+#define MyAppName "NaviServer"
 #define MyAppVersion GetEnv("MYAPP_VERSION")
 #define MyAppPublisher "Andre Carbajal"
 #define MyAppCopyright "Copyright (C) 2026 Andre Carbajal"
@@ -8,11 +8,11 @@ AppId={{628b9b2c-84a9-4010-9a9c-10f3b32b538c}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-AppPublisherURL=https://github.com/andre-carbajal/Naviger
+AppPublisherURL=https://github.com/andre-carbajal/NaviServer
 AppCopyright={#MyAppCopyright}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-OutputBaseFilename=Naviger-{#MyAppVersion}-windows
+OutputBaseFilename=NaviServer-{#MyAppVersion}-windows
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
@@ -28,14 +28,14 @@ VersionInfoProductVersion={#MyAppVersion}
 SetupIconFile=cmd\server\icon.ico
 
 [Files]
-Source: "dist\naviger-server.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\naviger-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\naviserver-server.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\naviserver-cli.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "cmd\server\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\web_dist\*"; DestDir: "{app}\web_dist"; Flags: ignoreversion recursesubdirs
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\naviger-server.exe"; IconFilename: "{app}\icon.ico"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\naviger-server.exe"; IconFilename: "{app}\icon.ico"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\naviserver-server.exe"; IconFilename: "{app}\icon.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\naviserver-server.exe"; IconFilename: "{app}\icon.ico"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -44,10 +44,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsAddPath('{app}')
 
 [Run]
-Filename: "{app}\naviger-server.exe"; Description: "Start Naviger"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\naviserver-server.exe"; Description: "Start NaviServer"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
-Filename: "taskkill"; Parameters: "/IM naviger-server.exe /F"; Flags: runhidden; StatusMsg: "Stopping Naviger..."
+Filename: "taskkill"; Parameters: "/IM naviserver-server.exe /F"; Flags: runhidden; StatusMsg: "Stopping NaviServer..."
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\web_dist"

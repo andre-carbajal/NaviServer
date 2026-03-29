@@ -77,11 +77,11 @@ func createDefaultConfig(configPath, configDir string) (*Config, error) {
 }
 
 func LoadOrGenerateSecret(configDir string) string {
-	if envSecret := os.Getenv("NAVIGER_SECRET_KEY"); envSecret != "" {
+	if envSecret := os.Getenv("NAVISERVER_SECRET_KEY"); envSecret != "" {
 		return envSecret
 	}
 
-	secretPath := filepath.Join(configDir, ".naviger_secret")
+	secretPath := filepath.Join(configDir, ".naviserver_secret")
 
 	data, err := os.ReadFile(secretPath)
 	if err == nil {
@@ -90,7 +90,7 @@ func LoadOrGenerateSecret(configDir string) string {
 
 	newSecret := make([]byte, 32)
 	if _, err := rand.Read(newSecret); err != nil {
-		return fmt.Sprintf("naviger-secret-%d", time.Now().UnixNano())
+		return fmt.Sprintf("naviserver-secret-%d", time.Now().UnixNano())
 	}
 
 	secretStr := hex.EncodeToString(newSecret)
@@ -101,7 +101,7 @@ func LoadOrGenerateSecret(configDir string) string {
 }
 
 func IsDev() bool {
-	val := os.Getenv("NAVIGER_DEV")
+	val := os.Getenv("NAVISERVER_DEV")
 	return val == "true" || val == "1"
 }
 

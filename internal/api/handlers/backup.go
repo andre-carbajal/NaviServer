@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 	"net/http"
 )
 

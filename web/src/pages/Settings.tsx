@@ -322,7 +322,7 @@ const Settings: React.FC = () => {
 
       <div className="card" style={{ marginTop: '20px' }}>
         <h2>System</h2>
-        <p>Manage the Naviger Daemon process.</p>
+        <p>Manage the NaviServer Daemon process.</p>
         <div>
           <Button
             variant="danger"
