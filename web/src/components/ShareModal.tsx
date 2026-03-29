@@ -1,10 +1,11 @@
-import { Globe, Loader2, X } from 'lucide-react';
+import { Globe, Loader2 } from 'lucide-react';
 
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { api } from '../services/api';
 import { Button } from './ui/Button';
 import { CopyButton } from './ui/CopyButton';
+import { Modal } from './ui/Modal';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -84,41 +85,13 @@ const ShareModal: React.FC<ShareModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay">
-      <div
-        className="modal-content"
-        style={{ maxWidth: '480px', padding: '24px 24px 30px 24px' }}
-      >
-        <div className="modal-header" style={{ marginBottom: '16px' }}>
-          <h2
-            className="modal-title flex items-center gap-2"
-            style={{ fontSize: '1.1rem' }}
-          >
-            <Globe size={20} className="text-blue-500" />
-            Share Server
-          </h2>
-          <button
-            className="icon-action"
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
+    <Modal isOpen={isOpen} onClose={onClose} title="Share Server">
+      <div style={{ maxWidth: '480px' }}>
         <div>
           <div
             className="flex justify-between items-start mb-4"
-            style={{ gap: '16px' }}
+            style={{ gap: '16px', marginTop: '10px' }}
           >
             <div>
               <div className="font-semibold text-base mb-0.5">
@@ -250,7 +223,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

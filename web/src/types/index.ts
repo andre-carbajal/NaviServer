@@ -22,6 +22,7 @@ export interface ProgressStep {
 export interface Backup {
   name: string;
   size: number;
+  serverId?: string;
   serverName?: string;
   status?: 'CREATING' | 'READY' | 'ERROR';
   progress?: number;

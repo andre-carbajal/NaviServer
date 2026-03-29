@@ -1,10 +1,11 @@
 import axios from 'axios';
-import { UserPlus, X } from 'lucide-react';
 
 import React, { useState } from 'react';
 
 import { api } from '../services/api';
 import type { User } from '../types';
+import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
 
 interface Props {
   onClose: () => void;
@@ -26,7 +27,7 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
     }
   }, [username]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -51,18 +52,8 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2 className="modal-title flex items-center gap-4">
-            <UserPlus size={24} className="text-blue-500" />
-            Create New User
-          </h2>
-          <button className="icon-action" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-
+    <Modal isOpen={true} onClose={onClose} title="Create New User">
+      <div style={{ padding: '5px 0' }}>
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -93,25 +84,21 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
           </div>
 
           <div className="modal-actions">
-            <button
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="secondary"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading || !!usernameError}
-            >
+            </Button>
+            <Button type="submit" disabled={loading || !!usernameError}>
               {loading ? 'Creating...' : 'Create User'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };
 

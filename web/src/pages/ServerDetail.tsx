@@ -150,7 +150,7 @@ const ServerDetail: React.FC = () => {
     }
   };
 
-  const handleCommandSubmit = (e: React.FormEvent) => {
+  const handleCommandSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
 

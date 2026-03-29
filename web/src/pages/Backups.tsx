@@ -1,5 +1,6 @@
 import {
   Download,
+  Edit,
   Loader2,
   Plus,
   RotateCcw,
@@ -14,8 +15,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import ConfirmationModal from '../components/ConfirmationModal';
 import CreateBackupModal from '../components/CreateBackupModal';
-import RestoreBackupModal from '../components/RestoreBackupModal';
+import EditBackupModal from '../components/EditBackupModal';
 import type { RestoreData } from '../components/RestoreBackupModal';
+import RestoreBackupModal from '../components/RestoreBackupModal';
 import UploadBackupModal from '../components/UploadBackupModal';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
@@ -35,7 +37,7 @@ interface UploadingBackup {
 
 const Backups: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [backups, setBackups] = useState<Backup[]>([]);
   const [creatingBackups, setCreatingBackups] = useState<CreatingBackup[]>([]);
   const [uploadingBackups, setUploadingBackups] = useState<UploadingBackup[]>(
@@ -45,8 +47,10 @@ const Backups: React.FC = () => {
   const { servers, refresh: refreshServers } = useServers();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
+  const [backupToEdit, setBackupToEdit] = useState<Backup | null>(null);
   const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
   const activeSockets = useRef<Set<string>>(new Set());
   const wsMap = useRef<Map<string, WebSocket>>(new Map());
@@ -210,6 +214,22 @@ const Backups: React.FC = () => {
       .cancelBackupCreation(requestId)
       .catch((e) => console.error('Error cancelling backup in backend:', e));
     removeCreatingBackup(requestId);
+  };
+
+  const handleEditClick = (backup: Backup) => {
+    setBackupToEdit(backup);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateBackup = async (serverId: string) => {
+    if (backupToEdit) {
+      try {
+        await api.updateBackup(backupToEdit.name, serverId);
+        fetchBackups();
+      } catch (error) {
+        console.error('Failed to update backup association:', error);
+      }
+    }
   };
 
   const handleDelete = (backupName: string) => {
@@ -491,6 +511,15 @@ const Backups: React.FC = () => {
                     className="actions-group"
                     style={{ border: 'none', padding: 0, margin: 0 }}
                   >
+                    {user?.role === 'admin' && (
+                      <button
+                        className="icon-action"
+                        title="Edit Association"
+                        onClick={() => handleEditClick(backup)}
+                      >
+                        <Edit size={18} />
+                      </button>
+                    )}
                     <a
                       className="icon-action"
                       title="Download"
@@ -553,6 +582,20 @@ const Backups: React.FC = () => {
         servers={servers}
         defaultServerId={!isGlobalView ? id : undefined}
       />
+
+      {backupToEdit && (
+        <EditBackupModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setBackupToEdit(null);
+          }}
+          onUpdate={handleUpdateBackup}
+          servers={servers}
+          currentServerId={backupToEdit.serverId}
+          backupName={backupToEdit.name}
+        />
+      )}
 
       {selectedBackup && (
         <RestoreBackupModal

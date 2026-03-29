@@ -380,9 +380,23 @@ func (m *Manager) SyncBackups() error {
 		return err
 	}
 
+	fileMap := make(map[string]bool)
+	for _, file := range files {
+		if !file.IsDir() && !strings.HasSuffix(file.Name(), ".temp") {
+			fileMap[file.Name()] = true
+		}
+	}
+
 	dbMap := make(map[string]bool)
 	for _, b := range dbBackups {
 		dbMap[b.FileName] = true
+
+		// Cleanup logic: If DB record exists but file is gone, delete from DB
+		if !fileMap[b.FileName] {
+			if err := m.Store.DeleteBackup(b.Name); err != nil {
+				log.Printf("Failed to remove ghost backup record %s: %v", b.Name, err)
+			}
+		}
 	}
 
 	servers, err := m.Store.ListServers()
@@ -390,16 +404,13 @@ func (m *Manager) SyncBackups() error {
 		return err
 	}
 
-	for _, file := range files {
-		if file.IsDir() || strings.HasSuffix(file.Name(), ".temp") {
+	for fileName := range fileMap {
+		if dbMap[fileName] {
 			continue
 		}
 
-		if dbMap[file.Name()] {
-			continue
-		}
-
-		info, err := file.Info()
+		// Discovery logic for new files
+		fInfo, err := os.Stat(filepath.Join(m.BackupsPath, fileName))
 		if err != nil {
 			continue
 		}
@@ -407,7 +418,7 @@ func (m *Manager) SyncBackups() error {
 		var serverID string
 		for _, srv := range servers {
 			safeName := sanitizeFileName(srv.Name)
-			if strings.HasPrefix(file.Name(), safeName) {
+			if strings.HasPrefix(fileName, safeName) {
 				serverID = srv.ID
 				break
 			}
@@ -415,16 +426,16 @@ func (m *Manager) SyncBackups() error {
 
 		backup := &domain.Backup{
 			ID:        uuid.New().String(),
-			Name:      file.Name(),
-			FileName:  file.Name(),
+			Name:      fileName,
+			FileName:  fileName,
 			ServerID:  serverID,
-			Size:      info.Size(),
-			CreatedAt: info.ModTime(),
+			Size:      fInfo.Size(),
+			CreatedAt: fInfo.ModTime(),
 			CreatedBy: "system",
 		}
 
 		if err := m.Store.SaveBackup(backup); err != nil {
-			log.Printf("Failed to sync backup %s: %v", file.Name(), err)
+			log.Printf("Failed to sync backup %s: %v", fileName, err)
 		}
 	}
 
@@ -766,12 +777,23 @@ func unarchive(src, dest string) error {
 	return nil
 }
 
+func (m *Manager) UpdateBackup(name string, serverID string) error {
+	return m.Store.UpdateBackup(name, serverID)
+}
+
 func sanitizeFileName(name string) string {
 	name = strings.ReplaceAll(name, " ", "_")
-	reg := regexp.MustCompile(`[^a-zA-Z0-9_.-]`)
+	// Allow most Unicode characters but remove path-illegal and potentially dangerous ones.
+	// Illegal in Windows/Unix: / \ : * ? " < > |
+	reg := regexp.MustCompile(`[\\/:*?"<>|]`)
 	sanitized := reg.ReplaceAllString(name, "")
-	if len(sanitized) > 50 {
-		sanitized = sanitized[:50]
+
+	// Truncate but avoid cutting in the middle of a multi-byte character
+	if len(sanitized) > 100 {
+		runes := []rune(sanitized)
+		if len(runes) > 50 {
+			sanitized = string(runes[:50])
+		}
 	}
 	return sanitized
 }

@@ -1,7 +1,5 @@
 import { Upload, X } from 'lucide-react';
-
 import React, { useRef, useState } from 'react';
-
 import type { Server } from '../types';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
@@ -34,7 +32,7 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedFile) {
       onUpload(selectedFile, selectedServerId || undefined);
@@ -104,20 +102,18 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
           </div>
         </div>
 
-        <div className="form-group">
-          <label>Associate with Server (Optional)</label>
-          <Select
-            value={selectedServerId}
-            onChange={(e) => setSelectedServerId(e.target.value)}
-          >
-            <option value="">None (Orphaned - Admin only)</option>
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <Select
+          label="Associate with Server (Optional)"
+          value={selectedServerId}
+          onChange={(e) => setSelectedServerId(e.target.value)}
+        >
+          <option value="">None (Orphaned - Admin only)</option>
+          {servers.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </Select>
 
         <div className="modal-actions">
           <Button variant="secondary" type="button" onClick={onClose}>

@@ -41,7 +41,7 @@ const Login: React.FC = () => {
     checkSetupStatus();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 

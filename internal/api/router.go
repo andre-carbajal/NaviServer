@@ -133,6 +133,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 
 	mux.Handle("GET /backups", protect(backupHandler.HandleListAllBackups, ""))
 	mux.Handle("POST /backups/upload", protect(backupHandler.HandleUploadBackup, ""))
+	mux.Handle("PUT /backups/{name}", protect(backupHandler.HandleUpdateBackup, "admin"))
 	mux.Handle("DELETE /backups/{name}", protect(backupHandler.HandleDeleteBackup, ""))
 	mux.Handle("GET /backups/{name}/download", protect(backupHandler.HandleDownloadBackup, ""))
 	mux.Handle("DELETE /backups/progress/{id}", protect(backupHandler.HandleCancelBackup, ""))

@@ -27,14 +27,14 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isDangerous = false,
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} hideCloseButton={true}>
+    <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div style={{ padding: '20px', maxWidth: '400px' }}>
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'start',
             gap: '15px',
-            marginBottom: '15px',
+            marginBottom: '25px',
           }}
         >
           {isDangerous && (
@@ -47,23 +47,22 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <AlertTriangle size={24} />
             </div>
           )}
-          <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{title}</h2>
+          <p
+            style={{
+              margin: 0,
+              lineHeight: '1.5',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {message}
+          </p>
         </div>
-
-        <p
-          style={{
-            marginBottom: '25px',
-            lineHeight: '1.5',
-            color: 'var(--text-muted)',
-          }}
-        >
-          {message}
-        </p>
 
         <div
           style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}
