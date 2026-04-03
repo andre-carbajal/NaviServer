@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-# Naviger Uninstall Script for Linux and macOS
+# NaviServer Uninstall Script for Linux and macOS
 # Reverses install.sh: stops and disables service/agent, removes files and symlinks
 
 set -euo pipefail
 
-INSTALL_DIR="/opt/naviger"
+INSTALL_DIR="/opt/naviserver"
 BIN_DIR="/usr/local/bin"
 SERVICE_FILE="/etc/systemd/system/naviger.service"
-PLIST_NAME="com.naviger.server.plist"
+PLIST_NAME="com.naviserver.server.plist"
 
 usage() {
   cat <<EOF
@@ -53,7 +53,7 @@ case "$OS" in
 esac
 
 if [ "$FORCE" != "yes" ]; then
-  echo "This will remove Naviger installation at: ${INSTALL_DIR}"
+  echo "This will remove NaviServer installation at: ${INSTALL_DIR}"
   echo "It will also remove symlinks in ${BIN_DIR} and any service/agent configuration."
   read -r -p "Are you sure you want to continue? [y/N]: " confirm
   case "$confirm" in
@@ -115,23 +115,23 @@ elif [ "$OS_TYPE" = "macos" ]; then
   fi
 
   # Remove App Bundle from system Applications (needs sudo)
-  APP_PATH="/Applications/Naviger.app"
+  APP_PATH="/Applications/NaviServer.app"
   if [ -d "$APP_PATH" ]; then
-      echo "Removing Naviger.app from /Applications (requires sudo)..."
+      echo "Removing NaviServer.app from /Applications (requires sudo)..."
       run_sudo rm -rf "$APP_PATH"
   fi
 
   # Remove App Bundle from user Applications (no sudo needed)
-  USER_APP_PATH="$USER_HOME/Applications/Naviger.app"
+  USER_APP_PATH="$USER_HOME/Applications/NaviServer.app"
   if [ -d "$USER_APP_PATH" ]; then
-      echo "Removing Naviger.app from user Applications..."
+      echo "Removing NaviServer.app from user Applications..."
       rm -rf "$USER_APP_PATH"
   fi
 
-  # Remove naviger-cli from /usr/local/bin (needs sudo)
-  if [ -f "${BIN_DIR}/naviger-cli" ] || [ -L "${BIN_DIR}/naviger-cli" ]; then
-      echo "Removing ${BIN_DIR}/naviger-cli (requires sudo)..."
-      run_sudo rm -f "${BIN_DIR}/naviger-cli" || true
+  # Remove naviserver-cli from /usr/local/bin (needs sudo)
+  if [ -f "${BIN_DIR}/naviserver-cli" ] || [ -L "${BIN_DIR}/naviserver-cli" ]; then
+      echo "Removing ${BIN_DIR}/naviserver-cli (requires sudo)..."
+      run_sudo rm -f "${BIN_DIR}/naviserver-cli" || true
   fi
 
   # Remove PATH entry added by PKG (needs sudo)
@@ -141,7 +141,7 @@ elif [ "$OS_TYPE" = "macos" ]; then
   fi
 
   # Forget PKG receipt (needs sudo)
-  PKG_ID="com.naviger.server"
+  PKG_ID="com.naviserver.server"
   if pkgutil --pkg-info "$PKG_ID" >/dev/null 2>&1; then
       echo "Removing PKG receipt for ${PKG_ID} (requires sudo)..."
       run_sudo pkgutil --forget "$PKG_ID" || true
@@ -151,13 +151,13 @@ fi
 # Remove symlinks in BIN_DIR (Linux only; needs sudo)
 if [ "$OS_TYPE" = "linux" ]; then
   echo "Removing symlinks in ${BIN_DIR} (requires sudo)..."
-  if [ -L "${BIN_DIR}/naviger-cli" ] || [ -e "${BIN_DIR}/naviger-cli" ]; then
-    run_sudo rm -f "${BIN_DIR}/naviger-cli" || true
-    echo "Removed ${BIN_DIR}/naviger-cli"
+  if [ -L "${BIN_DIR}/naviserver-cli" ] || [ -e "${BIN_DIR}/naviserver-cli" ]; then
+    run_sudo rm -f "${BIN_DIR}/naviserver-cli" || true
+    echo "Removed ${BIN_DIR}/naviserver-cli"
   fi
-  if [ -L "${BIN_DIR}/naviger-server" ] || [ -e "${BIN_DIR}/naviger-server" ]; then
-    run_sudo rm -f "${BIN_DIR}/naviger-server" || true
-    echo "Removed ${BIN_DIR}/naviger-server"
+  if [ -L "${BIN_DIR}/naviserver-server" ] || [ -e "${BIN_DIR}/naviserver-server" ]; then
+    run_sudo rm -f "${BIN_DIR}/naviserver-server" || true
+    echo "Removed ${BIN_DIR}/naviserver-server"
   fi
 fi
 

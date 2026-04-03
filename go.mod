@@ -1,4 +1,4 @@
-module naviger
+module naviserver
 
 go 1.26.1
 

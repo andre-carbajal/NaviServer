@@ -1,8 +1,8 @@
-# ⛏️ Naviger: A Modern Minecraft Server Manager
+# ⛏️ NaviServer: A Modern Minecraft Server Manager
 
-![GitHub release](https://img.shields.io/github/v/release/andre-carbajal/Naviger?style=flat-square)
+![GitHub release](https://img.shields.io/github/v/release/andre-carbajal/NaviServer?style=flat-square)
 
-Naviger is a modern, lightweight, and cross-platform Minecraft server manager designed to make managing multiple server
+NaviServer is a modern, lightweight, and cross-platform Minecraft server manager designed to make managing multiple server
 instances easy through an intuitive web interface, a powerful CLI, and clean operating system integration.
 
 ---
@@ -33,12 +33,12 @@ instances easy through an intuitive web interface, a powerful CLI, and clean ope
 ## 🐞 Bugs & Feedback
 
 If you encounter any issues or have suggestions for improvements, please visit
-our [GitHub Issues](https://github.com/andre-carbajal/Naviger/issues) page to report bugs or provide feedback.
-We appreciate your input to help us enhance Naviger!
+our [GitHub Issues](https://github.com/andre-carbajal/NaviServer/issues) page to report bugs or provide feedback.
+We appreciate your input to help us enhance NaviServer!
 
 ## 📋 Contributing
 
-Contributions are welcome! If you'd like to contribute to Naviger, please fork the repository and create a pull request
+Contributions are welcome! If you'd like to contribute to NaviServer, please fork the repository and create a pull request
 with your changes.
 
 ## 📄 License

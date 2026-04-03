@@ -15,7 +15,7 @@ mkdir -p dist/web_dist
 cp -r web/dist/* dist/web_dist/
 
 # Calculate version for injection
-VERSION="${NAVIGER_VERSION:-}"
+VERSION="${NAVISERVER_VERSION:-}"
 if [ -z "${VERSION}" ] && [ -f "internal/updater/updater.go" ]; then
     VERSION=$(grep -E 'CurrentVersion\s*=' internal/updater/updater.go | head -n 1 | awk -F'"' '{print $2}')
     VERSION="${VERSION#v}"
@@ -25,31 +25,31 @@ if [ -z "${VERSION}" ]; then
 fi
 
 echo "Building Go backend with version: v${VERSION}"
-LDFLAGS="-X 'github.com/andre-carbajal/Naviger/internal/updater.CurrentVersion=v${VERSION}'"
+LDFLAGS="-X 'github.com/andre-carbajal/NaviServer/internal/updater.CurrentVersion=v${VERSION}'"
 
 echo "Building server..."
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -v -o dist/naviger-server-amd64 ./cmd/server
-    GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -v -o dist/naviger-server-arm64 ./cmd/server
-    lipo -create -output dist/naviger-server dist/naviger-server-amd64 dist/naviger-server-arm64
-    rm dist/naviger-server-amd64 dist/naviger-server-arm64
+    GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -v -o dist/naviserver-server-amd64 ./cmd/server
+    GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -v -o dist/naviserver-server-arm64 ./cmd/server
+    lipo -create -output dist/naviserver-server dist/naviserver-server-amd64 dist/naviserver-server-arm64
+    rm dist/naviserver-server-amd64 dist/naviserver-server-arm64
 else
-    go build -ldflags "${LDFLAGS}" -v -o dist/naviger-server ./cmd/server
+    go build -ldflags "${LDFLAGS}" -v -o dist/naviserver-server ./cmd/server
 fi
 
 echo "Building CLI..."
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -v -o dist/naviger-cli-amd64 ./cmd/cli
-    GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -v -o dist/naviger-cli-arm64 ./cmd/cli
-    lipo -create -output dist/naviger-cli dist/naviger-cli-amd64 dist/naviger-cli-arm64
-    rm dist/naviger-cli-amd64 dist/naviger-cli-arm64
+    GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -v -o dist/naviserver-cli-amd64 ./cmd/cli
+    GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -v -o dist/naviserver-cli-arm64 ./cmd/cli
+    lipo -create -output dist/naviserver-cli dist/naviserver-cli-amd64 dist/naviserver-cli-arm64
+    rm dist/naviserver-cli-amd64 dist/naviserver-cli-arm64
 else
-    go build -ldflags "${LDFLAGS}" -v -o dist/naviger-cli ./cmd/cli
+    go build -ldflags "${LDFLAGS}" -v -o dist/naviserver-cli ./cmd/cli
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo "Creating macOS Application Bundle..."
-    APP_NAME="Naviger"
+    APP_NAME="NaviServer"
     APP_DIR="dist/${APP_NAME}.app"
     CONTENTS_DIR="${APP_DIR}/Contents"
     MACOS_DIR="${CONTENTS_DIR}/MacOS"
@@ -58,7 +58,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     mkdir -p "${MACOS_DIR}"
     mkdir -p "${RESOURCES_DIR}"
 
-    cp "dist/naviger-server" "${MACOS_DIR}/${APP_NAME}"
+    cp "dist/naviserver-server" "${MACOS_DIR}/${APP_NAME}"
 
     cp -r "dist/web_dist" "${MACOS_DIR}/"
 
@@ -72,7 +72,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.naviger.server</string>
+     <string>com.naviserver.server</string>
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundlePackageType</key>
@@ -127,13 +127,13 @@ EOF
 
         cp -R "${APP_DIR}" "${APP_DST}/"
         if [ -f "dist/naviger-cli" ]; then
-            cp "dist/naviger-cli" "${BIN_DST}/naviger-cli"
-            chmod +x "${BIN_DST}/naviger-cli"
+            cp "dist/naviserver-cli" "${BIN_DST}/naviserver-cli"
+            chmod +x "${BIN_DST}/naviserver-cli"
         fi
 
-        PKG_NAME="Naviger-${VERSION}-macos.pkg"
+        PKG_NAME="NaviServer-${VERSION}-macos.pkg"
         echo "Creating PKG ${PKG_NAME}..."
-        pkgbuild --root "${PKG_ROOT}" --install-location / --identifier "com.naviger.server" --version "${VERSION}" "dist/${PKG_NAME}"
+        pkgbuild --root "${PKG_ROOT}" --install-location / --identifier "com.naviserver.server" --version "${VERSION}" "dist/${PKG_NAME}"
 
         rm -rf "${PKG_ROOT}"
     fi
@@ -143,21 +143,21 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
 
     ICON_SRC="cmd/server/icon.png"
     if [ -f "$ICON_SRC" ]; then
-        cp "$ICON_SRC" "dist/naviger.png"
+        cp "$ICON_SRC" "dist/naviserver.png"
     fi
 
-    cat > "dist/naviger.desktop" <<EOF
+    cat > "dist/naviserver.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Naviger
-Comment=Naviger Server Manager
-Exec=/opt/naviger/naviger-server
-Icon=/usr/share/pixmaps/naviger.png
+Name=NaviServer
+Comment=NaviServer Server Manager
+Exec=/opt/naviserver/naviserver-server
+Icon=/usr/share/pixmaps/naviserver.png
 Terminal=false
 Categories=Development;Server;
 EOF
 
-    chmod +x "dist/naviger.desktop"
+    chmod +x "dist/naviserver.desktop"
 
     echo "Linux desktop files created in dist/"
 
@@ -165,54 +165,54 @@ EOF
         DEB_ROOT="dist/deb_root"
         rm -rf "${DEB_ROOT}"
 
-        mkdir -p "${DEB_ROOT}/opt/naviger"
+        mkdir -p "${DEB_ROOT}/opt/naviserver"
         mkdir -p "${DEB_ROOT}/usr/local/bin"
         mkdir -p "${DEB_ROOT}/usr/share/applications"
         mkdir -p "${DEB_ROOT}/usr/share/pixmaps"
         mkdir -p "${DEB_ROOT}/DEBIAN"
 
-        cp "dist/naviger-server" "${DEB_ROOT}/opt/naviger/naviger-server"
-        chmod +x "${DEB_ROOT}/opt/naviger/naviger-server"
-        cp "dist/naviger-cli" "${DEB_ROOT}/usr/local/bin/naviger-cli"
-        chmod +x "${DEB_ROOT}/usr/local/bin/naviger-cli"
+        cp "dist/naviserver-server" "${DEB_ROOT}/opt/naviserver/naviserver-server"
+        chmod +x "${DEB_ROOT}/opt/naviserver/naviserver-server"
+        cp "dist/naviserver-cli" "${DEB_ROOT}/usr/local/bin/naviserver-cli"
+        chmod +x "${DEB_ROOT}/usr/local/bin/naviserver-cli"
 
-        cp -r "dist/web_dist" "${DEB_ROOT}/opt/naviger/web_dist"
+        cp -r "dist/web_dist" "${DEB_ROOT}/opt/naviserver/web_dist"
 
-        cp "dist/naviger.png" "${DEB_ROOT}/usr/share/pixmaps/naviger.png"
-        cp "dist/naviger.desktop" "${DEB_ROOT}/usr/share/applications/naviger.desktop"
+        cp "dist/naviserver.png" "${DEB_ROOT}/usr/share/pixmaps/naviserver.png"
+        cp "dist/naviserver.desktop" "${DEB_ROOT}/usr/share/applications/naviserver.desktop"
 
         INSTALLED_SIZE=$(du -ks "${DEB_ROOT}" | cut -f1)
 
         cat > "${DEB_ROOT}/DEBIAN/control" <<EOF
-Package: naviger
+Package: naviserver
 Version: ${VERSION}
 Architecture: amd64
 Maintainer: Andre Carbajal
 Installed-Size: ${INSTALLED_SIZE}
 Description: Modern Minecraft Server Manager
- Naviger is a lightweight, cross-platform Minecraft server manager
+ NaviServer is a lightweight, cross-platform Minecraft server manager
  with Web UI, CLI, and native integration.
 Depends: libc6
 Section: utils
 Priority: optional
-Homepage: https://github.com/andre-carbajal/Naviger
+Homepage: https://github.com/andre-carbajal/NaviServer
 EOF
 
         cat > "${DEB_ROOT}/DEBIAN/postinst" <<'EOF'
 #!/bin/bash
 set -e
-ln -sf /opt/naviger/naviger-server /usr/local/bin/naviger-server
+ln -sf /opt/naviserver/naviserver-server /usr/local/bin/naviserver-server
 EOF
         chmod 755 "${DEB_ROOT}/DEBIAN/postinst"
 
         cat > "${DEB_ROOT}/DEBIAN/postrm" <<'EOF'
 #!/bin/bash
 set -e
-rm -f /usr/local/bin/naviger-server
+rm -f /usr/local/bin/naviserver-server
 EOF
         chmod 755 "${DEB_ROOT}/DEBIAN/postrm"
 
-        DEB_NAME="Naviger-${VERSION}-linux.deb"
+        DEB_NAME="NaviServer-${VERSION}-linux.deb"
         echo "Creating DEB ${DEB_NAME}..."
         dpkg-deb --build "${DEB_ROOT}" "dist/${DEB_NAME}"
 

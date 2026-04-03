@@ -273,7 +273,7 @@ const PublicServer: React.FC = () => {
           fontSize: '0.875rem',
         }}
       >
-        Powered by Naviger
+        Powered by NaviServer
       </div>
     </div>
   );
