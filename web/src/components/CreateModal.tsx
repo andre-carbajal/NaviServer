@@ -1,10 +1,10 @@
-import { X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 import React, { useEffect, useState } from 'react';
 
 import { api } from '../services/api.ts';
 import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -62,9 +62,7 @@ const CreateModal: React.FC<CreateModalProps> = ({
     }
   }, [loader]);
 
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newRequestId = uuidv4();
 
@@ -78,85 +76,77 @@ const CreateModal: React.FC<CreateModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="modal-title">Create New Server</div>
-          <Button variant="secondary" onClick={onClose}>
-            <X size={20} />
-          </Button>
+    <Modal isOpen={isOpen} onClose={onClose} title="Create New Server">
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Server Name</label>
+          <input
+            type="text"
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My Survival World"
+            required
+          />
         </div>
-        <form onSubmit={handleSubmit}>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '15px',
+          }}
+        >
           <div className="form-group">
-            <label>Server Name</label>
-            <input
-              type="text"
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="My Survival World"
-              required
-            />
+            <label>Loader</label>
+            <select
+              className="form-select"
+              value={loader}
+              onChange={(e) => setLoader(e.target.value)}
+            >
+              {loaders.map((l) => (
+                <option key={l} value={l}>
+                  {l.charAt(0).toUpperCase() + l.slice(1)}
+                </option>
+              ))}
+            </select>
           </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '15px',
-            }}
-          >
-            <div className="form-group">
-              <label>Loader</label>
-              <select
-                className="form-select"
-                value={loader}
-                onChange={(e) => setLoader(e.target.value)}
-              >
-                {loaders.map((l) => (
-                  <option key={l} value={l}>
-                    {l.charAt(0).toUpperCase() + l.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Version</label>
-              <select
-                className="form-select"
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-              >
-                {versions.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div className="form-group">
-            <label>RAM (MB)</label>
-            <input
-              type="number"
-              className="form-input"
-              value={ram}
-              onChange={(e) => setRam(Number(e.target.value))}
-              min="1024"
-              step="512"
-            />
+            <label>Version</label>
+            <select
+              className="form-select"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+            >
+              {versions.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
           </div>
+        </div>
 
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">Create Server</Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="form-group">
+          <label>RAM (MB)</label>
+          <input
+            type="number"
+            className="form-input"
+            value={ram}
+            onChange={(e) => setRam(Number(e.target.value))}
+            min="1024"
+            step="512"
+          />
+        </div>
+
+        <div className="modal-actions">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit">Create Server</Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

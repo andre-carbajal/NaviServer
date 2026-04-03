@@ -37,6 +37,7 @@ type PublicLinkRepository interface {
 
 type BackupRepository interface {
 	SaveBackup(backup *Backup) error
+	UpdateBackup(name string, serverID string) error
 	ListBackups(serverID string, userID string, role string) ([]Backup, error)
 	GetBackupByName(name string) (*Backup, error)
 	DeleteBackup(name string) error

@@ -302,3 +302,27 @@ func (h *BackupHandler) HandleCancelBackup(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status": "cancelled"}`))
 }
+
+func (h *BackupHandler) HandleUpdateBackup(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		http.Error(w, "Missing backup name", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		ServerID string `json:"serverId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.BackupManager.UpdateBackup(name, req.ServerID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status": "updated"}`))
+}

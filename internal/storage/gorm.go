@@ -461,6 +461,10 @@ func (s *GormStore) SaveBackup(backup *domain.Backup) error {
 	return s.db.Save(gormBackup).Error
 }
 
+func (s *GormStore) UpdateBackup(name string, serverID string) error {
+	return s.db.Model(&Backup{}).Where("name = ?", name).Update("server_id", serverID).Error
+}
+
 func (s *GormStore) ListBackups(serverID string, userID string, role string) ([]domain.Backup, error) {
 	var gormBackups []Backup
 	query := s.db.Model(&Backup{}).

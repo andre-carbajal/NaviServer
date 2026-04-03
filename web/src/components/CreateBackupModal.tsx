@@ -1,9 +1,8 @@
-import { X } from 'lucide-react';
-
 import React, { useEffect, useState } from 'react';
 
 import type { Server } from '../types';
 import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
 
 interface CreateBackupModalProps {
   isOpen: boolean;
@@ -34,7 +33,7 @@ const CreateBackupModal: React.FC<CreateBackupModalProps> = ({
     }
   }, [isOpen, defaultServerId, servers]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedServer) return;
 
@@ -49,73 +48,63 @@ const CreateBackupModal: React.FC<CreateBackupModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   const showServerSelect = !defaultServerId;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h2 className="modal-title">Create Backup</h2>
-          <button className="icon-action" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          {showServerSelect && (
-            <div className="form-group">
-              <label>Server</label>
-              <select
-                className="form-select"
-                value={selectedServer}
-                onChange={(e) => setSelectedServer(e.target.value)}
-                required
-              >
-                <option value="" disabled>
-                  Select a server
-                </option>
-                {servers.map((server) => (
-                  <option key={server.id} value={server.id}>
-                    {server.name} ({server.id})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Backup">
+      <form onSubmit={handleSubmit}>
+        {showServerSelect && (
           <div className="form-group">
-            <label>
-              Backup Name{' '}
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8em' }}>
-                (Optional)
-              </span>
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Defaults to timestamp"
-            />
-          </div>
-
-          <div className="modal-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={isSubmitting}
+            <label>Server</label>
+            <select
+              className="form-select"
+              value={selectedServer}
+              onChange={(e) => setSelectedServer(e.target.value)}
+              required
             >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !selectedServer}>
-              {isSubmitting ? 'Creating...' : 'Create'}
-            </Button>
+              <option value="" disabled>
+                Select a server
+              </option>
+              {servers.map((server) => (
+                <option key={server.id} value={server.id}>
+                  {server.name} ({server.id})
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <div className="form-group">
+          <label>
+            Backup Name{' '}
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.8em' }}>
+              (Optional)
+            </span>
+          </label>
+          <input
+            type="text"
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Defaults to timestamp"
+          />
+        </div>
+
+        <div className="modal-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting || !selectedServer}>
+            {isSubmitting ? 'Creating...' : 'Create'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

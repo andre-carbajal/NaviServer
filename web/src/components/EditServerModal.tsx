@@ -1,10 +1,9 @@
-import { X } from 'lucide-react';
-
 import React, { useEffect, useRef, useState } from 'react';
 
 import { api } from '../services/api';
 import type { Server } from '../types';
 import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
 
 interface EditServerModalProps {
   isOpen: boolean;
@@ -62,7 +61,7 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
     try {
@@ -75,166 +74,135 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div
-          className="modal-header"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'start',
-            marginBottom: '20px',
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0 }}>Edit Server</h2>
-          </div>
-          <button
-            className="icon-action"
-            onClick={onClose}
-            type="button"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Server Icon</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '8px',
-                  background: '#333',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  border: '1px solid #444',
-                  position: 'relative',
-                }}
-              >
-                {iconPreview ? (
-                  <img
-                    src={iconPreview}
-                    alt="Preview"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'fill',
-                      imageRendering: 'pixelated',
-                    }}
-                  />
-                ) : !imageError && server ? (
-                  <img
-                    src={`${api.getServerIconUrl(server.id)}?t=${Date.now()}`}
-                    alt="Current"
-                    onError={() => setImageError(true)}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      imageRendering: 'pixelated',
-                    }}
-                  />
-                ) : (
-                  <span
-                    style={{
-                      fontSize: '24px',
-                      color: '#666',
-                    }}
-                  >
-                    {server?.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div style={{ flex: 1 }}>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={handleFileChange}
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Choose Image
-                </Button>
-                <div
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Server">
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Server Icon</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '8px',
+                background: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                border: '1px solid #444',
+                position: 'relative',
+              }}
+            >
+              {iconPreview ? (
+                <img
+                  src={iconPreview}
+                  alt="Preview"
                   style={{
-                    fontSize: '0.8rem',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'fill',
+                    imageRendering: 'pixelated',
+                  }}
+                />
+              ) : !imageError && server ? (
+                <img
+                  src={`${api.getServerIconUrl(server.id)}?t=${Date.now()}`}
+                  alt="Current"
+                  onError={() => setImageError(true)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    imageRendering: 'pixelated',
+                  }}
+                />
+              ) : (
+                <span
+                  style={{
+                    fontSize: '24px',
                     color: '#666',
-                    marginTop: '5px',
                   }}
                 >
-                  Recommended 64x64 PNG
-                </div>
+                  {server?.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose Image
+              </Button>
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  color: '#666',
+                  marginTop: '5px',
+                }}
+              >
+                Recommended 64x64 PNG
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label>Server Name</label>
-            <input
-              type="text"
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>RAM (MB)</label>
-            <input
-              type="number"
-              className="form-input"
-              value={ram}
-              onChange={(e) => setRam(parseInt(e.target.value, 10))}
-              required
-              min="1024"
-              step="512"
-            />
-          </div>
-          <div className="form-group">
-            <label>Custom Arguments</label>
-            <input
-              type="text"
-              className="form-input"
-              value={customArgs}
-              onChange={(e) => setCustomArgs(e.target.value)}
-              placeholder="-Dexample=true"
-            />
-          </div>
-          <div className="modal-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="form-group">
+          <label>Server Name</label>
+          <input
+            type="text"
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>RAM (MB)</label>
+          <input
+            type="number"
+            className="form-input"
+            value={ram}
+            onChange={(e) => setRam(parseInt(e.target.value, 10))}
+            required
+            min="1024"
+            step="512"
+          />
+        </div>
+        <div className="form-group">
+          <label>Custom Arguments</label>
+          <input
+            type="text"
+            className="form-input"
+            value={customArgs}
+            onChange={(e) => setCustomArgs(e.target.value)}
+            placeholder="-Dexample=true"
+          />
+        </div>
+        <div className="modal-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
