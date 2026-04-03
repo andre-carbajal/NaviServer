@@ -180,7 +180,19 @@ EOF
         echo "Enabling and starting naviserver service..."
         run_sudo systemctl enable naviserver
         run_sudo systemctl start naviserver
-        echo "NaviServer service installed and started (Headless)."
+        
+        # CRITICAL: Restart service to ensure it works correctly with migrated data
+        echo "Restarting service (required for data consistency)..."
+        sleep 2
+        run_sudo systemctl restart naviserver
+        
+        # Verify service is running
+        if systemctl is-active --quiet naviserver; then
+            echo "✓ NaviServer service installed and started (Headless)."
+        else
+            echo "✗ Error: NaviServer service failed to start"
+            exit 1
+        fi
 
     elif [ "$OS_TYPE" = "macos" ]; then
         USER_HOME="$HOME"
@@ -223,7 +235,20 @@ EOF
         echo "Loading launchd agent..."
         launchctl unload "$PLIST_FILE" 2>/dev/null || true
         launchctl load "$PLIST_FILE"
-        echo "NaviServer agent installed and loaded (Headless)."
+        
+        # CRITICAL: Restart agent to ensure it works correctly with migrated data
+        echo "Restarting agent (required for data consistency)..."
+        sleep 2
+        launchctl stop com.naviserver.server 2>/dev/null || true
+        sleep 1
+        launchctl start com.naviserver.server 2>/dev/null || true
+        
+        # Verify agent is running
+        if launchctl list com.naviserver.server >/dev/null 2>&1; then
+            echo "✓ NaviServer agent installed and loaded (Headless)."
+        else
+            echo "✗ Warning: NaviServer agent may not be running"
+        fi
     fi
 
 else

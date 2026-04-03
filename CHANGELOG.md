@@ -1,34 +1,35 @@
 # Changelog
 
-- **Project Rebranding: Naviger is now NaviServer**:
-  - Renamed all application occurrences, binaries, and identifiers from `Naviger` to `NaviServer` across the entire codebase.
-  - Updated Go module name to `naviserver` and refreshed all internal imports and build configurations.
-  - Migrated environment variables (e.g., `NAVIGER_DEV` -> `NAVISERVER_DEV`, `NAVIGER_SECRET_KEY` -> `NAVISERVER_SECRET_KEY`) and system paths.
-  - **IMPORTANT MIGRATION NOTE**: Users of previous versions MUST run the provided `migration/migrate.sh` (Linux/macOS) or `migration/migrate.bat` (Windows) *before* installing the new version. These scripts ensure that existing servers, backups, and the database are moved from `naviger` to `naviserver` data directories automatically to prevent data loss or duplicate installations.
-  - Added dedicated migration scripts (in `migration/` directory) to handle service termination, data movement, and cleanup of legacy symlinks and installations.
-
-- Database-driven backup management and enhanced security:
-    - Implemented a new `Backup` model in the database to track files, server associations, and user ownership.
-    - Added automatic synchronization in `BackupManager` to discover existing files and register them in the database on
-      startup.
-    - Restructured API handlers in `internal/api/handlers/backup.go` to enforce server-based permissions for users.
-    - Users can now only manage backups for servers they are authorized to handle; orphaned backups are now restricted
-      to administrators.
-    - Introduced a new `UploadBackupModal` in the frontend to allow associating uploaded files with specific servers.
-    - Updated the backup creation process to calculate and store the final compressed file size in the database.
-- Added real-time Minecraft server player monitoring:
-    - Integrated [go-mcstatus](https://github.com/andre-carbajal/go-mcstatus) library to query server status.
-    - Displaying online and max player counts in the server list.
-    - Added a dedicated "Players" stat card to the server detail view (console page).
-    - Updated API and frontend types to support player statistics.
-- Unified project versioning:
-    - Transitioned `internal/updater.CurrentVersion` from a constant to a variable to support dynamic version injection
-      during compilation.
-    - Implemented version injection using Go `ldflags` in both `build.sh` and `build.bat`.
-    - Set the default version in the source code to `"dev"` to clearly distinguish development builds from official
-      releases.
-    - Updated GitHub Actions to automatically inject the release tag version into the binary, ensuring consistency
-      across all platforms.
-- Improve error handling and type definitions across components
-- Improved `SyncBackups` to perform bidirectional synchronization, removing ghost database records when physical files
-  are deleted externally.
+- **Enhanced Installation and Migration Scripts** (Migration Safety & Automation):
+  - **`migration/migrate.sh` (Linux/macOS)**: Complete rewrite with critical improvements:
+    - Automatic backup creation in home directory (`~/naviger_backup_YYYY-MM-DD_HH-MM-SS.tar.gz`)
+    - User confirmation at start and end of migration process
+    - 7-step migration process with clear progress indicators
+    - Pre-migration validation to ensure old data exists and is accessible
+    - Automatic installation of new version via `install.sh` (no manual step required)
+    - **Mandatory service restart** after installation to ensure data consistency
+    - Intelligent error handling: if `install.sh` fails, data remains safe and migration is marked incomplete
+    - Support for both `tar.gz` and `zip` backup formats with automatic fallback
+    - Comprehensive summary showing backup location and restoration instructions
+  - **`migration/migrate.bat` (Windows)**: Complete rewrite with critical improvements:
+    - Automatic backup creation in home directory (`naviger_backup_YYYY-MM-DD_HH-MM-SS.zip`)
+    - User confirmation at start of migration process
+    - 6-step migration process with clear progress indicators
+    - Automatic download of latest NaviServer installer from GitHub releases
+    - Synchronous execution of installer (waits for completion)
+    - Graceful fallback: if download fails, provides manual download instructions instead of aborting
+    - Automatic cleanup of temporary files
+    - Comprehensive summary with backup location
+  - **`install.sh` (macOS/Linux)**: Added mandatory service restart for headless installations:
+    - **Linux**: Added `systemctl restart naviserver` with verification that service is running
+    - **macOS**: Added `launchctl` stop/start/restart sequence with verification
+    - Sleep delays (2 seconds) before restart to ensure stability with migrated data
+    - Service state verification after restart to confirm successful startup
+  - **`uninstall.sh` (macOS/Linux)**: Enhanced with data preservation and backup options:
+    - New `--keep-data` / `-k` flag to preserve data directory during uninstallation
+    - Automatic backup creation (`~/naviserver_uninstall_backup_YYYY-MM-DD_HH-MM-SS.tar.gz`) before deletion
+    - Improved user confirmation with explicit data loss warnings
+    - Instructions for restoring from backup
+    - Colored console output for better readability (info, success, warning, error)
+  - **Data Safety**: All migration/installation processes now create automatic backups in user's home directory, ensuring zero data loss even if operations fail
+  - **Backward Compatibility**: Scripts handle cases where new data directories already exist, preventing accidental overwrites

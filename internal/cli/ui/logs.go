@@ -159,19 +159,19 @@ func (m logModel) View() string {
 	serverInfoContent := ""
 	if m.server != nil {
 		statusColor := "160"
-		statusIcon := "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´"
+		statusIcon := "🔴"
 		if m.server.Status == "RUNNING" {
 			statusColor = "42"
-			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢"
+			statusIcon = "🟢"
 		} else if m.server.Status == "STARTING" {
 			statusColor = "220"
-			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¡"
+			statusIcon = "🟡"
 		}
 
 		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor))
 
 		serverInfoContent = fmt.Sprintf(
-			"Server: %s %s  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  ID: %s  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  Port: %d\nLoader: %s %s  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  RAM: %d MB",
+			"Server: %s %s  •  ID: %s  •  Port: %d\nLoader: %s %s  •  RAM: %d MB",
 			statusIcon,
 			statusStyle.Render(m.server.Name),
 			m.server.ID,
@@ -203,11 +203,11 @@ func (m logModel) View() string {
 	for i, k := range keys {
 		helpText += k
 		if i < len(keys)-1 {
-			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
+			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
 		}
 	}
 
-	inputLine := fmt.Sprintf("ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ %s", m.textInput.View())
+	inputLine := fmt.Sprintf("→ %s", m.textInput.View())
 
 	helpLine := lipgloss.NewStyle().
 		Width(m.width - 6).

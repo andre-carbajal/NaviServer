@@ -77,7 +77,7 @@ func onReady() {
 	go func() {
 		info, err := updater.CheckForUpdates()
 		if err == nil && info.UpdateAvailable {
-			mVersion.SetTitle(fmt.Sprintf("Update Available: %s ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â", info.LatestVersion))
+			mVersion.SetTitle(fmt.Sprintf("Update Available: %s ⚠️", info.LatestVersion))
 			mVersion.SetTooltip("Click to open release page")
 			mVersion.Enable()
 		}
@@ -90,7 +90,7 @@ func onReady() {
 	var appAutoStart *autostart.App
 	if err == nil {
 		appAutoStart = &autostart.App{
-			Name:        "naviserver",
+			Name:        "NaviServer",
 			DisplayName: "NaviServer Daemon",
 			Exec:        []string{executable},
 		}
