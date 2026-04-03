@@ -66,7 +66,7 @@ BIN_DIR="/usr/local/bin"
 # Stop existing service if running
 echo "Checking for existing installation..."
 if [ "$OS_TYPE" = "linux" ]; then
-    if systemctl stop naviserver; then
+    if systemctl is-active --quiet naviserver; then
         echo "Stopping existing NaviServer service..."
         run_sudo systemctl stop naviserver
     fi
@@ -128,7 +128,7 @@ if [ "$INSTALL_MODE" = "1" ]; then
     # Check if extracted content is inside a folder (common with zips) or flat
     if [ -d "${TMP_DIR}/extracted/NaviServer.app" ]; then
          # macOS app bundle case - we need the binary inside
-         run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/Naviger" "${INSTALL_DIR}/naviserver-server"
+         run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/NaviServer" "${INSTALL_DIR}/naviserver-server"
          # Also copy web_dist if it exists inside Resources or MacOS
          if [ -d "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/web_dist" ]; then
              run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/web_dist" "${INSTALL_DIR}/"
@@ -178,8 +178,8 @@ EOF
         echo "Reloading systemd daemon..."
         run_sudo systemctl daemon-reload
         echo "Enabling and starting naviserver service..."
-        run_sudo systemctl stop naviserver
-        run_sudo systemctl stop naviserver
+        run_sudo systemctl enable naviserver
+        run_sudo systemctl start naviserver
         echo "NaviServer service installed and started (Headless)."
 
     elif [ "$OS_TYPE" = "macos" ]; then
@@ -275,7 +275,7 @@ EOF
              run_sudo mv naviserver.desktop "/usr/share/applications/"
         fi
 
-        echo "Naviger installed in Desktop mode."
+        echo "NaviServer installed in Desktop mode."
     fi
 
     # Install CLI if available (needs sudo)

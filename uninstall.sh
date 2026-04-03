@@ -7,7 +7,7 @@ set -euo pipefail
 
 INSTALL_DIR="/opt/naviserver"
 BIN_DIR="/usr/local/bin"
-SERVICE_FILE="/etc/systemd/system/naviger.service"
+SERVICE_FILE="/etc/systemd/system/naviserver.service"
 PLIST_NAME="com.naviserver.server.plist"
 
 usage() {
@@ -66,14 +66,14 @@ echo "Stopping and removing service/agent (if present)..."
 
 if [ "$OS_TYPE" = "linux" ]; then
   if command -v systemctl >/dev/null 2>&1; then
-    if systemctl is-active --quiet naviger; then
-      echo "Stopping naviger service..."
-      run_sudo systemctl stop naviger || true
+    if systemctl is-active --quiet naviserver; then
+      echo "Stopping naviserver service..."
+      run_sudo systemctl stop naviserver || true
     fi
 
-    if systemctl is-enabled --quiet naviger 2>/dev/null; then
-      echo "Disabling naviger service..."
-      run_sudo systemctl disable naviger || true
+    if systemctl is-enabled --quiet naviserver 2>/dev/null; then
+      echo "Disabling naviserver service..."
+      run_sudo systemctl disable naviserver || true
     fi
 
     if [ -f "$SERVICE_FILE" ]; then
@@ -84,17 +84,17 @@ if [ "$OS_TYPE" = "linux" ]; then
     fi
 
     # Also check for user service just in case
-    if systemctl --user is-active --quiet naviger 2>/dev/null; then
+    if systemctl --user is-active --quiet naviserver 2>/dev/null; then
         echo "Stopping user service..."
-        systemctl --user stop naviger || true
-        systemctl --user disable naviger || true
+        systemctl --user stop naviserver || true
+        systemctl --user disable naviserver || true
     fi
   else
     echo "systemctl not found; skipping systemd cleanup."
   fi
 
   # Remove desktop entry if it exists (user-owned, no sudo needed)
-  DESKTOP_FILE="$HOME/.local/share/applications/naviger.desktop"
+  DESKTOP_FILE="$HOME/.local/share/applications/naviserver.desktop"
   if [ -f "$DESKTOP_FILE" ]; then
       echo "Removing desktop entry..."
       rm -f "$DESKTOP_FILE"
@@ -135,9 +135,9 @@ elif [ "$OS_TYPE" = "macos" ]; then
   fi
 
   # Remove PATH entry added by PKG (needs sudo)
-  if [ -f "/etc/paths.d/naviger" ]; then
-      echo "Removing /etc/paths.d/naviger (requires sudo)..."
-      run_sudo rm -f "/etc/paths.d/naviger" || true
+  if [ -f "/etc/paths.d/naviserver" ]; then
+      echo "Removing /etc/paths.d/naviserver (requires sudo)..."
+      run_sudo rm -f "/etc/paths.d/naviserver" || true
   fi
 
   # Forget PKG receipt (needs sudo)
@@ -171,7 +171,7 @@ else
 fi
 
 # Additional cleanup: logs in /tmp (user-owned, no sudo needed)
-rm -f /tmp/naviger.out /tmp/naviger.err 2>/dev/null || true
+rm -f /tmp/naviserver.out /tmp/naviserver.err 2>/dev/null || true
 
 echo "Uninstall complete."
 

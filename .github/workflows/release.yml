@@ -54,7 +54,7 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          export NAVIGER_VERSION="${VERSION}"
+          export NAVISERVER_VERSION="${VERSION}"
           chmod +x build.sh
           ./build.sh
 
@@ -63,7 +63,7 @@ jobs:
         run: |
           set VERSION=${{ github.ref_name }}
           set VERSION=%VERSION:v=%
-          set NAVIGER_VERSION=%VERSION%
+          set NAVISERVER_VERSION=%VERSION%
           .\build.bat
         env:
           CGO_ENABLED: 1
@@ -92,8 +92,8 @@ jobs:
           $VERSION = "${{ github.ref_name }}"
           if ($VERSION -like 'v*') { $VERSION = $VERSION.Substring(1) }
           New-Item -ItemType Directory -Force -Path build
-          Copy-Item "Output/Naviger-${{ env.MYAPP_VERSION }}-windows.exe" "build/Naviger-${VERSION}-windows.exe"
-          $ZIP_NAME = "Naviger-${VERSION}-windows.zip"
+          Copy-Item "Output/NaviServer-${{ env.MYAPP_VERSION }}-windows.exe" "build/NaviServer-${VERSION}-windows.exe"
+          $ZIP_NAME = "NaviServer-${VERSION}-windows.zip"
           Compress-Archive -Path "dist/*" -DestinationPath "build/$ZIP_NAME" -Force
 
       - name: Create Zip Archive (Linux/macOS)
@@ -107,9 +107,9 @@ jobs:
             if ls dist/*.pkg >/dev/null 2>&1; then
               cp dist/*.pkg build/
             fi
-            cp -R dist/Naviger.app "build/binaries/"
-            cp dist/naviger-cli "build/binaries/" 2>/dev/null || true
-            cp dist/naviger-server "build/binaries/" 2>/dev/null || true
+            cp -R dist/NaviServer.app "build/binaries/"
+            cp dist/naviserver-cli "build/binaries/" 2>/dev/null || true
+            cp dist/naviserver-server "build/binaries/" 2>/dev/null || true
             cp -R dist/web_dist "build/binaries/" 2>/dev/null || true
           elif [ "${{ matrix.name }}" = "linux" ]; then
             if ls dist/*.deb >/dev/null 2>&1; then
@@ -120,7 +120,7 @@ jobs:
             cp -r dist/* "build/binaries/"
           fi
 
-          ZIP_NAME="Naviger-${VERSION}-${{ matrix.name }}.zip"
+          ZIP_NAME="NaviServer-${VERSION}-${{ matrix.name }}.zip"
           cd "build/binaries"
           zip -r "../${ZIP_NAME}" ./*
         shell: bash
@@ -129,7 +129,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-build
-          path: build/Naviger-*.*
+          path: build/NaviServer-*.*
 
   release:
     needs: build-native
@@ -149,7 +149,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/Naviger-*.*
+          files: build/NaviServer-*.*
           generate_release_notes: true
           draft: false
           prerelease: false

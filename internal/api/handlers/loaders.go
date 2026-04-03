@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"naviger/internal/loader"
+	"naviserver/internal/loader"
 )
 
 type LoadersHandler struct {

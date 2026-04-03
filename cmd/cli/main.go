@@ -1,8 +1,8 @@
 package main
 
 import (
-	"naviger/internal/cli/cmd"
-	"naviger/internal/config"
+	"naviserver/internal/cli/cmd"
+	"naviserver/internal/config"
 )
 
 func main() {

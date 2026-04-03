@@ -6,7 +6,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 	"net/http"
 )
 

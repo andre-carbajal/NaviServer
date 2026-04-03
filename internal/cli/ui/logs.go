@@ -3,7 +3,7 @@ package ui
 import (
 	"fmt"
 	"log"
-	"naviger/pkg/sdk"
+	"naviserver/pkg/sdk"
 	"net/http"
 	"os"
 	"os/signal"
@@ -159,19 +159,19 @@ func (m logModel) View() string {
 	serverInfoContent := ""
 	if m.server != nil {
 		statusColor := "160"
-		statusIcon := "🔴"
+		statusIcon := "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´"
 		if m.server.Status == "RUNNING" {
 			statusColor = "42"
-			statusIcon = "🟢"
+			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢"
 		} else if m.server.Status == "STARTING" {
 			statusColor = "220"
-			statusIcon = "🟡"
+			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¡"
 		}
 
 		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor))
 
 		serverInfoContent = fmt.Sprintf(
-			"Server: %s %s  •  ID: %s  •  Port: %d\nLoader: %s %s  •  RAM: %d MB",
+			"Server: %s %s  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  ID: %s  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  Port: %d\nLoader: %s %s  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  RAM: %d MB",
 			statusIcon,
 			statusStyle.Render(m.server.Name),
 			m.server.ID,
@@ -203,11 +203,11 @@ func (m logModel) View() string {
 	for i, k := range keys {
 		helpText += k
 		if i < len(keys)-1 {
-			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
+			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
 		}
 	}
 
-	inputLine := fmt.Sprintf("→ %s", m.textInput.View())
+	inputLine := fmt.Sprintf("ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ %s", m.textInput.View())
 
 	helpLine := lipgloss.NewStyle().
 		Width(m.width - 6).
@@ -243,7 +243,7 @@ func RunLogs(client *sdk.Client, id string) bool {
 	}
 
 	header := http.Header{}
-	header.Set("X-Naviger-Client", "CLI")
+	header.Set("X-NaviServer-Client", "CLI")
 
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err != nil {

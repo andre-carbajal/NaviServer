@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"naviger/pkg/sdk"
+	"naviserver/pkg/sdk"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -171,7 +171,7 @@ func (m BackupCreateWizardModel) View() string {
 	for i, k := range keys {
 		helpText += k
 		if i < len(keys)-1 {
-			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
+			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
 		}
 	}
 

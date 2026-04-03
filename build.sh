@@ -25,7 +25,7 @@ if [ -z "${VERSION}" ]; then
 fi
 
 echo "Building Go backend with version: v${VERSION}"
-LDFLAGS="-X 'github.com/andre-carbajal/NaviServer/internal/updater.CurrentVersion=v${VERSION}'"
+LDFLAGS="-X 'naviserver/internal/updater.CurrentVersion=v${VERSION}'"
 
 echo "Building server..."
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -72,13 +72,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-     <string>com.naviserver.server</string>
+    <string>com.naviserver.server</string>
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>2.0.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSHighResolutionCapable</key>
@@ -126,7 +126,7 @@ EOF
         mkdir -p "${APP_DST}" "${BIN_DST}"
 
         cp -R "${APP_DIR}" "${APP_DST}/"
-        if [ -f "dist/naviger-cli" ]; then
+        if [ -f "dist/naviserver-cli" ]; then
             cp "dist/naviserver-cli" "${BIN_DST}/naviserver-cli"
             chmod +x "${BIN_DST}/naviserver-cli"
         fi

@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"naviger/internal/storage"
+	"naviserver/internal/storage"
 	"net"
 )
 

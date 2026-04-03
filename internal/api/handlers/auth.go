@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

@@ -7,7 +7,7 @@ import (
 )
 
 func TestLoadOrGenerateSecret(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "naviger-config-test")
+	tempDir, err := os.MkdirTemp("", "naviserver-config-test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -21,7 +21,7 @@ func TestLoadOrGenerateSecret(t *testing.T) {
 		t.Errorf("Expected 64 char hex string, got length %d", len(secret1))
 	}
 
-	secretPath := filepath.Join(tempDir, ".naviger_secret")
+	secretPath := filepath.Join(tempDir, ".naviserver_secret")
 	if _, err := os.Stat(secretPath); os.IsNotExist(err) {
 		t.Error("Secret file was not created")
 	}
@@ -31,8 +31,8 @@ func TestLoadOrGenerateSecret(t *testing.T) {
 		t.Errorf("Expected secret to persist. Got %s, want %s", secret2, secret1)
 	}
 
-	os.Setenv("NAVIGER_SECRET_KEY", "custom-env-secret")
-	defer os.Unsetenv("NAVIGER_SECRET_KEY")
+	os.Setenv("NAVISERVER_SECRET_KEY", "custom-env-secret")
+	defer os.Unsetenv("NAVISERVER_SECRET_KEY")
 
 	secret3 := LoadOrGenerateSecret(tempDir)
 	if secret3 != "custom-env-secret" {

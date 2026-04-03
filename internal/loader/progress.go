@@ -2,7 +2,7 @@ package loader
 
 import (
 	"io"
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 )
 
 type ProgressReader struct {

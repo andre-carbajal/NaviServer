@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"naviger/pkg/sdk"
+	"naviserver/pkg/sdk"
 	"os"
 	"time"
 
@@ -278,19 +278,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) updateList() {
 	var items []list.Item
 	for _, s := range m.servers {
-		statusIcon := "🔴"
+		statusIcon := "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´"
 		statusColor := lipgloss.Color("196")
 		if s.Status == "RUNNING" {
-			statusIcon = "🟢"
+			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢"
 			statusColor = lipgloss.Color("46")
 		} else if s.Status == "STARTING" {
-			statusIcon = "🟡"
+			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¡"
 			statusColor = lipgloss.Color("226")
 		} else if s.Status == "STOPPING" {
-			statusIcon = "🟠"
+			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â "
 			statusColor = lipgloss.Color("208")
 		} else if s.Status == "CREATING" {
-			statusIcon = "🔵"
+			statusIcon = "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ"
 			statusColor = lipgloss.Color("51")
 		}
 
@@ -305,7 +305,7 @@ func (m *model) updateList() {
 
 		title := fmt.Sprintf("%s %s", statusIcon, s.Name)
 
-		desc := fmt.Sprintf("ID: %s • Port: %d • Ver: %s • CPU: %s • RAM: %s • Disk: %s",
+		desc := fmt.Sprintf("ID: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Port: %d ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Ver: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ CPU: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ RAM: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Disk: %s",
 			s.ID, s.Port, s.Version, cpu, ram, disk)
 
 		items = append(items, serverListItem{
@@ -324,7 +324,7 @@ func (m model) View() string {
 	}
 
 	if m.mode == ViewDeleteConfirm {
-		title := headerStyle.Width(m.width).Render("NAVIGER DASHBOARD")
+		title := headerStyle.Width(m.width).Render("NAVISERVER DASHBOARD")
 		header := headerStyle.Render("DELETE CONFIRMATION")
 		content := fmt.Sprintf("\nAre you sure you want to delete server:\n\n%s\n\n(y/n)",
 			lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render(m.deleteServerName))
@@ -342,7 +342,7 @@ func (m model) View() string {
 		return "Loading..."
 	}
 
-	title := headerStyle.Width(m.width).Render("NAVIGER DASHBOARD")
+	title := headerStyle.Width(m.width).Render("NAVISERVER DASHBOARD")
 
 	var totalCPU float64
 	var totalRAM int64
@@ -353,7 +353,7 @@ func (m model) View() string {
 		totalDisk += stat.Disk
 	}
 
-	statsContent := fmt.Sprintf("Daemon: %s\nServers: %d • CPU: %.1f%% • RAM: %s • Disk: %s",
+	statsContent := fmt.Sprintf("Daemon: %s\nServers: %d ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ CPU: %.1f%% ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ RAM: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Disk: %s",
 		m.client.BaseURL(),
 		len(m.servers),
 		totalCPU,
@@ -384,7 +384,7 @@ func (m model) View() string {
 	for i, k := range keys {
 		statusLine += k
 		if i < len(keys)-1 {
-			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
+			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
 		}
 	}
 

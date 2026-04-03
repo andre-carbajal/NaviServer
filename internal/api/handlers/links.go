@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 
 	"github.com/google/uuid"
 )

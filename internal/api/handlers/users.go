@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"naviger/internal/domain"
+	"naviserver/internal/domain"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

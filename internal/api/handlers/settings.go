@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"naviger/internal/config"
+	"naviserver/internal/config"
 	"net/http"
 	"strconv"
 )

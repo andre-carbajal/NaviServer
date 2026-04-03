@@ -3,13 +3,13 @@ package handlers
 import (
 	"net/http"
 
-	"naviger/internal/backup"
-	"naviger/internal/config"
-	"naviger/internal/domain"
-	"naviger/internal/runner"
-	"naviger/internal/server"
-	"naviger/internal/storage"
-	"naviger/internal/ws"
+	"naviserver/internal/backup"
+	"naviserver/internal/config"
+	"naviserver/internal/domain"
+	"naviserver/internal/runner"
+	"naviserver/internal/server"
+	"naviserver/internal/storage"
+	"naviserver/internal/ws"
 )
 
 type BaseHandler struct {

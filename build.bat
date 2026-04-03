@@ -21,7 +21,7 @@ if "%VERSION%"=="" (
     set VERSION=dev
 )
 echo "Building version: v%VERSION%"
-set LDFLAGS=-X "github.com/andre-carbajal/NaviServer/internal/updater.CurrentVersion=v%VERSION%"
+set LDFLAGS=-X "naviserver/internal/updater.CurrentVersion=v%VERSION%"
 
 echo "Building server..."
 call go build -ldflags "-H=windowsgui %LDFLAGS%" -v -o dist\naviserver-server.exe .\cmd\server

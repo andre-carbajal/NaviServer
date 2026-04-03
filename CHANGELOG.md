@@ -1,5 +1,12 @@
 # Changelog
 
+- **Project Rebranding: Naviger is now NaviServer**:
+  - Renamed all application occurrences, binaries, and identifiers from `Naviger` to `NaviServer` across the entire codebase.
+  - Updated Go module name to `naviserver` and refreshed all internal imports and build configurations.
+  - Migrated environment variables (e.g., `NAVIGER_DEV` -> `NAVISERVER_DEV`, `NAVIGER_SECRET_KEY` -> `NAVISERVER_SECRET_KEY`) and system paths.
+  - **IMPORTANT MIGRATION NOTE**: Users of previous versions MUST run the provided `migration/migrate.sh` (Linux/macOS) or `migration/migrate.bat` (Windows) *before* installing the new version. These scripts ensure that existing servers, backups, and the database are moved from `naviger` to `naviserver` data directories automatically to prevent data loss or duplicate installations.
+  - Added dedicated migration scripts (in `migration/` directory) to handle service termination, data movement, and cleanup of legacy symlinks and installations.
+
 - Database-driven backup management and enhanced security:
     - Implemented a new `Backup` model in the database to track files, server associations, and user ownership.
     - Added automatic synchronization in `BackupManager` to discover existing files and register them in the database on

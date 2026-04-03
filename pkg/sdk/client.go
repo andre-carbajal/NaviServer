@@ -41,7 +41,7 @@ func (c *Client) doRequest(method, path string, body interface{}) (*http.Respons
 		return nil, err
 	}
 
-	req.Header.Set("X-Naviger-Client", "CLI")
+	req.Header.Set("X-NaviServer-Client", "CLI")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

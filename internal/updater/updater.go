@@ -11,7 +11,7 @@ import (
 var (
 	CurrentVersion = "dev"
 	RepoOwner      = "andre-carbajal"
-	RepoName       = "naviger"
+	RepoName       = "naviserver"
 )
 
 type Tag struct {
@@ -32,7 +32,7 @@ func CheckForUpdates() (*UpdateInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "naviger-updater")
+	req.Header.Set("User-Agent", "naviserver-updater")
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	client := &http.Client{}

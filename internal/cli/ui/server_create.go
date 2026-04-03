@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"naviger/pkg/sdk"
+	"naviserver/pkg/sdk"
 	"net/http"
 	"strconv"
 	"time"
@@ -350,16 +350,16 @@ func (m WizardModel) View() string {
 
 			switch step.State {
 			case StepDone:
-				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("✓")
+				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“")
 				labelStyle = labelStyle.Foreground(lipgloss.Color("240"))
 			case StepRunning:
 				icon = m.spinner.View()
 				labelStyle = labelStyle.Bold(true)
 			case StepFailed:
-				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("✗")
+				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("ÃƒÂ¢Ã…â€œÃ¢â‚¬â€")
 				labelStyle = labelStyle.Foreground(lipgloss.Color("196"))
 			default:
-				icon = "•"
+				icon = "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢"
 			}
 
 			content += fmt.Sprintf(" %s %s\n", icon, labelStyle.Render(step.Label))
@@ -382,7 +382,7 @@ func (m WizardModel) View() string {
 		Align(lipgloss.Center).
 		Render(content)
 
-	statusLine := "esc: back/cancel • enter: next"
+	statusLine := "esc: back/cancel ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ enter: next"
 	footerBox := footerStyle.
 		Width(m.width - 4).
 		Render(statusLine)
@@ -439,7 +439,7 @@ func connectToProgress(client *sdk.Client, id string) tea.Cmd {
 		}
 
 		header := http.Header{}
-		header.Set("X-Naviger-Client", "CLI")
+		header.Set("X-NaviServer-Client", "CLI")
 
 		conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
 		if err != nil {
