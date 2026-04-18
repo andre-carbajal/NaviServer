@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 type SystemHandler struct {
@@ -55,10 +56,16 @@ func (h *SystemHandler) HandleGetNetworkInterfaces(w http.ResponseWriter, r *htt
 }
 
 func (h *SystemHandler) HandleRestartDaemon(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"status": "restarting"}`))
+	_, _ = w.Write([]byte(`{"status": "restarting"}`))
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+
 	go func() {
-		os.Exit(0)
+		time.Sleep(300 * time.Millisecond)
+		os.Exit(1)
 	}()
 }
 

@@ -169,9 +169,7 @@ const Settings: React.FC = () => {
         'Daemon restart command sent. The page may lose connection briefly.',
       );
     } catch (err) {
-      alert(
-        'Daemon restart command sent. The page may lose connection briefly.',
-      );
+      alert('Failed to send daemon restart command. Please try again.');
       console.error('Failed to restart daemon:', err);
     } finally {
       setIsRestarting(false);
