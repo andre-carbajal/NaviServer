@@ -1,35 +1,15 @@
 # Changelog
 
-- **Enhanced Installation and Migration Scripts** (Migration Safety & Automation):
-  - **`migration/migrate.sh` (Linux/macOS)**: Complete rewrite with critical improvements:
-    - Automatic backup creation in home directory (`~/naviger_backup_YYYY-MM-DD_HH-MM-SS.tar.gz`)
-    - User confirmation at start and end of migration process
-    - 7-step migration process with clear progress indicators
-    - Pre-migration validation to ensure old data exists and is accessible
-    - Automatic installation of new version via `install.sh` (no manual step required)
-    - **Mandatory service restart** after installation to ensure data consistency
-    - Intelligent error handling: if `install.sh` fails, data remains safe and migration is marked incomplete
-    - Support for both `tar.gz` and `zip` backup formats with automatic fallback
-    - Comprehensive summary showing backup location and restoration instructions
-  - **`migration/migrate.bat` (Windows)**: Complete rewrite with critical improvements:
-    - Automatic backup creation in home directory (`naviger_backup_YYYY-MM-DD_HH-MM-SS.zip`)
-    - User confirmation at start of migration process
-    - 6-step migration process with clear progress indicators
-    - Automatic download of latest NaviServer installer from GitHub releases
-    - Synchronous execution of installer (waits for completion)
-    - Graceful fallback: if download fails, provides manual download instructions instead of aborting
-    - Automatic cleanup of temporary files
-    - Comprehensive summary with backup location
-  - **`install.sh` (macOS/Linux)**: Added mandatory service restart for headless installations:
-    - **Linux**: Added `systemctl restart naviserver` with verification that service is running
-    - **macOS**: Added `launchctl` stop/start/restart sequence with verification
-    - Sleep delays (2 seconds) before restart to ensure stability with migrated data
-    - Service state verification after restart to confirm successful startup
-  - **`uninstall.sh` (macOS/Linux)**: Enhanced with data preservation and backup options:
-    - New `--keep-data` / `-k` flag to preserve data directory during uninstallation
-    - Automatic backup creation (`~/naviserver_uninstall_backup_YYYY-MM-DD_HH-MM-SS.tar.gz`) before deletion
-    - Improved user confirmation with explicit data loss warnings
-    - Instructions for restoring from backup
-    - Colored console output for better readability (info, success, warning, error)
-  - **Data Safety**: All migration/installation processes now create automatic backups in user's home directory, ensuring zero data loss even if operations fail
-  - **Backward Compatibility**: Scripts handle cases where new data directories already exist, preventing accidental overwrites
+- **API/WebSocket configuration improvements** (`73055d0`, `e310559`):
+  - Refactored frontend API/WS URL resolution to improve environment-based configuration.
+  - Extended backend config handling for API host/port and allowed CORS origins.
+  - Improved environment variable support and precedence for runtime/network settings.
+  - Updated related frontend flows and backend wiring (`cmd/server`, `internal/config`, `internal/api`, `web/src/services/api.ts`).
+
+- **Documentation expansion** (`072175b`):
+  - Added comprehensive documentation pages under `wiki/` for CLI usage, installation, configuration, migration from 1.x, TUI usage, and wiki home navigation.
+
+- **Frontend dependency maintenance (security/stability)**:
+  - Bumped `axios` from `1.14.0` to `1.15.0` (`8e58f40`, merged via `5ba995b`).
+  - Bumped `follow-redirects` from `1.15.11` to `1.16.0` (`52804e1`, merged via `2f89296`).
+  - Bumped `vite` from `8.0.3` to `8.0.8` (`ef1bad2`, merged via `ef5f0ec`).
