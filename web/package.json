@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
-    "axios": "^1.13.6",
+    "axios": "^1.15.0",
     "lucide-react": "^0.577.0",
     "monaco-json5-highlighter": "^0.1.2",
     "react": "^19.2.4",
