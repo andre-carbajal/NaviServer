@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 
-import { WS_HOST, api } from '../services/api';
+import { WS_BASE_URL, api } from '../services/api';
 import type { Server } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -91,7 +91,7 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
 
       activeSockets.current.add(requestId);
       const ws = new WebSocket(
-        `ws://${WS_HOST}/ws/progress/${requestId}?token=${token}`,
+        `${WS_BASE_URL}/ws/progress/${requestId}?token=${token}`,
       );
       wsMap.current.set(requestId, ws);
 

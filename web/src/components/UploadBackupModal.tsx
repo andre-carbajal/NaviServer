@@ -1,5 +1,7 @@
 import { Upload, X } from 'lucide-react';
+
 import React, { useRef, useState } from 'react';
+
 import type { Server } from '../types';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';

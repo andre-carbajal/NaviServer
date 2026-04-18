@@ -22,7 +22,7 @@ import UploadBackupModal from '../components/UploadBackupModal';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useServers } from '../hooks/useServers';
-import { WS_HOST, api } from '../services/api';
+import { WS_BASE_URL, api } from '../services/api';
 import type { Backup } from '../types';
 
 interface CreatingBackup extends Backup {
@@ -122,7 +122,7 @@ const Backups: React.FC = () => {
 
       activeSockets.current.add(requestId);
       const ws = new WebSocket(
-        `ws://${WS_HOST}/ws/progress/${requestId}?token=${token}`,
+        `${WS_BASE_URL}/ws/progress/${requestId}?token=${token}`,
       );
       wsMap.current.set(requestId, ws);
 

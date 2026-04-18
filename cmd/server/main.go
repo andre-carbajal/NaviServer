@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -122,7 +123,7 @@ func onReady() {
 		for {
 			select {
 			case <-mOpenUI.ClickedCh:
-				port := config.GetPort()
+				port := resolveConfiguredPort()
 				_ = browser.OpenURL(fmt.Sprintf("http://localhost:%d", port))
 
 			case <-mRestart.ClickedCh:
@@ -190,17 +191,11 @@ func runHeadless() {
 func startDaemonService(ctx context.Context) {
 	fmt.Println("Starting NaviServer Daemon...")
 
-	userConfigDir, err := os.UserConfigDir()
+	configDir, err := resolveConfigDir()
 	if err != nil {
 		log.Printf("Error getting config dir: %v", err)
 		return
 	}
-
-	appName := "naviserver"
-	if config.IsDev() {
-		appName = "naviserver-dev"
-	}
-	configDir := filepath.Join(userConfigDir, appName)
 
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
@@ -239,7 +234,7 @@ func startDaemonService(ctx context.Context) {
 	}
 
 	apiServer := api.NewAPIServer(srvMgr, supervisor, store, hubManager, backupManager, cfg)
-	listenAddr := fmt.Sprintf(":%d", config.GetPort())
+	listenAddr := net.JoinHostPort(cfg.API.Host, strconv.Itoa(cfg.API.Port))
 
 	httpServer := apiServer.CreateHTTPServer(listenAddr)
 
@@ -262,4 +257,36 @@ func startDaemonService(ctx context.Context) {
 	}
 
 	log.Println("Daemon stopped cleanly.")
+}
+
+func resolveConfigDir() (string, error) {
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	appName := "naviserver"
+	if config.IsDev() {
+		appName = "naviserver-dev"
+	}
+
+	return filepath.Join(userConfigDir, appName), nil
+}
+
+func resolveConfiguredPort() int {
+	configDir, err := resolveConfigDir()
+	if err != nil {
+		return config.GetPort()
+	}
+
+	cfg, err := config.LoadConfig(configDir)
+	if err != nil {
+		return config.GetPort()
+	}
+
+	if cfg.API.Port > 0 {
+		return cfg.API.Port
+	}
+
+	return config.GetPort()
 }

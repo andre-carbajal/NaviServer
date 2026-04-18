@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '../context/AuthContext';
-import { WS_HOST } from '../services/api';
+import { WS_BASE_URL } from '../services/api';
 
 export const useConsole = (serverId: string) => {
   const { token } = useAuth();
@@ -15,8 +15,7 @@ export const useConsole = (serverId: string) => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLogs([]);
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${WS_HOST}/ws/servers/${serverId}/console?token=${token}`;
+    const url = `${WS_BASE_URL}/ws/servers/${serverId}/console?token=${token}`;
 
     console.log(`Connecting to WS: ${url}`);
     ws.current = new WebSocket(url);

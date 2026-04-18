@@ -9,7 +9,9 @@ import (
 	"naviserver/internal/server"
 	"naviserver/internal/storage"
 	"naviserver/internal/ws"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -181,13 +183,12 @@ func (api *Server) Start(listenAddr string) error {
 func (api *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		if origin != "" {
-			if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-			}
+		if origin != "" && api.isAllowedOrigin(origin, r) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
+		w.Header().Add("Vary", "Origin")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if r.Method == "OPTIONS" {
@@ -197,4 +198,30 @@ func (api *Server) corsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (api *Server) isAllowedOrigin(origin string, r *http.Request) bool {
+	if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
+		return true
+	}
+
+	if api.Config != nil {
+		for _, allowed := range api.Config.API.AllowedOrigins {
+			if origin == allowed {
+				return true
+			}
+		}
+	}
+
+	originURL, err := url.Parse(origin)
+	if err != nil || originURL.Hostname() == "" {
+		return false
+	}
+
+	requestHost := r.Host
+	if host, _, err := net.SplitHostPort(r.Host); err == nil {
+		requestHost = host
+	}
+
+	return strings.EqualFold(originURL.Hostname(), requestHost)
 }

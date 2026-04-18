@@ -9,13 +9,53 @@ import type {
   ServerStats,
 } from '../types';
 
-const API_PORT = import.meta.env.VITE_API_PORT || 23008;
 const API_HOST = window.location.hostname;
 const API_PROTOCOL = window.location.protocol;
-export const WS_HOST = `${API_HOST}:${API_PORT}`;
+const API_ORIGIN = `${window.location.protocol}//${window.location.host}`;
+const DEV_API_PORT = 23009;
+
+const normalizeBaseUrl = (value: string) =>
+  value.endsWith('/') ? value.slice(0, -1) : value;
+
+const resolveApiBaseUrl = () => {
+  const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  if (typeof envBaseUrl === 'string' && envBaseUrl.trim() !== '') {
+    return normalizeBaseUrl(envBaseUrl.trim());
+  }
+
+  const envApiPort = import.meta.env.VITE_API_PORT;
+  if (typeof envApiPort === 'string' && envApiPort.trim() !== '') {
+    return `${API_PROTOCOL}//${API_HOST}:${envApiPort.trim()}`;
+  }
+
+  if (import.meta.env.DEV) {
+    return `${API_PROTOCOL}//${API_HOST}:${DEV_API_PORT}`;
+  }
+
+  return normalizeBaseUrl(API_ORIGIN);
+};
+
+const resolveWsBaseUrl = (apiBaseUrl: string) => {
+  const envWsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
+  if (typeof envWsBaseUrl === 'string' && envWsBaseUrl.trim() !== '') {
+    return normalizeBaseUrl(envWsBaseUrl.trim());
+  }
+
+  if (apiBaseUrl.startsWith('https://')) {
+    return `wss://${apiBaseUrl.slice('https://'.length)}`;
+  }
+  if (apiBaseUrl.startsWith('http://')) {
+    return `ws://${apiBaseUrl.slice('http://'.length)}`;
+  }
+
+  return apiBaseUrl;
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
+export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL);
 
 const apiInstance = axios.create({
-  baseURL: `${API_PROTOCOL}//${API_HOST}:${API_PORT}`,
+  baseURL: API_BASE_URL,
   timeout: 5000,
   withCredentials: true,
   headers: {
@@ -49,8 +89,7 @@ export const api = {
     apiInstance.get<ServerStats>(`/servers/${id}/stats`),
   getAllServerStats: () =>
     apiInstance.get<Record<string, ServerStats>>('/servers-stats'),
-  getServerIconUrl: (id: string) =>
-    `${API_PROTOCOL}//${API_HOST}:${API_PORT}/servers/${id}/icon`,
+  getServerIconUrl: (id: string) => `${API_BASE_URL}/servers/${id}/icon`,
   uploadServerIcon: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('icon', file);
@@ -118,7 +157,7 @@ export const api = {
   updateBackup: (backupName: string, serverId: string) =>
     apiInstance.put(`/backups/${backupName}`, { serverId }),
   getBackupDownloadUrl: (backupName: string) =>
-    `${API_PROTOCOL}//${API_HOST}:${API_PORT}/backups/${backupName}/download`,
+    `${API_BASE_URL}/backups/${backupName}/download`,
   cancelBackupCreation: (requestId: string) =>
     apiInstance.delete(`/backups/progress/${requestId}`),
   restoreBackup: (
