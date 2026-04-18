@@ -24,8 +24,14 @@ const resolveApiBaseUrl = () => {
   }
 
   const envApiPort = import.meta.env.VITE_API_PORT;
-  if (typeof envApiPort === 'string' && envApiPort.trim() !== '') {
-    return `${API_PROTOCOL}//${API_HOST}:${envApiPort.trim()}`;
+  const resolvedEnvApiPort =
+    typeof envApiPort === 'number'
+      ? String(envApiPort)
+      : typeof envApiPort === 'string'
+        ? envApiPort
+        : '';
+  if (resolvedEnvApiPort.trim() !== '') {
+    return `${API_PROTOCOL}//${API_HOST}:${resolvedEnvApiPort.trim()}`;
   }
 
   if (import.meta.env.DEV) {

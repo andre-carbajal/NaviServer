@@ -14,6 +14,7 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "axios": "^1.15.0",
+    "dompurify": "^3.4.0",
     "lucide-react": "^0.577.0",
     "monaco-json5-highlighter": "^0.1.2",
     "react": "^19.2.4",
@@ -38,5 +39,10 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.1",
     "vite": "^8.0.8"
+  },
+  "overrides": {
+    "monaco-editor": {
+      "dompurify": "3.4.0"
+    }
   }
 }
