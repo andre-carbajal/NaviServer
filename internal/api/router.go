@@ -205,9 +205,8 @@ func (api *Server) isAllowedOrigin(origin string, r *http.Request) bool {
 		return true
 	}
 
-	allowedOrigins := strings.TrimSpace(os.Getenv("NAVISERVER_ALLOWED_ORIGINS"))
-	if allowedOrigins != "" {
-		for _, raw := range strings.Split(allowedOrigins, ",") {
+	if api.Config != nil {
+		for _, raw := range api.Config.API.AllowedOrigins {
 			allowed := strings.TrimSpace(raw)
 			if allowed != "" && origin == allowed {
 				return true

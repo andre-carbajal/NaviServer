@@ -68,11 +68,118 @@ func LoadConfig(configDir string) (*Config, error) {
 	}
 
 	cfg.applyDefaults(configDir)
+	if err := migrateConfigFileIfNeeded(configPath, file, cfg); err != nil {
+		return nil, err
+	}
 	cfg.applyEnvOverrides()
 
 	cfg.JWTSecret = LoadOrGenerateSecret(configDir)
 
 	return &cfg, nil
+}
+
+func migrateConfigFileIfNeeded(configPath string, file []byte, cfg Config) error {
+	var root map[string]json.RawMessage
+	if err := json.Unmarshal(file, &root); err != nil {
+		return err
+	}
+	if root == nil {
+		root = make(map[string]json.RawMessage)
+	}
+
+	changed := false
+	setIfMissing := func(key string, value any) error {
+		if _, ok := root[key]; ok {
+			return nil
+		}
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return err
+		}
+		root[key] = encoded
+		changed = true
+		return nil
+	}
+
+	if err := setIfMissing("servers_path", cfg.ServersPath); err != nil {
+		return err
+	}
+	if err := setIfMissing("backups_path", cfg.BackupsPath); err != nil {
+		return err
+	}
+	if err := setIfMissing("runtimes_path", cfg.RuntimesPath); err != nil {
+		return err
+	}
+	if err := setIfMissing("database_path", cfg.DatabasePath); err != nil {
+		return err
+	}
+
+	if rawAPI, ok := root["api"]; !ok || len(rawAPI) == 0 || string(rawAPI) == "null" {
+		encoded, err := json.Marshal(cfg.API)
+		if err != nil {
+			return err
+		}
+		root["api"] = encoded
+		changed = true
+	} else {
+		var apiMap map[string]json.RawMessage
+		if err := json.Unmarshal(rawAPI, &apiMap); err != nil {
+			encoded, marshalErr := json.Marshal(cfg.API)
+			if marshalErr != nil {
+				return marshalErr
+			}
+			root["api"] = encoded
+			changed = true
+		} else {
+			if apiMap == nil {
+				apiMap = make(map[string]json.RawMessage)
+			}
+
+			apiChanged := false
+			setAPIIfMissing := func(key string, value any) error {
+				if _, ok := apiMap[key]; ok {
+					return nil
+				}
+				encoded, err := json.Marshal(value)
+				if err != nil {
+					return err
+				}
+				apiMap[key] = encoded
+				apiChanged = true
+				return nil
+			}
+
+			if err := setAPIIfMissing("host", cfg.API.Host); err != nil {
+				return err
+			}
+			if err := setAPIIfMissing("port", cfg.API.Port); err != nil {
+				return err
+			}
+			if err := setAPIIfMissing("allowed_origins", cfg.API.AllowedOrigins); err != nil {
+				return err
+			}
+
+			if apiChanged {
+				encoded, err := json.Marshal(apiMap)
+				if err != nil {
+					return err
+				}
+				root["api"] = encoded
+				changed = true
+			}
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	encoded, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(configPath, encoded, 0644)
 }
 
 func createDefaultConfig(configPath, configDir string) (*Config, error) {
