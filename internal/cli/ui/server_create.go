@@ -60,6 +60,7 @@ type WizardModel struct {
 	steps           []ProgressStep
 	progressConn    *websocket.Conn
 	requestID       string
+	showHelp        bool
 }
 
 type WizardDoneMsg struct{}
@@ -181,6 +182,9 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "?":
+			m.showHelp = !m.showHelp
+			return m, nil
 		case "esc":
 			if m.creating {
 				return m, nil
@@ -337,8 +341,9 @@ func (m WizardModel) View() string {
 		content += fmt.Sprintf("\n%s", m.ramInput.View())
 	case StepConfirm:
 		stepTitle = "Confirm Creation"
-		content += fmt.Sprintf("\nName: %s\nLoader: %s\nVersion: %s\nRAM: %s MB\n\n(y/n)",
+		content += fmt.Sprintf("\nName: %s\nLoader: %s\nVersion: %s\nRAM: %s MB",
 			m.nameInput.Value(), m.selectedLoader, m.selectedVersion, m.ramInput.Value())
+		content = content + "\n" + confirmHint()
 	}
 
 	if m.creating {
@@ -385,17 +390,24 @@ func (m WizardModel) View() string {
 	keys := []string{
 		keyStyle.Render("esc") + descStyle.Render(": back/cancel"),
 		keyStyle.Render("enter") + descStyle.Render(": next"),
+		keyStyle.Render("?") + descStyle.Render(": help"),
+		keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 	}
-	statusLine := ""
-	for i, k := range keys {
-		statusLine += k
-		if i < len(keys)-1 {
-			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
-		}
-	}
+	statusLine := renderInlineKeys(keys)
 	footerBox := footerStyle.
 		Width(m.width - 4).
 		Render(statusLine)
+
+	if m.showHelp {
+		helpBody := lipgloss.JoinVertical(lipgloss.Left,
+			"Create server wizard",
+			"- Enter accepts the current value or selection",
+			"- Esc goes back one step or cancels at first step",
+			"- Final confirmation uses y/Enter to confirm and n/Esc to cancel",
+		)
+		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+		mainContainer = lipgloss.JoinVertical(lipgloss.Left, mainContainer, helpBox)
+	}
 
 	return lipgloss.JoinVertical(lipgloss.Center,
 		title,

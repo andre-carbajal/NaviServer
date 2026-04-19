@@ -27,6 +27,7 @@ type BackupCreateWizardModel struct {
 	height             int
 	selectedServerID   string
 	selectedServerName string
+	showHelp           bool
 }
 
 func NewBackupCreateWizard(client *sdk.Client) BackupCreateWizardModel {
@@ -62,6 +63,14 @@ func (m BackupCreateWizardModel) Update(msg tea.Msg) (BackupCreateWizardModel, t
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.creating {
+			return m, nil
+		}
+
+		switch msg.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		case "?":
+			m.showHelp = !m.showHelp
 			return m, nil
 		}
 
@@ -159,6 +168,8 @@ func (m BackupCreateWizardModel) View() string {
 
 	keys := []string{
 		keyStyle.Render("esc") + descStyle.Render(": back"),
+		keyStyle.Render("?") + descStyle.Render(": help"),
+		keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 	}
 	if m.step == BackupStepSelectServer {
 		keys = append(keys, keyStyle.Render("enter")+descStyle.Render(": next"))
@@ -166,19 +177,23 @@ func (m BackupCreateWizardModel) View() string {
 		keys = append(keys, keyStyle.Render("enter")+descStyle.Render(": create"))
 	}
 
-	helpText := lipgloss.JoinHorizontal(lipgloss.Top, keys...)
-	helpText = ""
-	for i, k := range keys {
-		helpText += k
-		if i < len(keys)-1 {
-			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
-		}
-	}
+	helpText := renderInlineKeys(keys)
 
 	footerBox := footerStyle.
 		Width(m.width - 4).
 		Align(lipgloss.Center).
 		Render(helpText)
+
+	if m.showHelp {
+		helpBody := lipgloss.JoinVertical(lipgloss.Left,
+			"Create backup wizard",
+			"- Enter selects the current step option",
+			"- Esc returns to backups dashboard",
+			"- Optional name can be left empty",
+		)
+		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+		content = lipgloss.JoinVertical(lipgloss.Left, content, helpBox)
+	}
 
 	return lipgloss.JoinVertical(lipgloss.Center,
 		title,

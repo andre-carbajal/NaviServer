@@ -21,10 +21,11 @@ func (i mainMenuItem) Title() string       { return i.title }
 func (i mainMenuItem) Description() string { return i.description }
 
 type mainMenuModel struct {
-	list   list.Model
-	width  int
-	height int
-	choice string
+	list     list.Model
+	width    int
+	height   int
+	choice   string
+	showHelp bool
 }
 
 func newMainMenuModel() mainMenuModel {
@@ -56,6 +57,9 @@ func (m mainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q", "esc":
 			m.choice = "quit"
 			return m, tea.Quit
+		case "?":
+			m.showHelp = !m.showHelp
+			return m, nil
 		case "s":
 			m.choice = "servers"
 			return m, tea.Quit
@@ -102,14 +106,21 @@ func (m mainMenuModel) View() string {
 		keyStyle.Render("enter") + descStyle.Render(": open"),
 		keyStyle.Render("s") + descStyle.Render(": servers"),
 		keyStyle.Render("b") + descStyle.Render(": backups"),
+		keyStyle.Render("?") + descStyle.Render(": help"),
 		keyStyle.Render("q/esc") + descStyle.Render(": quit"),
+		keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 	}
-	statusLine := ""
-	for i, k := range keys {
-		statusLine += k
-		if i < len(keys)-1 {
-			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
-		}
+	statusLine := renderInlineKeys(keys)
+
+	if m.showHelp {
+		helpBody := lipgloss.JoinVertical(lipgloss.Left,
+			"Main menu",
+			"- Use arrow keys to move between sections",
+			"- Enter opens the selected section",
+			"- Logs are available from Servers with Enter",
+		)
+		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+		listBox = lipgloss.JoinVertical(lipgloss.Left, listBox, helpBox)
 	}
 
 	footerBox := footerStyle.

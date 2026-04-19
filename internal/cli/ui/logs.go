@@ -30,6 +30,7 @@ type logModel struct {
 	client    *sdk.Client
 	width     int
 	height    int
+	showHelp  bool
 }
 
 func initialLogModel(id string, conn *websocket.Conn, sub chan string, client *sdk.Client) logModel {
@@ -92,14 +93,17 @@ func (m logModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
+		switch msg.String() {
+		case "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
-		case tea.KeyEsc:
+		case "esc", "q":
 			m.back = true
 			return m, tea.Quit
-		case tea.KeyEnter:
+		case "?":
+			m.showHelp = !m.showHelp
+			return m, nil
+		case "enter":
 			if m.textInput.Value() != "" {
 				cmd := m.textInput.Value()
 				m.textInput.SetValue("")
@@ -201,17 +205,12 @@ func (m logModel) View() string {
 		Render(m.viewport.View())
 
 	keys := []string{
-		keyStyle.Render("esc") + descStyle.Render(": back"),
+		keyStyle.Render("enter") + descStyle.Render(": send"),
+		keyStyle.Render("q/esc") + descStyle.Render(": back"),
+		keyStyle.Render("?") + descStyle.Render(": help"),
 		keyStyle.Render("ctrl+c") + descStyle.Render(": quit"),
 	}
-	helpText := lipgloss.JoinHorizontal(lipgloss.Top, keys...)
-	helpText = ""
-	for i, k := range keys {
-		helpText += k
-		if i < len(keys)-1 {
-			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
-		}
-	}
+	helpText := renderInlineKeys(keys)
 
 	inputLine := fmt.Sprintf("→ %s", m.textInput.View())
 
@@ -230,6 +229,17 @@ func (m logModel) View() string {
 		Width(m.width - 4).
 		Align(lipgloss.Left).
 		Render(footerContent)
+
+	if m.showHelp {
+		helpBody := lipgloss.JoinVertical(lipgloss.Left,
+			"Logs view",
+			"- Type command and press Enter to send to server console",
+			"- q/Esc returns to servers list",
+			"- Ctrl+C exits the entire TUI",
+		)
+		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+		console = lipgloss.JoinVertical(lipgloss.Left, console, helpBox)
+	}
 
 	return lipgloss.JoinVertical(lipgloss.Center,
 		title,

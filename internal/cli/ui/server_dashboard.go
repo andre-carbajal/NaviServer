@@ -37,6 +37,8 @@ type model struct {
 	mode             dashboardMode
 	deleteServerID   string
 	deleteServerName string
+	showHelp         bool
+	navigateLogs     bool
 }
 
 type dashboardMode int
@@ -85,7 +87,7 @@ func RunServerDashboard(client *sdk.Client) string {
 			}
 		}
 
-		if m.message == "navigate_logs" {
+		if m.navigateLogs {
 			if m.mode == ViewDashboard {
 				i := m.list.SelectedItem()
 				if i != nil {
@@ -116,11 +118,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.(type) {
 		case WizardDoneMsg:
 			m.mode = ViewDashboard
-			m.message = "Server creation started!"
+			m.message = "Server creation started"
 			return m, tea.Batch(fetchDataCmd(m.client), tickCmd(), func() tea.Msg { return "clear_message" })
 		case WizardCancelMsg:
 			m.mode = ViewDashboard
-			m.message = "Server creation cancelled."
+			m.message = "Server creation cancelled"
 			return m, tea.Batch(tickCmd(), func() tea.Msg { return "clear_message" })
 		case tea.WindowSizeMsg:
 		}
@@ -131,22 +133,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.list.FilterState() == list.Filtering {
+			if msg.String() == "ctrl+c" {
+				m.err = fmt.Errorf("quit")
+				return m, tea.Quit
+			}
 			break
 		}
 		switch msg.String() {
+		case "ctrl+c":
+			m.err = fmt.Errorf("quit")
+			return m, tea.Quit
 		case "q":
 			m.err = fmt.Errorf("quit")
 			return m, tea.Quit
-		case "ctrl+c", "esc":
+		case "esc":
 			if m.mode == ViewDeleteConfirm {
 				m.mode = ViewDashboard
-				m.message = "Deletion cancelled."
+				m.message = "Deletion cancelled"
 				return m, nil
 			}
 			if m.list.FilterState() != list.Filtering {
 				m.err = fmt.Errorf("quit")
 				return m, tea.Quit
 			}
+		case "?":
+			m.showHelp = !m.showHelp
+			return m, nil
 		case "c":
 			m.mode = ViewWizard
 			wm := NewWizardModel(m.client, m.width, m.height)
@@ -218,7 +230,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case "enter":
-			m.message = "navigate_logs"
+			m.navigateLogs = true
 			return m, tea.Quit
 		case "clear_message":
 			m.message = ""
@@ -262,7 +274,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 			case "n", "esc":
 				m.mode = ViewDashboard
-				m.message = "Deletion cancelled."
+				m.message = "Deletion cancelled"
 				return m, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
 					return "clear_message"
 				})
@@ -326,8 +338,9 @@ func (m model) View() string {
 	if m.mode == ViewDeleteConfirm {
 		title := headerStyle.Width(m.width).Render("NAVISERVER DASHBOARD")
 		header := headerStyle.Render("DELETE CONFIRMATION")
-		content := fmt.Sprintf("\nAre you sure you want to delete server:\n\n%s\n\n(y/n)",
+		content := fmt.Sprintf("\nAre you sure you want to delete server:\n\n%s",
 			lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render(m.deleteServerName))
+		content = fmt.Sprintf("%s\n", content) + confirmHint()
 
 		confirmBox := baseStyle.
 			Width(m.width-4).
@@ -377,25 +390,36 @@ func (m model) View() string {
 		keyStyle.Render("x") + descStyle.Render(": stop"),
 		keyStyle.Render("d") + descStyle.Render(": delete"),
 		keyStyle.Render("enter") + descStyle.Render(": logs"),
+		keyStyle.Render("?") + descStyle.Render(": help"),
 		keyStyle.Render("q/esc") + descStyle.Render(": quit"),
+		keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 	}
-	statusLine := lipgloss.JoinHorizontal(lipgloss.Top, keys...)
-	statusLine = ""
-	for i, k := range keys {
-		statusLine += k
-		if i < len(keys)-1 {
-			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
-		}
-	}
+	statusLine := renderInlineKeys(keys)
 
 	footerBox := footerStyle.
 		Width(m.width - 4).
 		Render(statusLine)
 
+	if m.showHelp {
+		helpBody := lipgloss.JoinVertical(lipgloss.Left,
+			"Servers dashboard",
+			"- Enter opens logs for selected server",
+			"- c opens create wizard",
+			"- d opens delete confirmation",
+			"- Confirm actions with y/Enter, cancel with n/Esc",
+		)
+		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+		listContainer = lipgloss.JoinVertical(lipgloss.Left, listContainer, helpBox)
+	}
+
 	if m.message != "" {
 		footerBox = fmt.Sprintf("%s\n%s",
-			lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("205")).Bold(true).Render(m.message),
+			statusMessage(m.message),
 			footerBox)
+	}
+
+	if m.err != nil && m.err.Error() != "quit" {
+		footerBox = fmt.Sprintf("%s\n%s", errorMessage(m.err.Error()), footerBox)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Center,

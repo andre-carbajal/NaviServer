@@ -69,6 +69,7 @@ type BackupDashboardModel struct {
 	selectedLoader  string
 	selectedVersion string
 	restoring       bool
+	showHelp        bool
 }
 
 type backupListItem struct {
@@ -163,15 +164,24 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.mode == BackupViewList && m.list.FilterState() == list.Filtering {
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
 			break
 		}
 		if m.mode == BackupViewCreate && m.serverList.FilterState() == list.Filtering {
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
 			break
 		}
 
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
+		case "?":
+			m.showHelp = !m.showHelp
+			return m, nil
 		case "q", "esc":
 			if m.mode == BackupViewList {
 				return m, tea.Quit
@@ -453,10 +463,6 @@ func (m BackupDashboardModel) View() string {
 
 	title := headerStyle.Width(m.width).Render("BACKUPS DASHBOARD")
 
-	if m.err != nil {
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render(fmt.Sprintf("Error: %v\n\n", m.err))
-	}
-
 	switch m.mode {
 	case BackupViewList:
 		listContainer := baseStyle.
@@ -469,25 +475,36 @@ func (m BackupDashboardModel) View() string {
 			keyStyle.Render("c") + descStyle.Render(": create"),
 			keyStyle.Render("r") + descStyle.Render(": restore"),
 			keyStyle.Render("d") + descStyle.Render(": delete"),
+			keyStyle.Render("?") + descStyle.Render(": help"),
 			keyStyle.Render("q/esc") + descStyle.Render(": quit"),
+			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 		}
-		statusLine := lipgloss.JoinHorizontal(lipgloss.Top, keys...)
-		statusLine = ""
-		for i, k := range keys {
-			statusLine += k
-			if i < len(keys)-1 {
-				statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
-			}
-		}
+		statusLine := renderInlineKeys(keys)
 
 		footerBox := footerStyle.
 			Width(m.width - 4).
 			Render(statusLine)
 
+		if m.showHelp {
+			helpBody := lipgloss.JoinVertical(lipgloss.Left,
+				"Backups dashboard",
+				"- c starts backup creation",
+				"- r starts restore workflow",
+				"- d asks for delete confirmation",
+				"- Confirm actions with y/Enter, cancel with n/Esc",
+			)
+			helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+			listContainer = lipgloss.JoinVertical(lipgloss.Left, listContainer, helpBox)
+		}
+
 		if m.message != "" {
 			footerBox = fmt.Sprintf("%s\n%s",
-				lipgloss.NewStyle().MarginLeft(2).Foreground(lipgloss.Color("205")).Bold(true).Render(m.message),
+				statusMessage(m.message),
 				footerBox)
+		}
+
+		if m.err != nil {
+			footerBox = fmt.Sprintf("%s\n%s", errorMessage(m.err.Error()), footerBox)
 		}
 
 		return lipgloss.JoinVertical(lipgloss.Center,
@@ -518,8 +535,9 @@ func (m BackupDashboardModel) View() string {
 			case RestoreStepRAM:
 				content += fmt.Sprintf("Enter RAM (MB):\n\n%s", m.restoreRam.View())
 			case RestoreStepConfirm:
-				content += fmt.Sprintf("Confirm Restore?\n\nBackup: %s\nNew Server Name: %s\nLoader: %s\nVersion: %s\nRAM: %s MB\n\n(y/n)",
+				content += fmt.Sprintf("Confirm Restore?\n\nBackup: %s\nNew Server Name: %s\nLoader: %s\nVersion: %s\nRAM: %s MB",
 					m.restoreBackup, m.restoreName.Value(), m.selectedLoader, m.selectedVersion, m.restoreRam.Value())
+				content = content + "\n" + confirmHint()
 			}
 		}
 
@@ -529,12 +547,34 @@ func (m BackupDashboardModel) View() string {
 			Align(lipgloss.Center).
 			Render(content)
 
-		return lipgloss.JoinVertical(lipgloss.Center, title, header, contentBox)
+		footerKeys := []string{
+			keyStyle.Render("enter") + descStyle.Render(": next/confirm"),
+			keyStyle.Render("esc") + descStyle.Render(": back"),
+			keyStyle.Render("?") + descStyle.Render(": help"),
+			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
+		}
+		footerBox := footerStyle.Width(m.width - 4).Render(renderInlineKeys(footerKeys))
+		if m.showHelp {
+			helpBody := lipgloss.JoinVertical(lipgloss.Left,
+				"Restore workflow",
+				"- Enter moves to next step",
+				"- Esc returns to previous screen",
+				"- Final confirmation uses y/Enter to confirm and n/Esc to cancel",
+			)
+			helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
+			contentBox = lipgloss.JoinVertical(lipgloss.Left, contentBox, helpBox)
+		}
+		if m.err != nil {
+			footerBox = fmt.Sprintf("%s\n%s", errorMessage(m.err.Error()), footerBox)
+		}
+
+		return lipgloss.JoinVertical(lipgloss.Center, title, header, contentBox, footerBox)
 
 	case BackupViewDeleteConfirm:
 		header := headerStyle.Render("DELETE CONFIRMATION")
-		content := fmt.Sprintf("\nAre you sure you want to delete backup:\n\n%s\n\n(y/n)",
+		content := fmt.Sprintf("\nAre you sure you want to delete backup:\n\n%s",
 			lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render(m.deleteBackupName))
+		content = fmt.Sprintf("%s\n", content) + confirmHint()
 
 		confirmBox := baseStyle.
 			Width(m.width-4).
@@ -542,7 +582,13 @@ func (m BackupDashboardModel) View() string {
 			Align(lipgloss.Center, lipgloss.Center).
 			Render(content)
 
-		return lipgloss.JoinVertical(lipgloss.Center, title, header, confirmBox)
+		footerKeys := []string{
+			keyStyle.Render("y/enter") + descStyle.Render(": confirm"),
+			keyStyle.Render("n/esc") + descStyle.Render(": cancel"),
+			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
+		}
+		footerBox := footerStyle.Width(m.width - 4).Render(renderInlineKeys(footerKeys))
+		return lipgloss.JoinVertical(lipgloss.Center, title, header, confirmBox, footerBox)
 	}
 
 	return ""
