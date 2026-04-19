@@ -61,7 +61,18 @@ type WizardModel struct {
 	progressConn    *websocket.Conn
 	requestID       string
 	showHelp        bool
+	createState     asyncFlowState
+	createStatus    string
 }
+
+type asyncFlowState int
+
+const (
+	asyncStateIdle asyncFlowState = iota
+	asyncStateRunning
+	asyncStateDone
+	asyncStateFailed
+)
 
 type WizardDoneMsg struct{}
 type WizardCancelMsg struct{}
@@ -71,6 +82,9 @@ type versionsMsg []string
 type serverCreatedMsg struct{}
 type progressMsg sdk.ProgressEvent
 type progressConnMsg *websocket.Conn
+type progressClosedMsg struct {
+	err error
+}
 
 func NewWizardModel(client *sdk.Client, width, height int) WizardModel {
 	tiName := textinput.New()
@@ -108,6 +122,7 @@ func NewWizardModel(client *sdk.Client, width, height int) WizardModel {
 		height:      height,
 		progress:    prog,
 		spinner:     s,
+		createState: asyncStateIdle,
 	}
 }
 
@@ -137,15 +152,27 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			if msg.Message == "Server created successfully" {
+				m.createState = asyncStateDone
+				m.createStatus = "Done"
 				m.steps[len(m.steps)-1].State = StepDone
 				time.Sleep(500 * time.Millisecond)
+				if m.progressConn != nil {
+					_ = m.progressConn.Close()
+					m.progressConn = nil
+				}
 				return m, func() tea.Msg { return WizardDoneMsg{} }
 			}
 			if msg.Progress == -1 {
 				m.creating = false
+				m.createState = asyncStateFailed
+				m.createStatus = "Failed"
 				m.err = fmt.Errorf("server creation failed: %s", msg.Message)
 				if len(m.steps) > 0 {
 					m.steps[len(m.steps)-1].State = StepFailed
+				}
+				if m.progressConn != nil {
+					_ = m.progressConn.Close()
+					m.progressConn = nil
 				}
 				return m, nil
 			}
@@ -160,6 +187,32 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return m, waitForProgress(m.progressConn)
 
+		case progressClosedMsg:
+			if m.createState == asyncStateDone {
+				m.creating = false
+				return m, nil
+			}
+
+			if msg.err != nil {
+				m.err = fmt.Errorf("progress connection closed: %w", msg.err)
+			} else {
+				m.err = fmt.Errorf("progress connection closed before completion")
+			}
+			m.creating = false
+			m.createState = asyncStateFailed
+			m.createStatus = "Failed"
+			if len(m.steps) > 0 {
+				lastIdx := len(m.steps) - 1
+				if m.steps[lastIdx].State == StepRunning {
+					m.steps[lastIdx].State = StepFailed
+				}
+			}
+			if m.progressConn != nil {
+				_ = m.progressConn.Close()
+				m.progressConn = nil
+			}
+			return m, nil
+
 		case spinner.TickMsg:
 			var cmd tea.Cmd
 			m.spinner, cmd = m.spinner.Update(msg)
@@ -173,7 +226,19 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case errMsg:
 			m.creating = false
+			m.createState = asyncStateFailed
+			m.createStatus = "Failed"
 			m.err = msg.(error)
+			if len(m.steps) > 0 {
+				lastIdx := len(m.steps) - 1
+				if m.steps[lastIdx].State == StepRunning {
+					m.steps[lastIdx].State = StepFailed
+				}
+			}
+			if m.progressConn != nil {
+				_ = m.progressConn.Close()
+				m.progressConn = nil
+			}
 			return m, nil
 		}
 		return m, nil
@@ -290,6 +355,10 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "y" || msg.Type == tea.KeyEnter {
 				ram, _ := strconv.Atoi(m.ramInput.Value())
 				m.creating = true
+				m.createState = asyncStateRunning
+				m.createStatus = "Running"
+				m.err = nil
+				m.steps = nil
 				m.requestID = uuid.New().String()
 
 				return m, tea.Batch(
@@ -348,6 +417,22 @@ func (m WizardModel) View() string {
 
 	if m.creating {
 		content = fmt.Sprintf("\n\nCreating server '%s'...\n\n", m.nameInput.Value())
+
+		statusColor := lipgloss.Color("220")
+		statusText := "Running"
+		switch m.createState {
+		case asyncStateDone:
+			statusColor = lipgloss.Color("42")
+			statusText = "Done"
+		case asyncStateFailed:
+			statusColor = lipgloss.Color("196")
+			statusText = "Failed"
+		}
+		if m.createStatus != "" {
+			statusText = m.createStatus
+		}
+		content += lipgloss.NewStyle().Bold(true).Foreground(statusColor).Render("Status: " + statusText)
+		content += "\n\n"
 
 		for _, step := range m.steps {
 			icon := " "
@@ -478,12 +563,12 @@ func connectToProgress(client *sdk.Client, id string) tea.Cmd {
 func waitForProgress(conn *websocket.Conn) tea.Cmd {
 	return func() tea.Msg {
 		if conn == nil {
-			return nil
+			return progressClosedMsg{err: nil}
 		}
 		var event sdk.ProgressEvent
 		err := conn.ReadJSON(&event)
 		if err != nil {
-			return nil
+			return progressClosedMsg{err: err}
 		}
 		return progressMsg(event)
 	}

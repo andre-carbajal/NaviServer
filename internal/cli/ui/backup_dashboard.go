@@ -69,6 +69,8 @@ type BackupDashboardModel struct {
 	selectedLoader  string
 	selectedVersion string
 	restoring       bool
+	restoreState    asyncFlowState
+	restoreStatus   string
 	showHelp        bool
 }
 
@@ -145,6 +147,7 @@ func RunBackupDashboard(client *sdk.Client) {
 		restoreLoader:  rl,
 		restoreVersion: rv,
 		isLoading:      true,
+		restoreState:   asyncStateIdle,
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithInput(os.Stdin), tea.WithOutput(os.Stdout))
@@ -257,13 +260,19 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(fetchBackups(m.client), tickCmd())
 	case backupRestoredMsg:
 		m.restoring = false
+		m.restoreState = asyncStateDone
+		m.restoreStatus = "Done"
 		m.mode = BackupViewList
 		m.message = "Backup restored successfully"
 		return m, tea.Batch(fetchBackups(m.client), tickCmd())
 	case errMsg:
 		m.err = msg
 		m.createWizard.creating = false
-		m.restoring = false
+		if m.restoring {
+			m.restoring = false
+			m.restoreState = asyncStateFailed
+			m.restoreStatus = "Failed"
+		}
 		return m, nil
 	case string:
 		if msg == "clear_message" {
@@ -288,6 +297,9 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				i := m.list.SelectedItem()
 				if i != nil {
 					m.mode = BackupViewRestore
+					m.restoreState = asyncStateIdle
+					m.restoreStatus = ""
+					m.err = nil
 					name := i.(backupListItem).name
 					name = strings.TrimPrefix(name, "💾 ")
 
@@ -359,6 +371,9 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.restoreMode = RestoreModeSelectServer
 							m.restoreTarget = itm.id
 							m.restoring = true
+							m.restoreState = asyncStateRunning
+							m.restoreStatus = "Running"
+							m.err = nil
 							return m, restoreBackup(m.client, m.restoreBackup, sdk.RestoreBackupRequest{
 								TargetServerID: m.restoreTarget,
 							})
@@ -439,6 +454,9 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if msg.String() == "y" || msg.Type == tea.KeyEnter {
 					ram, _ := strconv.Atoi(m.restoreRam.Value())
 					m.restoring = true
+					m.restoreState = asyncStateRunning
+					m.restoreStatus = "Running"
+					m.err = nil
 					return m, restoreBackup(m.client, m.restoreBackup, sdk.RestoreBackupRequest{
 						NewServerName:    m.restoreName.Value(),
 						NewServerLoader:  m.selectedLoader,
@@ -520,8 +538,27 @@ func (m BackupDashboardModel) View() string {
 		header := headerStyle.Render("Restore Backup: " + m.restoreBackup)
 		content := ""
 
+		statusColor := lipgloss.Color("240")
+		statusText := "Idle"
+		switch m.restoreState {
+		case asyncStateRunning:
+			statusColor = lipgloss.Color("220")
+			statusText = "Running"
+		case asyncStateDone:
+			statusColor = lipgloss.Color("42")
+			statusText = "Done"
+		case asyncStateFailed:
+			statusColor = lipgloss.Color("196")
+			statusText = "Failed"
+		}
+		if m.restoreStatus != "" {
+			statusText = m.restoreStatus
+		}
+		content += lipgloss.NewStyle().Bold(true).Foreground(statusColor).Render("Status: " + statusText)
+		content += "\n\n"
+
 		if m.restoring {
-			content = "Restoring backup... Please wait."
+			content += "Restoring backup... Please wait."
 		} else {
 			switch m.restoreStep {
 			case RestoreStepSelectTarget:
