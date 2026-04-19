@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"naviserver/internal/cli/ui"
 	"naviserver/pkg/sdk"
 	"os"
 
@@ -20,16 +19,8 @@ var RootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		Client = sdk.NewClient(BaseURL)
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		for {
-			serverID := ui.RunServerDashboard(Client)
-			if serverID == "" {
-				break
-			}
-			if !ui.RunLogs(Client, serverID) {
-				break
-			}
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
 	},
 }
 

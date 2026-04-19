@@ -278,19 +278,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *model) updateList() {
 	var items []list.Item
 	for _, s := range m.servers {
-		statusIcon := "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´"
+		statusIcon := "🔴"
 		statusColor := lipgloss.Color("196")
 		if s.Status == "RUNNING" {
-			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢"
+			statusIcon = "🟢"
 			statusColor = lipgloss.Color("46")
 		} else if s.Status == "STARTING" {
-			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¡"
+			statusIcon = "🟡"
 			statusColor = lipgloss.Color("226")
 		} else if s.Status == "STOPPING" {
-			statusIcon = "ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â "
+			statusIcon = "🟠"
 			statusColor = lipgloss.Color("208")
 		} else if s.Status == "CREATING" {
-			statusIcon = "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ"
+			statusIcon = "🔵"
 			statusColor = lipgloss.Color("51")
 		}
 
@@ -305,7 +305,7 @@ func (m *model) updateList() {
 
 		title := fmt.Sprintf("%s %s", statusIcon, s.Name)
 
-		desc := fmt.Sprintf("ID: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Port: %d ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Ver: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ CPU: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ RAM: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Disk: %s",
+		desc := fmt.Sprintf("ID: %s • Port: %d • Ver: %s • CPU: %s • RAM: %s • Disk: %s",
 			s.ID, s.Port, s.Version, cpu, ram, disk)
 
 		items = append(items, serverListItem{
@@ -353,7 +353,7 @@ func (m model) View() string {
 		totalDisk += stat.Disk
 	}
 
-	statsContent := fmt.Sprintf("Daemon: %s\nServers: %d ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ CPU: %.1f%% ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ RAM: %s ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Disk: %s",
+	statsContent := fmt.Sprintf("Daemon: %s\nServers: %d • CPU: %.1f%% • RAM: %s • Disk: %s",
 		m.client.BaseURL(),
 		len(m.servers),
 		totalCPU,
@@ -384,7 +384,7 @@ func (m model) View() string {
 	for i, k := range keys {
 		statusLine += k
 		if i < len(keys)-1 {
-			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
+			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
 		}
 	}
 

@@ -203,7 +203,7 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.isLoading = false
 		var items []list.Item
 		for _, b := range msg {
-			name := fmt.Sprintf("ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ %s", b.Name)
+			name := fmt.Sprintf("💾 %s", b.Name)
 			items = append(items, backupListItem{name: name, size: b.Size})
 		}
 		m.list.SetItems(items)
@@ -279,7 +279,7 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if i != nil {
 					m.mode = BackupViewRestore
 					name := i.(backupListItem).name
-					name = strings.TrimPrefix(name, "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ ")
+					name = strings.TrimPrefix(name, "💾 ")
 
 					m.restoreBackup = name
 					m.restoreStep = RestoreStepSelectTarget
@@ -290,7 +290,7 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if i != nil {
 					itm := i.(backupListItem)
 					name := itm.name
-					name = strings.TrimPrefix(name, "ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ ")
+					name = strings.TrimPrefix(name, "💾 ")
 
 					m.deleteBackupName = name
 					m.mode = BackupViewDeleteConfirm
@@ -476,7 +476,7 @@ func (m BackupDashboardModel) View() string {
 		for i, k := range keys {
 			statusLine += k
 			if i < len(keys)-1 {
-				statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
+				statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
 			}
 		}
 

@@ -154,7 +154,7 @@ func (m logModel) View() string {
 		return "\n  Initializing..."
 	}
 
-	title := headerStyle.Width(m.width).Render("SEVER CONSOLE LOGS")
+	title := headerStyle.Width(m.width).Render("SERVER CONSOLE LOGS")
 
 	serverInfoContent := ""
 	if m.server != nil {
@@ -166,6 +166,12 @@ func (m logModel) View() string {
 		} else if m.server.Status == "STARTING" {
 			statusColor = "220"
 			statusIcon = "🟡"
+		} else if m.server.Status == "STOPPING" {
+			statusColor = "208"
+			statusIcon = "🟠"
+		} else if m.server.Status == "CREATING" {
+			statusColor = "51"
+			statusIcon = "🔵"
 		}
 
 		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor))

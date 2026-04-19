@@ -171,7 +171,7 @@ func (m BackupCreateWizardModel) View() string {
 	for i, k := range keys {
 		helpText += k
 		if i < len(keys)-1 {
-			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ")
+			helpText += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
 		}
 	}
 

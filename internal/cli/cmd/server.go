@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"naviserver/internal/cli/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -11,16 +10,8 @@ import (
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Manage servers",
-	Run: func(cmd *cobra.Command, args []string) {
-		for {
-			result := ui.RunServerDashboard(Client)
-			if result == "" {
-				break
-			}
-			if !ui.RunLogs(Client, result) {
-				break
-			}
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
 	},
 }
 

@@ -1,19 +1,14 @@
 # Changelog
 
-## Unreleased
-
-- **Config migration and backward compatibility**:
-  - Added automatic non-destructive migration for `config.json` on startup.
-  - Missing fields are backfilled (`servers_path`, `backups_path`, `runtimes_path`, `database_path`, `api.host`, `api.port`, `api.allowed_origins`).
-  - Existing user values are preserved and never overwritten during migration.
-  - Unknown/custom keys in `config.json` (including nested `api` keys) are preserved.
-
-- **Frontend API base URL fix (dev/proxy scenarios)**:
-  - Improved API base URL resolution to avoid unintended fallback to `:23009` when `VITE_API_PORT` is injected as a non-string value.
-  - Better compatibility for local development and reverse proxy setups.
-
-- **Tests**:
-  - Added migration tests to validate:
-	- Backfilling missing config fields.
-	- Preserving existing and custom config values.
-	- Keeping env override precedence without rewriting persisted file values.
+- Fixed mojibake/corrupt characters in dashboards and wizards.
+- Logs: fixed title typo from `SEVER CONSOLE LOGS` to `SERVER CONSOLE LOGS`.
+- UI consistency: standardized footer/help separators and aligned status iconography across server, backup, and logs
+  views.
+- UI consistency: standardized server creation wizard footer/help styling to match the shared TUI pattern (`keyStyle` +
+  `descStyle` + ` • ` separators).
+- CLI behavior: fixed command surface so TUI opens only with `naviserver-cli tui`; running `naviserver-cli`,
+  `naviserver-cli backup`, or `naviserver-cli server` now shows contextual help instead of opening interactive UI.
+- TUI navigation: added a main hub section for easier entry to `Servers` and `Backups`; removed top-level `Logs` from
+  hub since logs are accessed per server.
+- Docs: updated sprint plan to unified `naviserver` model with `naviserver tui` for interactive navigation and
+  `naviserver <subcommand>` for parameter-based CLI usage.

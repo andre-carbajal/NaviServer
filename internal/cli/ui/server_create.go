@@ -350,16 +350,16 @@ func (m WizardModel) View() string {
 
 			switch step.State {
 			case StepDone:
-				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“")
+				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("✓")
 				labelStyle = labelStyle.Foreground(lipgloss.Color("240"))
 			case StepRunning:
 				icon = m.spinner.View()
 				labelStyle = labelStyle.Bold(true)
 			case StepFailed:
-				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("ÃƒÂ¢Ã…â€œÃ¢â‚¬â€")
+				icon = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("✗")
 				labelStyle = labelStyle.Foreground(lipgloss.Color("196"))
 			default:
-				icon = "ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢"
+				icon = "•"
 			}
 
 			content += fmt.Sprintf(" %s %s\n", icon, labelStyle.Render(step.Label))
@@ -382,7 +382,17 @@ func (m WizardModel) View() string {
 		Align(lipgloss.Center).
 		Render(content)
 
-	statusLine := "esc: back/cancel ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ enter: next"
+	keys := []string{
+		keyStyle.Render("esc") + descStyle.Render(": back/cancel"),
+		keyStyle.Render("enter") + descStyle.Render(": next"),
+	}
+	statusLine := ""
+	for i, k := range keys {
+		statusLine += k
+		if i < len(keys)-1 {
+			statusLine += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(" • ")
+		}
+	}
 	footerBox := footerStyle.
 		Width(m.width - 4).
 		Render(statusLine)

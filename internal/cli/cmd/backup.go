@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"naviserver/internal/cli/ui"
 	"naviserver/pkg/sdk"
 
 	"github.com/spf13/cobra"
@@ -12,12 +11,8 @@ import (
 var backupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Manage backups",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			ui.RunBackupDashboard(Client)
-		} else {
-			cmd.Help()
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
 	},
 }
 
