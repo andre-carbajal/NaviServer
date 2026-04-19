@@ -1,5 +1,11 @@
 # Changelog
 
+- Added contextual help toggle (`?`) across main menu, servers dashboard, backups dashboard, logs,
+  and create wizards.
+- TUI keybinding unification: aligned global behavior and footer hints for `q/esc`, `ctrl+c`, and `enter` across
+  primary views.
+- TUI messaging standardization: introduced shared status/error rendering (`Status:` / `Error:`) and a common
+  confirmation convention (`Confirm: y/Enter | Cancel: n/Esc`) in delete/restore/create flows.
 - Fixed mojibake/corrupt characters in dashboards and wizards.
 - Logs: fixed title typo from `SEVER CONSOLE LOGS` to `SERVER CONSOLE LOGS`.
 - UI consistency: standardized footer/help separators and aligned status iconography across server, backup, and logs
