@@ -1,8 +1,10 @@
 NaviServer stores configuration in the user config directory under:
+
 - `naviserver` (normal mode)
 - `naviserver-dev` (when `NAVISERVER_DEV=true` or `1`)
 
 Key files:
+
 - `config.json`
 - `.naviserver_secret` (auto-generated unless overridden via environment variable)
 

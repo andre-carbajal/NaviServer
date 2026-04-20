@@ -5,14 +5,15 @@ If your current installation still uses legacy `naviger` paths/binaries, migrate
 - App name: `naviger` -> `naviserver`
 - Binaries: `naviger-server` -> `naviserver-server`, `naviger-cli` -> `naviserver-cli`
 - Data directories:
-  - Linux: `~/.config/naviger` -> `~/.config/naviserver`
-  - macOS: `~/Library/Application Support/naviger` -> `~/Library/Application Support/naviserver`
-  - Windows: `%AppData%\naviger` -> `%AppData%\naviserver`
+    - Linux: `~/.config/naviger` -> `~/.config/naviserver`
+    - macOS: `~/Library/Application Support/naviger` -> `~/Library/Application Support/naviserver`
+    - Windows: `%AppData%\naviger` -> `%AppData%\naviserver`
 - Secret key file: `.naviger_secret` -> `.naviserver_secret`
 
 # When to run migration
 
 Run migration only once:
+
 - after downloading the new version,
 - before first launch of new NaviServer,
 - and before running the new installer.
@@ -27,6 +28,7 @@ chmod +x migration/migrate.sh
 ```
 
 What `migration/migrate.sh` does:
+
 - Validates that old data exists.
 - Creates automatic backup in your home directory (`naviger_backup_<timestamp>.tar.gz` or `.zip`).
 - Stops old services/agents.
@@ -44,6 +46,7 @@ migration\migrate.bat
 ```
 
 What `migration/migrate.bat` does:
+
 - Validates old data directory.
 - Creates backup (`naviger_backup_<timestamp>.zip`) in user home.
 - Stops old processes.
@@ -61,8 +64,8 @@ What `migration/migrate.bat` does:
 1. Complete installation (if not done automatically).
 2. Start NaviServer in your preferred mode.
 3. Validate expected data:
-   - server list
-   - user accounts/login
-   - backups list
+    - server list
+    - user accounts/login
+    - backups list
 4. If headless, verify service/agent status (`systemctl` on Linux, `launchctl` on macOS).
 

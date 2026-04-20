@@ -15,6 +15,18 @@ type Client struct {
 	httpClient *http.Client
 }
 
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *APIError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("api error (%d): %s", e.StatusCode, e.Message)
+	}
+	return fmt.Sprintf("api error (%d)", e.StatusCode)
+}
+
 func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL:    baseURL,
@@ -58,11 +70,7 @@ func (c *Client) get(path string, target interface{}) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		msg := strings.TrimSpace(string(body))
-		if msg != "" {
-			return fmt.Errorf("error: %s", msg)
-		}
-		return fmt.Errorf("API error (%d)", resp.StatusCode)
+		return newAPIError(resp.StatusCode, body)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(target)
@@ -77,11 +85,7 @@ func (c *Client) post(path string, body interface{}, target interface{}) error {
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		msg := strings.TrimSpace(string(bodyBytes))
-		if msg != "" {
-			return fmt.Errorf("error: %s", msg)
-		}
-		return fmt.Errorf("API error (%d)", resp.StatusCode)
+		return newAPIError(resp.StatusCode, bodyBytes)
 	}
 
 	if target != nil {
@@ -99,11 +103,7 @@ func (c *Client) delete(path string) error {
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		msg := strings.TrimSpace(string(body))
-		if msg != "" {
-			return fmt.Errorf("error: %s", msg)
-		}
-		return fmt.Errorf("API error (%d)", resp.StatusCode)
+		return newAPIError(resp.StatusCode, body)
 	}
 	return nil
 }
@@ -117,13 +117,16 @@ func (c *Client) put(path string, body interface{}) error {
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		msg := strings.TrimSpace(string(bodyBytes))
-		if msg != "" {
-			return fmt.Errorf("Error: %s", msg)
-		}
-		return fmt.Errorf("API error (%d)", resp.StatusCode)
+		return newAPIError(resp.StatusCode, bodyBytes)
 	}
 	return nil
+}
+
+func newAPIError(statusCode int, body []byte) error {
+	return &APIError{
+		StatusCode: statusCode,
+		Message:    strings.TrimSpace(string(body)),
+	}
 }
 
 func (c *Client) GetWebSocketURL(path string) (string, error) {

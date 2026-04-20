@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"naviserver/pkg/sdk"
 
 	"github.com/spf13/cobra"
@@ -19,25 +18,25 @@ var backupCmd = &cobra.Command{
 var backupCreateCmd = &cobra.Command{
 	Use:   "create [serverId] [name]",
 	Short: "Create a backup",
-	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.RangeArgs(1, 2),
+	RunE: func(cmd *cobra.Command, args []string) error {
 		name := ""
 		if len(args) > 1 {
 			name = args[1]
 		}
-		handleBackupCreate(args[0], name)
+		return handleBackupCreate(args[0], name)
 	},
 }
 
 var backupListCmd = &cobra.Command{
 	Use:   "list [serverId]",
 	Short: "List backups",
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {
-			handleListBackups(args[0])
-		} else {
-			handleListAllBackups()
+			return handleListBackups(args[0])
 		}
+		return handleListAllBackups()
 	},
 }
 
@@ -45,8 +44,8 @@ var backupDeleteCmd = &cobra.Command{
 	Use:   "delete [name]",
 	Short: "Delete a backup",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		handleDeleteBackup(args[0])
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return handleDeleteBackup(args[0])
 	},
 }
 
@@ -58,8 +57,8 @@ var backupRestoreCmd = &cobra.Command{
 	Use:   "restore [name]",
 	Short: "Restore a backup",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		handleRestoreBackup(args[0])
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return handleRestoreBackup(args[0])
 	},
 }
 
@@ -75,51 +74,106 @@ func init() {
 	RootCmd.AddCommand(backupCmd)
 }
 
-func handleBackupCreate(serverID, name string) {
+func handleBackupCreate(serverID, name string) error {
 	resp, err := Client.CreateBackup(serverID, name)
 	if err != nil {
-		log.Fatalf("Error creating backup: %v", err)
+		return fmt.Errorf("create backup for server %s: %w", serverID, err)
 	}
-	fmt.Println(resp.Message)
-	fmt.Printf("Location: %s\n", resp.Path)
+
+	if isJSONOutput() {
+		return printJSON(map[string]string{
+			"action":    "create_backup",
+			"server_id": serverID,
+			"status":    "ok",
+			"message":   resp.Message,
+			"path":      resp.Path,
+		})
+	}
+
+	fmt.Printf("OK  backup created for server %s\n", serverID)
+	fmt.Printf("Path: %s\n", resp.Path)
+	return nil
 }
 
-func handleListBackups(serverID string) {
+func handleListBackups(serverID string) error {
 	backups, err := Client.ListServerBackups(serverID)
 	if err != nil {
-		log.Fatalf("Error listing backups: %v", err)
+		return fmt.Errorf("list backups for server %s: %w", serverID, err)
 	}
-	printBackups(backups)
+	return printBackups(backups, serverID)
 }
 
-func handleListAllBackups() {
+func handleListAllBackups() error {
 	backups, err := Client.ListAllBackups()
 	if err != nil {
-		log.Fatalf("Error listing backups: %v", err)
+		return fmt.Errorf("list backups: %w", err)
 	}
-	printBackups(backups)
+	return printBackups(backups, "")
 }
 
-func printBackups(backups []sdk.BackupInfo) {
-	fmt.Println("Backups:")
+func printBackups(backups []sdk.BackupInfo, serverID string) error {
+	if isJSONOutput() {
+		type backupJSON struct {
+			Name      string `json:"name"`
+			SizeBytes int64  `json:"size_bytes"`
+			SizeMB    string `json:"size_mb"`
+		}
+
+		items := make([]backupJSON, 0, len(backups))
+		for _, b := range backups {
+			items = append(items, backupJSON{
+				Name:      b.Name,
+				SizeBytes: b.Size,
+				SizeMB:    formatMegabytes(b.Size),
+			})
+		}
+
+		payload := struct {
+			Action   string       `json:"action"`
+			Status   string       `json:"status"`
+			Backups  []backupJSON `json:"backups"`
+			ServerID string       `json:"server_id,omitempty"`
+		}{
+			Action:   "list_backups",
+			Status:   "ok",
+			Backups:  items,
+			ServerID: serverID,
+		}
+
+		return printJSON(payload)
+	}
+
+	rows := make([][]string, 0, len(backups))
 	for _, b := range backups {
-		fmt.Printf("- %s (%.2f MB)\n", b.Name, float64(b.Size)/1024/1024)
+		rows = append(rows, []string{b.Name, formatMegabytes(b.Size), fmt.Sprintf("%d", b.Size)})
 	}
+	printTable([]string{"NAME", "SIZE_MB", "SIZE_BYTES"}, rows)
+	return nil
 }
 
-func handleDeleteBackup(name string) {
+func handleDeleteBackup(name string) error {
 	if err := Client.DeleteBackup(name); err != nil {
-		log.Fatalf("Error deleting backup: %v", err)
+		return fmt.Errorf("delete backup %s: %w", name, err)
 	}
-	fmt.Println("Backup deleted successfully.")
+
+	if isJSONOutput() {
+		return printJSON(map[string]string{
+			"action":      "delete_backup",
+			"backup_name": name,
+			"status":      "ok",
+		})
+	}
+
+	fmt.Printf("OK  backup deleted: %s\n", name)
+	return nil
 }
 
-func handleRestoreBackup(backupName string) {
+func handleRestoreBackup(backupName string) error {
 	req := sdk.RestoreBackupRequest{}
 
 	if restoreNew {
 		if restoreName == "" {
-			log.Fatal("Error: You must specify --name for the new server")
+			return newValidationError("you must specify --name when using --new")
 		}
 		req.NewServerName = restoreName
 		req.NewServerVersion = restoreVer
@@ -127,13 +181,23 @@ func handleRestoreBackup(backupName string) {
 		req.NewServerRam = restoreRam
 	} else {
 		if restoreTarget == "" {
-			log.Fatal("Error: You must specify --target <ID> or use --new")
+			return newValidationError("you must specify --target <ID> or use --new")
 		}
 		req.TargetServerID = restoreTarget
 	}
 
 	if err := Client.RestoreBackup(backupName, req); err != nil {
-		log.Fatalf("Error restoring backup: %v", err)
+		return fmt.Errorf("restore backup %s: %w", backupName, err)
 	}
-	fmt.Println("Backup restored successfully.")
+
+	if isJSONOutput() {
+		return printJSON(map[string]string{
+			"action":      "restore_backup",
+			"backup_name": backupName,
+			"status":      "ok",
+		})
+	}
+
+	fmt.Printf("OK  backup restored: %s\n", backupName)
+	return nil
 }

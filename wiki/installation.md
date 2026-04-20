@@ -5,16 +5,17 @@
 ```
 
 The script:
+
 - Detects OS and architecture.
 - Downloads the latest release ZIP from GitHub.
 - Lets you choose installation mode:
-  - `Headless (Service/Daemon)`
-  - `Desktop (App/Shortcut)`
+    - `Headless (Service/Daemon)`
+    - `Desktop (App/Shortcut)`
 - Installs binaries in `/opt/naviserver`.
 - Installs `naviserver-cli` in `/usr/local/bin` when available.
 - Configures background execution:
-  - Linux: `systemd` service `naviserver`
-  - macOS: `launchd` agent `com.naviserver.server`
+    - Linux: `systemd` service `naviserver`
+    - macOS: `launchd` agent `com.naviserver.server`
 
 # Option 2: build from source
 
@@ -36,6 +37,7 @@ go build ./cmd/cli
 ```
 
 Useful flags:
+
 - `--keep-data` or `-k`: preserve the data directory.
 - `--yes` or `-y`: run non-interactively.
 
@@ -44,6 +46,7 @@ Useful flags:
 If you are coming from 1.x.x data/layout (`naviger`), run migration before first start of the new version.
 
 Important notes:
+
 - Run migration only once, before launching new NaviServer for the first time.
 - The scripts create an automatic backup in your home directory.
 - Data directory is moved from `naviger` to `naviserver`.
@@ -64,6 +67,7 @@ migration\migrate.bat
 ```
 
 After migration:
+
 - Continue with normal installation (`./install.sh` on Linux/macOS or Windows installer).
 - For headless mode, confirm service/agent is running after install.
 

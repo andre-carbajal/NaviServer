@@ -21,7 +21,7 @@ instances easy through an intuitive web interface, a powerful CLI, and clean ope
 
 - Dual Interface:
     - Web UI: Modern control panel developed in React and Vite.
-    - Interactive CLI: Powerful command-line interface based on Bubble Tea.
+    - CLI + TUI: Script-friendly CLI plus interactive terminal interface based on Bubble Tea.
 - Backup Management: Complete system for creating, listing, and restoring backups.
 - Real-Time Console: Communication via WebSockets for monitoring and live commands.
 - Daemon with System Integration: Background application with icon in the system tray (systray) for quick access and
@@ -29,6 +29,24 @@ instances easy through an intuitive web interface, a powerful CLI, and clean ope
 - Automatic Runtime Management (JVM): Downloads and organizes the necessary Java versions for each server automatically.
 - Performance Statistics: Monitoring of CPU and RAM usage per server.
 - Cross-Platform: Runs on Windows, macOS, and Linux.
+
+## 🧩 CLI Quick Commands
+
+```bash
+# Open interactive TUI
+go run ./cmd/cli tui
+
+# Servers
+go run ./cmd/cli server list
+go run ./cmd/cli server create --name <server-name> --loader <loader> --version <version> --ram <mb>
+go run ./cmd/cli server create --name <server-name> --async
+go run ./cmd/cli server start <server-id>
+go run ./cmd/cli server stop <server-id>
+go run ./cmd/cli server delete <server-id>
+```
+
+`server create` is synchronous by default (waits for progress completion over WebSocket).
+Use `--async` for fire-and-return behavior.
 
 ## 🐞 Bugs & Feedback
 

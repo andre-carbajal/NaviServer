@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -10,13 +9,17 @@ import (
 var portsCmd = &cobra.Command{
 	Use:   "ports",
 	Short: "Manage port range",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
 }
 
 var portsGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get port range",
-	Run: func(cmd *cobra.Command, args []string) {
-		handleGetPortRange()
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return handleGetPortRange()
 	},
 }
 
@@ -24,35 +27,39 @@ var portsStart, portsEnd int
 var portsSetCmd = &cobra.Command{
 	Use:   "set",
 	Short: "Set port range",
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if portsStart == 0 || portsEnd == 0 {
-			log.Fatal("Error: You must specify both --start and --end flags to update the port range")
+			return newValidationError("you must specify both --start and --end")
 		}
-		handleSetPortRange(portsStart, portsEnd)
+		return handleSetPortRange(portsStart, portsEnd)
 	},
 }
 
 var loadersCmd = &cobra.Command{
 	Use:   "loaders",
 	Short: "List available loaders",
-	Run: func(cmd *cobra.Command, args []string) {
-		handleListLoaders()
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return handleListLoaders()
 	},
 }
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Check for updates",
-	Run: func(cmd *cobra.Command, args []string) {
-		handleCheckUpdates()
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return handleCheckUpdates()
 	},
 }
 
 var restartCmd = &cobra.Command{
 	Use:   "restart",
 	Short: "Restart the daemon",
-	Run: func(cmd *cobra.Command, args []string) {
-		handleRestartDaemon()
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return handleRestartDaemon()
 	},
 }
 
@@ -64,57 +71,113 @@ func init() {
 	RootCmd.AddCommand(portsCmd, loadersCmd, updateCmd, restartCmd)
 }
 
-func handleGetPortRange() {
+func handleGetPortRange() error {
 	pr, err := Client.GetPortRange()
 	if err != nil {
-		log.Fatalf("Error getting port range: %v", err)
+		return fmt.Errorf("get port range: %w", err)
 	}
-	fmt.Println("\n--- PORT CONFIGURATION ---")
-	fmt.Printf("Start port: %d\n", pr.Start)
-	fmt.Printf("End port:   %d\n", pr.End)
-	fmt.Printf("Range:      %d ports available\n", pr.End-pr.Start+1)
+
+	if isJSONOutput() {
+		return printJSON(map[string]any{
+			"action": "get_port_range",
+			"status": "ok",
+			"port_range": map[string]int{
+				"start": pr.Start,
+				"end":   pr.End,
+				"range": pr.End - pr.Start + 1,
+			},
+		})
+	}
+
+	printTable([]string{"KEY", "VALUE"}, [][]string{
+		{"START_PORT", fmt.Sprintf("%d", pr.Start)},
+		{"END_PORT", fmt.Sprintf("%d", pr.End)},
+		{"RANGE", fmt.Sprintf("%d", pr.End-pr.Start+1)},
+	})
+	return nil
 }
 
-func handleSetPortRange(start, end int) {
+func handleSetPortRange(start, end int) error {
 	if err := Client.SetPortRange(start, end); err != nil {
-		log.Fatalf("Error setting port range: %v", err)
+		return fmt.Errorf("set port range: %w", err)
 	}
-	fmt.Println("Port configuration updated successfully!")
+
+	if isJSONOutput() {
+		return printJSON(map[string]any{
+			"action": "set_port_range",
+			"status": "ok",
+			"start":  start,
+			"end":    end,
+		})
+	}
+
+	fmt.Println("OK  port configuration updated")
 	fmt.Printf("New range: %d - %d\n", start, end)
+	return nil
 }
 
-func handleListLoaders() {
+func handleListLoaders() error {
 	loaders, err := Client.ListLoaders()
 	if err != nil {
-		log.Fatalf("Error listing loaders: %v", err)
+		return fmt.Errorf("list loaders: %w", err)
 	}
-	fmt.Println("\n--- AVAILABLE LOADERS ---")
+
+	if isJSONOutput() {
+		return printJSON(map[string]any{
+			"action":  "list_loaders",
+			"status":  "ok",
+			"loaders": loaders,
+		})
+	}
+
+	rows := make([][]string, 0, len(loaders))
 	for _, l := range loaders {
-		fmt.Printf("- %s\n", l)
+		rows = append(rows, []string{l})
 	}
+	printTable([]string{"LOADER"}, rows)
+	return nil
 }
 
-func handleCheckUpdates() {
+func handleCheckUpdates() error {
 	info, err := Client.CheckUpdates()
 	if err != nil {
-		log.Fatalf("Error checking updates: %v", err)
+		return fmt.Errorf("check updates: %w", err)
 	}
 
-	fmt.Println("\n--- UPDATE CHECK ---")
-	fmt.Printf("Current version: %s\n", info.CurrentVersion)
-	fmt.Printf("Latest version:  %s\n", info.LatestVersion)
+	if isJSONOutput() {
+		return printJSON(map[string]any{
+			"action": "check_updates",
+			"status": "ok",
+			"update": info,
+		})
+	}
 
+	availability := "NO"
 	if info.UpdateAvailable {
-		fmt.Println("\nUpdate available!")
-		fmt.Printf("Download it here: %s\n", info.ReleaseURL)
-	} else {
-		fmt.Println("\nYou are up to date.")
+		availability = "YES"
 	}
+	printTable([]string{"KEY", "VALUE"}, [][]string{
+		{"CURRENT_VERSION", info.CurrentVersion},
+		{"LATEST_VERSION", info.LatestVersion},
+		{"UPDATE_AVAILABLE", availability},
+		{"RELEASE_URL", info.ReleaseURL},
+	})
+
+	return nil
 }
 
-func handleRestartDaemon() {
+func handleRestartDaemon() error {
 	if err := Client.RestartDaemon(); err != nil {
-		log.Fatalf("Error restarting daemon: %v", err)
+		return fmt.Errorf("restart daemon: %w", err)
 	}
-	fmt.Println("Daemon restart command sent successfully.")
+
+	if isJSONOutput() {
+		return printJSON(map[string]string{
+			"action": "restart_daemon",
+			"status": "ok",
+		})
+	}
+
+	fmt.Println("OK  daemon restart command sent")
+	return nil
 }
