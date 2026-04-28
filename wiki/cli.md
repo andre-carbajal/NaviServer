@@ -54,9 +54,32 @@ Restore defaults:
 ## Misc commands
 
 ```bash
-naviserver-cli ports get
-naviserver-cli ports set --start <port> --end <port>
 naviserver-cli loaders
 naviserver-cli update
 naviserver-cli restart
+```
+
+## Settings commands
+
+```bash
+naviserver-cli settings
+naviserver-cli settings port-range get
+naviserver-cli settings port-range set --start <port> --end <port>
+naviserver-cli settings public-ip get
+naviserver-cli settings public-ip set --value <ip-or-host>
+naviserver-cli settings interfaces list
+naviserver-cli settings log-buffer get
+naviserver-cli settings log-buffer set --lines <n>
+```
+
+## User commands
+
+```bash
+naviserver-cli user
+naviserver-cli user list
+naviserver-cli user create --username <name> --password <pass>
+naviserver-cli user delete <user-id>
+naviserver-cli user password set <user-id> --password <pass>
+naviserver-cli user permissions get <user-id>
+naviserver-cli user permissions set <user-id> --server <server-id> --power <true|false> --console <true|false>
 ```

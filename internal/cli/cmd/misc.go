@@ -6,36 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var portsCmd = &cobra.Command{
-	Use:   "ports",
-	Short: "Manage port range",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
-var portsGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get port range",
-	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return handleGetPortRange()
-	},
-}
-
-var portsStart, portsEnd int
-var portsSetCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set port range",
-	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if portsStart == 0 || portsEnd == 0 {
-			return newValidationError("you must specify both --start and --end")
-		}
-		return handleSetPortRange(portsStart, portsEnd)
-	},
-}
-
 var loadersCmd = &cobra.Command{
 	Use:   "loaders",
 	Short: "List available loaders",
@@ -64,56 +34,7 @@ var restartCmd = &cobra.Command{
 }
 
 func init() {
-	portsSetCmd.Flags().IntVar(&portsStart, "start", 0, "Start port")
-	portsSetCmd.Flags().IntVar(&portsEnd, "end", 0, "End port")
-	portsCmd.AddCommand(portsGetCmd, portsSetCmd)
-
-	RootCmd.AddCommand(portsCmd, loadersCmd, updateCmd, restartCmd)
-}
-
-func handleGetPortRange() error {
-	pr, err := Client.GetPortRange()
-	if err != nil {
-		return fmt.Errorf("get port range: %w", err)
-	}
-
-	if isJSONOutput() {
-		return printJSON(map[string]any{
-			"action": "get_port_range",
-			"status": "ok",
-			"port_range": map[string]int{
-				"start": pr.Start,
-				"end":   pr.End,
-				"range": pr.End - pr.Start + 1,
-			},
-		})
-	}
-
-	printTable([]string{"KEY", "VALUE"}, [][]string{
-		{"START_PORT", fmt.Sprintf("%d", pr.Start)},
-		{"END_PORT", fmt.Sprintf("%d", pr.End)},
-		{"RANGE", fmt.Sprintf("%d", pr.End-pr.Start+1)},
-	})
-	return nil
-}
-
-func handleSetPortRange(start, end int) error {
-	if err := Client.SetPortRange(start, end); err != nil {
-		return fmt.Errorf("set port range: %w", err)
-	}
-
-	if isJSONOutput() {
-		return printJSON(map[string]any{
-			"action": "set_port_range",
-			"status": "ok",
-			"start":  start,
-			"end":    end,
-		})
-	}
-
-	fmt.Println("OK  port configuration updated")
-	fmt.Printf("New range: %d - %d\n", start, end)
-	return nil
+	RootCmd.AddCommand(loadersCmd, updateCmd, restartCmd)
 }
 
 func handleListLoaders() error {
