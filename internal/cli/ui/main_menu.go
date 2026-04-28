@@ -32,8 +32,8 @@ func newMainMenuModel() mainMenuModel {
 	items := []list.Item{
 		mainMenuItem{title: "Servers", description: "Create, start, stop, delete and inspect", action: "servers"},
 		mainMenuItem{title: "Backups", description: "Create, restore and delete backups", action: "backups"},
-		mainMenuItem{title: "Settings", description: "Network, public address and log buffer", action: "settings"},
 		mainMenuItem{title: "Users", description: "List and manage user accounts", action: "users"},
+		mainMenuItem{title: "Settings", description: "Network, public address and log buffer", action: "settings"},
 	}
 
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
