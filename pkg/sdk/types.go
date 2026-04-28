@@ -59,3 +59,28 @@ type RestoreBackupRequest struct {
 	NewServerLoader  string `json:"newServerLoader,omitempty"`
 	NewServerRam     int    `json:"newServerRam,omitempty"`
 }
+
+type LogBufferSettings struct {
+	LogBufferSize int `json:"log_buffer_size"`
+}
+
+type PublicAddressSettings struct {
+	PublicIP string `json:"public_ip"`
+}
+
+type NetworkInterfaces struct {
+	Interfaces []string `json:"interfaces"`
+}
+
+type User struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
+
+type Permission struct {
+	UserID          string `json:"userId"`
+	ServerID        string `json:"serverId"`
+	CanViewConsole  bool   `json:"canViewConsole"`
+	CanControlPower bool   `json:"canControlPower"`
+}

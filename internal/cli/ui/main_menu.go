@@ -32,6 +32,8 @@ func newMainMenuModel() mainMenuModel {
 	items := []list.Item{
 		mainMenuItem{title: "Servers", description: "Create, start, stop, delete and inspect", action: "servers"},
 		mainMenuItem{title: "Backups", description: "Create, restore and delete backups", action: "backups"},
+		mainMenuItem{title: "Settings", description: "Network, public address and log buffer", action: "settings"},
+		mainMenuItem{title: "Users", description: "List and manage user accounts", action: "users"},
 	}
 
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
@@ -65,6 +67,12 @@ func (m mainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "b":
 			m.choice = "backups"
+			return m, tea.Quit
+		case "g":
+			m.choice = "settings"
+			return m, tea.Quit
+		case "u":
+			m.choice = "users"
 			return m, tea.Quit
 		case "enter":
 			i, ok := m.list.SelectedItem().(mainMenuItem)
@@ -106,6 +114,8 @@ func (m mainMenuModel) View() string {
 		keyStyle.Render("enter") + descStyle.Render(": open"),
 		keyStyle.Render("s") + descStyle.Render(": servers"),
 		keyStyle.Render("b") + descStyle.Render(": backups"),
+		keyStyle.Render("g") + descStyle.Render(": settings"),
+		keyStyle.Render("u") + descStyle.Render(": users"),
 		keyStyle.Render("?") + descStyle.Render(": help"),
 		keyStyle.Render("q/esc") + descStyle.Render(": quit"),
 		keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
@@ -118,6 +128,7 @@ func (m mainMenuModel) View() string {
 			"- Use arrow keys to move between sections",
 			"- Enter opens the selected section",
 			"- Logs are available from Servers with Enter",
+			"- Settings and Users foundations are available",
 		)
 		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
 		listBox = lipgloss.JoinVertical(lipgloss.Left, listBox, helpBox)
@@ -164,6 +175,10 @@ func RunMainTUI(client *sdk.Client) {
 			}
 		case "backups":
 			RunBackupDashboard(client)
+		case "settings":
+			RunSettingsDashboard(client)
+		case "users":
+			RunUsersDashboard(client)
 		default:
 			return
 		}
