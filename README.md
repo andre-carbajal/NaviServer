@@ -48,7 +48,10 @@ naviserver-cli server stop <server-id>
 naviserver-cli server delete <server-id>
 
 # Completion
+naviserver-cli completion bash > /etc/bash_completion.d/naviserver-cli
 naviserver-cli completion zsh > ~/.zfunc/_naviserver-cli
+naviserver-cli completion fish > ~/.config/fish/completions/naviserver-cli.fish
+naviserver-cli completion powershell > naviserver-cli.ps1
 
 # Settings
 naviserver-cli settings port-range get
@@ -70,6 +73,13 @@ naviserver-cli user permissions set <user-id> --server <server-id> --power true 
 
 `server create` is synchronous by default (waits for progress completion over WebSocket).
 Use `--async` for fire-and-return behavior.
+
+## 🖥️ TUI Highlights
+
+- Settings and Users dashboards with full management flows.
+- Contextual help popups and improved key hints across views.
+- Logs improvements: autoscroll toggle and in-buffer search.
+- Explicit status feedback for long-running operations.
 
 ## 🐞 Bugs & Feedback
 

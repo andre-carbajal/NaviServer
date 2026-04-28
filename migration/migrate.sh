@@ -11,6 +11,97 @@ color_success() { echo "✓ $1"; }
 color_warning() { echo "⚠️  $1"; }
 color_error()   { echo "✗ $1"; }
 
+prompt_update_config_path() {
+  local key="$1"
+  local config_file="$2"
+  local old_prefix="$3"
+  local new_prefix="$4"
+
+  local current_value
+  current_value=$(python3 - "$config_file" "$key" <<'PY'
+import json
+import sys
+
+config_path = sys.argv[1]
+key = sys.argv[2]
+
+with open(config_path, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
+value = data.get(key)
+if isinstance(value, str):
+    print(value)
+PY
+)
+
+  if [ -z "$current_value" ]; then
+    return 0
+  fi
+
+  case "$current_value" in
+    *"$old_prefix"*)
+      local suggested_value
+      suggested_value="${current_value/$old_prefix/$new_prefix}"
+
+      echo ""
+      color_info "config.json -> ${key}"
+      echo "  actual:    ${current_value}"
+      echo "  sugerida:  ${suggested_value}"
+      read -p "  Cambiar esta ruta? (y/n) " -n 1 -r
+      echo
+
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        python3 - "$config_file" "$key" "$suggested_value" <<'PY'
+import json
+import sys
+
+config_path = sys.argv[1]
+key = sys.argv[2]
+new_value = sys.argv[3]
+
+with open(config_path, 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
+data[key] = new_value
+
+with open(config_path, 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+PY
+        color_success "Actualizado ${key}"
+      else
+        color_info "Se mantiene ${key}"
+      fi
+      ;;
+  esac
+}
+
+maybe_update_config_json_paths() {
+  local config_file="$1"
+  local old_prefix="$2"
+  local new_prefix="$3"
+
+  if [ ! -f "$config_file" ]; then
+    color_info "No se encontro config.json para ajustar rutas"
+    return 0
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    color_warning "python3 no esta disponible; se omite ajuste interactivo de config.json"
+    return 0
+  fi
+
+  local backup_file="${config_file}.bak.$(date +"%Y-%m-%d_%H-%M-%S")"
+  cp "$config_file" "$backup_file"
+  color_info "Backup de config creado: ${backup_file}"
+
+  color_info "Revisando rutas legacy en config.json (una por una)..."
+  prompt_update_config_path "servers_path" "$config_file" "$old_prefix" "$new_prefix"
+  prompt_update_config_path "backups_path" "$config_file" "$old_prefix" "$new_prefix"
+  prompt_update_config_path "runtimes_path" "$config_file" "$old_prefix" "$new_prefix"
+  prompt_update_config_path "database_path" "$config_file" "$old_prefix" "$new_prefix"
+}
+
 # Helper for sudo
 run_sudo() {
   if [ "${EUID:-$(id -u)}" -eq 0 ]; then "$@"; else sudo "$@"; fi
@@ -154,6 +245,16 @@ else
         color_success "Secret file migrated"
     fi
 fi
+
+echo ""
+
+# ============================================================
+# 4.5 UPDATE CONFIG JSON PATHS (INTERACTIVE)
+# ============================================================
+color_info "Step 4.5: Reviewing config.json paths..."
+
+CONFIG_FILE="${NEW_DATA_DIR}/config.json"
+maybe_update_config_json_paths "$CONFIG_FILE" "$OLD_DATA_DIR" "$NEW_DATA_DIR"
 
 echo ""
 

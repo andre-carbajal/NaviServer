@@ -114,6 +114,29 @@ if exist "%NEW_DATA_DIR%" (
 echo.
 
 REM ============================================================
+REM 4.5. UPDATE CONFIG.JSON PATHS (INTERACTIVE)
+REM ============================================================
+echo Step 4.5: Reviewing config.json paths...
+
+set CONFIG_FILE=%NEW_DATA_DIR%\config.json
+if exist "%CONFIG_FILE%" (
+    set CONFIG_BACKUP=%CONFIG_FILE%.bak_%TIMESTAMP%
+    copy "%CONFIG_FILE%" "%CONFIG_BACKUP%" >nul 2>&1
+    if exist "%CONFIG_BACKUP%" (
+        echo ^✓ Config backup created: %CONFIG_BACKUP%
+    )
+
+    call :MaybeUpdateConfigPath servers_path
+    call :MaybeUpdateConfigPath backups_path
+    call :MaybeUpdateConfigPath runtimes_path
+    call :MaybeUpdateConfigPath database_path
+) else (
+    echo INFO: No config.json found to adjust paths.
+)
+
+echo.
+
+REM ============================================================
 REM 6. DOWNLOAD INSTALLER
 REM ============================================================
 echo Step 5: Downloading NaviServer installer...
@@ -198,3 +221,38 @@ echo   %BACKUP_FILE%
 echo.
 pause
 exit /b 0
+
+:MaybeUpdateConfigPath
+set KEY=%~1
+set CURRENT_VALUE=
+
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -Command "$cfg = Get-Content '%CONFIG_FILE%' -Raw | ConvertFrom-Json; $v = $cfg.%KEY%; if ($v -is [string]) { Write-Output $v }" 2^>nul`) do (
+    set CURRENT_VALUE=%%A
+)
+
+if "%CURRENT_VALUE%"=="" goto :eof
+
+echo %CURRENT_VALUE% | find /I "%OLD_DATA_DIR%" >nul
+if errorlevel 1 goto :clearvalue
+
+set SUGGESTED_VALUE=%CURRENT_VALUE:%OLD_DATA_DIR%=%NEW_DATA_DIR%%
+
+echo.
+echo config.json ^-^> %KEY%
+echo   actual:    %CURRENT_VALUE%
+echo   sugerida:  %SUGGESTED_VALUE%
+set /p updateChoice="  Cambiar esta ruta? (y/n) "
+
+if /I "%updateChoice%"=="y" (
+    powershell -NoProfile -Command "$cfg = Get-Content '%CONFIG_FILE%' -Raw | ConvertFrom-Json; $cfg.%KEY% = '%SUGGESTED_VALUE%'; $cfg | ConvertTo-Json -Depth 10 | Set-Content '%CONFIG_FILE%' -Encoding UTF8" >nul 2>&1
+    echo ^✓ Updated %KEY%
+) else (
+    echo INFO: Keeping %KEY%
+)
+
+:clearvalue
+set CURRENT_VALUE=
+set SUGGESTED_VALUE=
+set updateChoice=
+set KEY=
+goto :eof
