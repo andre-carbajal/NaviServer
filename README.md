@@ -43,6 +43,9 @@ go run ./cmd/cli server create --name <server-name> --async
 go run ./cmd/cli server start <server-id>
 go run ./cmd/cli server stop <server-id>
 go run ./cmd/cli server delete <server-id>
+
+# Completion
+go run ./cmd/cli completion zsh > ~/.zfunc/_naviserver-cli
 ```
 
 `server create` is synchronous by default (waits for progress completion over WebSocket).
