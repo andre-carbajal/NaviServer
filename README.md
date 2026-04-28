@@ -32,20 +32,40 @@ instances easy through an intuitive web interface, a powerful CLI, and clean ope
 
 ## 🧩 CLI Quick Commands
 
+Assuming `naviserver-cli` is installed and available in your `PATH`.
+For local development, you can run the same commands with `go run ./cmd/cli`.
+
 ```bash
 # Open interactive TUI
-go run ./cmd/cli tui
+naviserver-cli tui
 
 # Servers
-go run ./cmd/cli server list
-go run ./cmd/cli server create --name <server-name> --loader <loader> --version <version> --ram <mb>
-go run ./cmd/cli server create --name <server-name> --async
-go run ./cmd/cli server start <server-id>
-go run ./cmd/cli server stop <server-id>
-go run ./cmd/cli server delete <server-id>
+naviserver-cli server list
+naviserver-cli server create --name <server-name> --loader <loader> --version <version> --ram <mb>
+naviserver-cli server create --name <server-name> --async
+naviserver-cli server start <server-id>
+naviserver-cli server stop <server-id>
+naviserver-cli server delete <server-id>
 
 # Completion
-go run ./cmd/cli completion zsh > ~/.zfunc/_naviserver-cli
+naviserver-cli completion zsh > ~/.zfunc/_naviserver-cli
+
+# Settings
+naviserver-cli settings port-range get
+naviserver-cli settings port-range set --start 23008 --end 23108
+naviserver-cli settings public-ip get
+naviserver-cli settings public-ip set --value localhost
+naviserver-cli settings interfaces list
+naviserver-cli settings log-buffer get
+naviserver-cli settings log-buffer set --lines 1200
+
+# Users
+naviserver-cli user list
+naviserver-cli user create --username dev --password 'change-me'
+naviserver-cli user password set <user-id> --password 'new-password'
+naviserver-cli user permissions get <user-id>
+naviserver-cli user permissions set <user-id> --server <server-id> --power true --console false
+
 ```
 
 `server create` is synchronous by default (waits for progress completion over WebSocket).

@@ -165,7 +165,7 @@ func handleUserList() error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action": "user_list",
+			"action": "list_users",
 			"status": "ok",
 			"users":  users,
 		})
@@ -187,7 +187,7 @@ func handleUserCreate(username, password string) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action": "user_create",
+			"action": "create_user",
 			"status": "ok",
 			"user":   user,
 		})
@@ -205,7 +205,7 @@ func handleUserDelete(userID string) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":  "user_delete",
+			"action":  "delete_user",
 			"status":  "ok",
 			"user_id": userID,
 		})
@@ -222,7 +222,7 @@ func handleUserPasswordSet(userID, password string) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":  "user_password_set",
+			"action":  "set_user_password",
 			"status":  "ok",
 			"user_id": userID,
 		})
@@ -240,7 +240,7 @@ func handleUserPermissionsGet(userID string) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":      "user_permissions_get",
+			"action":      "get_user_permissions",
 			"status":      "ok",
 			"user_id":     userID,
 			"permissions": permissions,
@@ -305,7 +305,7 @@ func handleUserPermissionsSet(userID, serverID string, power, console bool) erro
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":  "user_permissions_set",
+			"action":  "set_user_permissions",
 			"status":  "ok",
 			"user_id": userID,
 			"permission": map[string]any{

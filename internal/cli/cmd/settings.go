@@ -168,7 +168,7 @@ func handleSettingsPortRangeGet() error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action": "settings_port_range_get",
+			"action": "get_settings_port_range",
 			"status": "ok",
 			"port_range": map[string]int{
 				"start": pr.Start,
@@ -194,7 +194,7 @@ func handleSettingsPortRangeSet(start, end int) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action": "settings_port_range_set",
+			"action": "set_settings_port_range",
 			"status": "ok",
 			"start":  start,
 			"end":    end,
@@ -215,7 +215,7 @@ func handleSettingsPublicIPGet() error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":    "settings_public_ip_get",
+			"action":    "get_settings_public_ip",
 			"status":    "ok",
 			"public_ip": publicIP.PublicIP,
 		})
@@ -232,7 +232,7 @@ func handleSettingsPublicIPSet(value string) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":    "settings_public_ip_set",
+			"action":    "set_settings_public_ip",
 			"status":    "ok",
 			"public_ip": value,
 		})
@@ -252,7 +252,7 @@ func handleSettingsInterfacesList() error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action":     "settings_interfaces_list",
+			"action":     "list_settings_interfaces",
 			"status":     "ok",
 			"interfaces": items,
 		})
@@ -274,7 +274,7 @@ func handleSettingsLogBufferGet() error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action": "settings_log_buffer_get",
+			"action": "get_settings_log_buffer",
 			"status": "ok",
 			"log_buffer": map[string]int{
 				"lines": logBuffer.LogBufferSize,
@@ -293,7 +293,7 @@ func handleSettingsLogBufferSet(lines int) error {
 
 	if isJSONOutput() {
 		return printJSON(map[string]any{
-			"action": "settings_log_buffer_set",
+			"action": "set_settings_log_buffer",
 			"status": "ok",
 			"lines":  lines,
 		})

@@ -411,6 +411,7 @@ func (m usersDashboardModel) updateCreateUser(msg tea.KeyMsg) (tea.Model, tea.Cm
 		m.createUsername.Blur()
 		m.createPassword.Blur()
 		m.message = "User creation cancelled"
+		m.err = nil
 		return m, nil
 	case "tab", "shift+tab", "up", "down":
 		if m.createStep == 0 {
@@ -461,6 +462,7 @@ func (m usersDashboardModel) updateChangePassword(msg tea.KeyMsg) (tea.Model, te
 		m.mode = UsersViewList
 		m.passwordInput.Blur()
 		m.message = "Password update cancelled"
+		m.err = nil
 		return m, nil
 	case "enter":
 		if m.activeUser == nil {
@@ -489,9 +491,10 @@ func (m usersDashboardModel) updateEditPermissions(msg tea.KeyMsg) (tea.Model, t
 	}
 
 	switch msg.String() {
-	case "esc":
+	case "q", "esc":
 		m.mode = UsersViewList
 		m.message = "Permission edit cancelled"
+		m.err = nil
 		return m, nil
 	case "tab", "left", "right":
 		if m.permissionCol == 0 {
@@ -567,9 +570,10 @@ func (m usersDashboardModel) updateDeleteConfirm(msg tea.KeyMsg) (tea.Model, tea
 	}
 
 	switch msg.String() {
-	case "n", "esc":
+	case "q", "n", "esc":
 		m.mode = UsersViewList
 		m.message = "Deletion cancelled"
+		m.err = nil
 		return m, nil
 	case "y", "enter":
 		m.message = "Deleting user..."
@@ -623,7 +627,7 @@ func (m usersDashboardModel) View() string {
 		keyStyle.Render("d") + descStyle.Render(": delete"),
 		keyStyle.Render("r") + descStyle.Render(": refresh"),
 		keyStyle.Render("?") + descStyle.Render(": help"),
-		keyStyle.Render("q/esc") + descStyle.Render(": back"),
+		keyStyle.Render("q/esc") + descStyle.Render(": quit"),
 		keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 	}
 	if m.mode == UsersViewCreate {
@@ -641,7 +645,7 @@ func (m usersDashboardModel) View() string {
 			keyStyle.Render("space") + descStyle.Render(": toggle"),
 			keyStyle.Render("enter") + descStyle.Render(": save"),
 			keyStyle.Render("r") + descStyle.Render(": reload"),
-			keyStyle.Render("esc") + descStyle.Render(": back"),
+			keyStyle.Render("q/esc") + descStyle.Render(": back"),
 		}
 	}
 	if m.mode == UsersViewChangePassword {
@@ -654,7 +658,7 @@ func (m usersDashboardModel) View() string {
 	if m.mode == UsersViewDeleteConfirm {
 		keys = []string{
 			keyStyle.Render("y/enter") + descStyle.Render(": confirm"),
-			keyStyle.Render("n/esc") + descStyle.Render(": cancel"),
+			keyStyle.Render("q/n/esc") + descStyle.Render(": cancel"),
 			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 		}
 	}

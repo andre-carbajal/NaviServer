@@ -147,7 +147,7 @@ func (m settingsDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.mode {
 		case settingsModeEditNumber:
 			switch msg.String() {
-			case "esc":
+			case "q", "esc":
 				m.mode = m.editReturnMode
 				m.input.Blur()
 				m.message = "Edit cancelled"
@@ -161,7 +161,7 @@ func (m settingsDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case settingsModeSelectPublicIP:
 			switch msg.String() {
-			case "esc":
+			case "q", "esc":
 				m.mode = settingsModeList
 				m.message = "Selection cancelled"
 				return m, nil
@@ -189,7 +189,7 @@ func (m settingsDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		case settingsModeNetworkConfig:
 			switch msg.String() {
-			case "esc":
+			case "q", "esc":
 				m.mode = settingsModeList
 				m.message = ""
 				return m, nil
@@ -488,7 +488,7 @@ func (m settingsDashboardModel) View() string {
 			keyStyle.Render("enter") + descStyle.Render(": edit/select"),
 			keyStyle.Render("r") + descStyle.Render(": refresh"),
 			keyStyle.Render("?") + descStyle.Render(": help"),
-			keyStyle.Render("q/esc") + descStyle.Render(": back"),
+			keyStyle.Render("q/esc") + descStyle.Render(": quit"),
 			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 		}
 
@@ -502,7 +502,7 @@ func (m settingsDashboardModel) View() string {
 		keys = []string{
 			keyStyle.Render("enter") + descStyle.Render(": edit"),
 			keyStyle.Render("?") + descStyle.Render(": help"),
-			keyStyle.Render("esc") + descStyle.Render(": back"),
+			keyStyle.Render("q/esc") + descStyle.Render(": back"),
 			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 		}
 
@@ -529,7 +529,7 @@ func (m settingsDashboardModel) View() string {
 
 		keys = []string{
 			keyStyle.Render("enter") + descStyle.Render(": save"),
-			keyStyle.Render("esc") + descStyle.Render(": cancel"),
+			keyStyle.Render("q/esc") + descStyle.Render(": cancel"),
 			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 		}
 
@@ -540,7 +540,7 @@ func (m settingsDashboardModel) View() string {
 			Render(m.ipList.View())
 		keys = []string{
 			keyStyle.Render("enter") + descStyle.Render(": select and save"),
-			keyStyle.Render("esc") + descStyle.Render(": cancel"),
+			keyStyle.Render("q/esc") + descStyle.Render(": cancel"),
 			keyStyle.Render("?") + descStyle.Render(": help"),
 			keyStyle.Render("ctrl+c") + descStyle.Render(": exit"),
 		}
@@ -564,14 +564,14 @@ func (m settingsDashboardModel) View() string {
 				"Network configuration",
 				"- Start and End Port are edited independently",
 				"- Enter saves each field immediately",
-				"- Esc returns to settings list",
+				"- q/Esc returns to settings list",
 			)
 		case settingsModeEditNumber:
 			helpBody = lipgloss.JoinVertical(lipgloss.Left,
 				"Edit mode",
 				"- Type a numeric value",
 				"- Enter saves immediately",
-				"- Esc cancels editing",
+				"- q/Esc cancels editing",
 			)
 		case settingsModeSelectPublicIP:
 			helpBody = lipgloss.JoinVertical(lipgloss.Left,
@@ -579,6 +579,7 @@ func (m settingsDashboardModel) View() string {
 				"- Choose localhost or an available interface",
 				"- Unavailable label means saved value is not currently detected",
 				"- Enter saves selection immediately",
+				"- q/Esc cancels without saving",
 			)
 		}
 		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)

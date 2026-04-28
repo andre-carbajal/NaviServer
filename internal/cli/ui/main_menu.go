@@ -128,7 +128,7 @@ func (m mainMenuModel) View() string {
 			"- Use arrow keys to move between sections",
 			"- Enter opens the selected section",
 			"- Logs are available from Servers with Enter",
-			"- Settings and Users foundations are available",
+			"- Settings and Users are fully available",
 		)
 		helpBox := helpBoxStyle.Width(m.width - 4).Render(helpBody)
 		listBox = lipgloss.JoinVertical(lipgloss.Left, listBox, helpBox)
