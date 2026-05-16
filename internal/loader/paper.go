@@ -27,18 +27,55 @@ func NewPaperLoader() *PaperLoader {
 	return &PaperLoader{}
 }
 
-func (l *PaperLoader) GetSupportedVersions() ([]string, error) {
+func (l *PaperLoader) GetSupportedVersions(options LoaderOptions) ([]string, error) {
 	return l.getVersions()
 }
 
-func (l *PaperLoader) Load(versionID string, destDir string, progressChan chan<- domain.ProgressEvent) error {
+func (l *PaperLoader) GetMetadata(options LoaderOptions) (*LoaderMetadata, error) {
+	versions, err := l.getVersions()
+	if err != nil {
+		return nil, err
+	}
+	latest := ""
+	if len(versions) > 0 {
+		latest = versions[0]
+	}
+	md := &LoaderMetadata{
+		LatestVersion:     latest,
+		MinecraftVersions: versions,
+	}
+	targetVersion := options.MCVersion
+	if targetVersion == "" && latest != "" {
+		targetVersion = latest
+	}
+	if targetVersion != "" {
+		builds, err := l.getBuilds(targetVersion)
+		if err == nil {
+			md.BuildVersions = builds
+		}
+	}
+	return md, nil
+}
+
+func (l *PaperLoader) Load(options LoaderOptions, destDir string, progressChan chan<- domain.ProgressEvent) (string, error) {
+	versionID := options.MCVersion
+	if versionID == "" {
+		versions, err := l.getVersions()
+		if err != nil {
+			return "", fmt.Errorf("error getting Paper versions: %w", err)
+		}
+		if len(versions) == 0 {
+			return "", fmt.Errorf("no Paper versions found")
+		}
+		versionID = versions[0]
+	}
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Searching for version %s...", versionID)}
 	}
 
 	versions, err := l.getVersions()
 	if err != nil {
-		return fmt.Errorf("error getting Paper versions: %w", err)
+		return "", fmt.Errorf("error getting Paper versions: %w", err)
 	}
 
 	versionExists := false
@@ -50,19 +87,28 @@ func (l *PaperLoader) Load(versionID string, destDir string, progressChan chan<-
 	}
 
 	if !versionExists {
-		return fmt.Errorf("version %s not found in Paper", versionID)
+		return "", fmt.Errorf("version %s not found in Paper", versionID)
 	}
 
-	if progressChan != nil {
-		progressChan <- domain.ProgressEvent{Message: "Getting latest build..."}
+	selectedBuild := options.BuildVersion
+	if selectedBuild == "" {
+		if progressChan != nil {
+			progressChan <- domain.ProgressEvent{Message: "Getting latest build..."}
+		}
+		latestBuild, err := l.getLatestBuild(versionID)
+		if err != nil {
+			return "", fmt.Errorf("error getting latest build: %w", err)
+		}
+		selectedBuild = fmt.Sprintf("%d", latestBuild)
 	}
-	latestBuild, err := l.getLatestBuild(versionID)
-	if err != nil {
-		return fmt.Errorf("error getting latest build: %w", err)
+	buildInt := 0
+	_, _ = fmt.Sscanf(selectedBuild, "%d", &buildInt)
+	if buildInt <= 0 {
+		return "", fmt.Errorf("invalid Paper build version: %s", selectedBuild)
 	}
 
 	downloadURL := fmt.Sprintf("%sversions/%s/builds/%d/downloads/paper-%s-%d.jar",
-		PaperAPIURL, versionID, latestBuild, versionID, latestBuild)
+		PaperAPIURL, versionID, buildInt, versionID, buildInt)
 
 	finalPath := filepath.Join(destDir, "server.jar")
 	if progressChan != nil {
@@ -71,13 +117,13 @@ func (l *PaperLoader) Load(versionID string, destDir string, progressChan chan<-
 
 	err = l.downloadFile(downloadURL, finalPath, progressChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Installation completed.", Progress: 100}
 	}
-	return nil
+	return versionID, nil
 }
 
 func (l *PaperLoader) getVersions() ([]string, error) {
@@ -108,27 +154,43 @@ func (l *PaperLoader) getVersions() ([]string, error) {
 }
 
 func (l *PaperLoader) getLatestBuild(version string) (int, error) {
+	builds, err := l.getBuilds(version)
+	if err != nil {
+		return 0, err
+	}
+	if len(builds) == 0 {
+		return 0, fmt.Errorf("no builds found for version %s", version)
+	}
+	latest := 0
+	_, _ = fmt.Sscanf(builds[0], "%d", &latest)
+	return latest, nil
+}
+
+func (l *PaperLoader) getBuilds(version string) ([]string, error) {
 	url := fmt.Sprintf("%sversions/%s", PaperAPIURL, version)
 	resp, err := http.Get(url)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("API responded with status %d", resp.StatusCode)
+		return nil, fmt.Errorf("API responded with status %d", resp.StatusCode)
 	}
 
 	var response PaperBuildsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	if len(response.Builds) == 0 {
-		return 0, fmt.Errorf("no builds found for version %s", version)
+		return nil, fmt.Errorf("no builds found for version %s", version)
 	}
-
-	return response.Builds[len(response.Builds)-1], nil
+	builds := make([]string, 0, len(response.Builds))
+	for i := len(response.Builds) - 1; i >= 0; i-- {
+		builds = append(builds, fmt.Sprintf("%d", response.Builds[i]))
+	}
+	return builds, nil
 }
 
 func (l *PaperLoader) downloadFile(url string, dest string, progressChan chan<- domain.ProgressEvent) error {

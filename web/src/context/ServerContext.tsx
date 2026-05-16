@@ -17,9 +17,17 @@ interface ServerContextType {
   createServer: (data: {
     name: string;
     loader: string;
-    version: string;
+    version?: string;
     ram: number;
     requestId?: string;
+    loaderOptions?: {
+      mcVersion?: string;
+      includeSnapshots?: boolean;
+      includeUnstable?: boolean;
+      buildVersion?: string;
+      loaderVersion?: string;
+      installerVersion?: string;
+    };
   }) => Promise<boolean>;
   startServer: (id: string) => Promise<void>;
   stopServer: (id: string) => Promise<void>;
@@ -209,9 +217,17 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
   const createServer = async (data: {
     name: string;
     loader: string;
-    version: string;
+    version?: string;
     ram: number;
     requestId?: string;
+    loaderOptions?: {
+      mcVersion?: string;
+      includeSnapshots?: boolean;
+      includeUnstable?: boolean;
+      buildVersion?: string;
+      loaderVersion?: string;
+      installerVersion?: string;
+    };
   }) => {
     const tempId = data.requestId || `temp-${Date.now()}`;
 
@@ -219,7 +235,7 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
       id: tempId,
       name: data.name,
       loader: data.loader,
-      version: data.version,
+      version: data.loaderOptions?.mcVersion || data.version || 'latest',
       ram: data.ram,
       port: 0,
       status: 'CREATING',

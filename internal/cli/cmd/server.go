@@ -40,11 +40,17 @@ var serverListCmd = &cobra.Command{
 }
 
 var (
-	createName    string
-	createLoader  string
-	createVersion string
-	createRAM     int
-	createAsync   bool
+	createName             string
+	createLoader           string
+	createVersion          string
+	createRAM              int
+	createAsync            bool
+	createMCVersion        string
+	createIncludeSnapshots bool
+	createIncludeUnstable  bool
+	createBuildVersion     string
+	createLoaderVersion    string
+	createInstallerVersion string
 )
 
 var serverCreateCmd = &cobra.Command{
@@ -86,6 +92,12 @@ func init() {
 	serverCreateCmd.Flags().StringVar(&createVersion, "version", "1.20.1", "Server version")
 	serverCreateCmd.Flags().IntVar(&createRAM, "ram", 2048, "Server RAM in MB")
 	serverCreateCmd.Flags().BoolVar(&createAsync, "async", false, "Run create request asynchronously")
+	serverCreateCmd.Flags().StringVar(&createMCVersion, "mc-version", "", "Minecraft version (default: latest stable)")
+	serverCreateCmd.Flags().BoolVar(&createIncludeSnapshots, "include-snapshots", false, "Include snapshots (vanilla)")
+	serverCreateCmd.Flags().BoolVar(&createIncludeUnstable, "include-unstable", false, "Include unstable versions")
+	serverCreateCmd.Flags().StringVar(&createBuildVersion, "build-version", "", "Build version (paper)")
+	serverCreateCmd.Flags().StringVar(&createLoaderVersion, "loader-version", "", "Loader version (fabric/forge/neoforge/quilt)")
+	serverCreateCmd.Flags().StringVar(&createInstallerVersion, "installer-version", "", "Installer version (quilt/fabric)")
 
 	serverCmd.AddCommand(serverListCmd, serverCreateCmd, serverDeleteCmd, serverStartCmd, serverStopCmd)
 	RootCmd.AddCommand(serverCmd)
@@ -124,11 +136,22 @@ func handleListServers() error {
 
 func handleCreateServer(name, loader, version string, ram int, async bool) error {
 	req := sdk.CreateServerRequest{
-		Name:      name,
-		Loader:    loader,
-		Version:   version,
+		Name:    name,
+		Loader:  loader,
+		Version: version,
+		LoaderOptions: sdk.LoaderOptions{
+			MCVersion:        createMCVersion,
+			IncludeSnapshots: createIncludeSnapshots,
+			IncludeUnstable:  createIncludeUnstable,
+			BuildVersion:     createBuildVersion,
+			LoaderVersion:    createLoaderVersion,
+			InstallerVersion: createInstallerVersion,
+		},
 		Ram:       ram,
 		RequestID: uuid.New().String(),
+	}
+	if req.LoaderOptions.MCVersion == "" && version != "" {
+		req.LoaderOptions.MCVersion = version
 	}
 
 	if async {

@@ -19,7 +19,7 @@ func NewForgeLoader() *ForgeLoader {
 	return &ForgeLoader{}
 }
 
-func (l *ForgeLoader) GetSupportedVersions() ([]string, error) {
+func (l *ForgeLoader) GetSupportedVersions(options LoaderOptions) ([]string, error) {
 	resp, err := http.Get(ForgeAPIURL + "minecraft")
 	if err != nil {
 		return nil, err
@@ -37,6 +37,25 @@ func (l *ForgeLoader) GetSupportedVersions() ([]string, error) {
 
 	SortVersions(versions)
 	return versions, nil
+}
+
+func (l *ForgeLoader) GetMetadata(options LoaderOptions) (*LoaderMetadata, error) {
+	versions, err := l.GetSupportedVersions(options)
+	if err != nil {
+		return nil, err
+	}
+	md := &LoaderMetadata{MinecraftVersions: versions}
+	if len(versions) > 0 {
+		md.LatestVersion = versions[0]
+	}
+	target := options.MCVersion
+	if target == "" && len(versions) > 0 {
+		target = versions[0]
+	}
+	if target != "" {
+		md.LoaderVersions, _ = l.getLoaderVersions(target)
+	}
+	return md, nil
 }
 
 func (l *ForgeLoader) getLoaderVersions(minecraftVersion string) ([]string, error) {
@@ -68,14 +87,22 @@ func (l *ForgeLoader) getLoaderVersions(minecraftVersion string) ([]string, erro
 	return versions, nil
 }
 
-func (l *ForgeLoader) Load(versionID string, destDir string, progressChan chan<- domain.ProgressEvent) error {
+func (l *ForgeLoader) Load(options LoaderOptions, destDir string, progressChan chan<- domain.ProgressEvent) (string, error) {
+	versionID := options.MCVersion
+	if versionID == "" {
+		versions, err := l.GetSupportedVersions(options)
+		if err != nil || len(versions) == 0 {
+			return "", fmt.Errorf("error getting Forge versions: %w", err)
+		}
+		versionID = versions[0]
+	}
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Searching for version %s...", versionID)}
 	}
 
-	supportedVersions, err := l.GetSupportedVersions()
+	supportedVersions, err := l.GetSupportedVersions(options)
 	if err != nil {
-		return fmt.Errorf("error getting Forge versions: %w", err)
+		return "", fmt.Errorf("error getting Forge versions: %w", err)
 	}
 
 	versionExists := false
@@ -87,7 +114,7 @@ func (l *ForgeLoader) Load(versionID string, destDir string, progressChan chan<-
 	}
 
 	if !versionExists {
-		return fmt.Errorf("version %s not found in Forge", versionID)
+		return "", fmt.Errorf("version %s not found in Forge", versionID)
 	}
 
 	if progressChan != nil {
@@ -95,12 +122,15 @@ func (l *ForgeLoader) Load(versionID string, destDir string, progressChan chan<-
 	}
 	loaderVersions, err := l.getLoaderVersions(versionID)
 	if err != nil {
-		return fmt.Errorf("error getting Forge loader versions: %w", err)
+		return "", fmt.Errorf("error getting Forge loader versions: %w", err)
 	}
 	if len(loaderVersions) == 0 {
-		return fmt.Errorf("no loader versions found for Forge on minecraft version %s", versionID)
+		return "", fmt.Errorf("no loader versions found for Forge on minecraft version %s", versionID)
 	}
 	latestLoaderVersion := loaderVersions[0]
+	if options.LoaderVersion != "" {
+		latestLoaderVersion = options.LoaderVersion
+	}
 
 	forgeVersion := fmt.Sprintf("%s-%s", versionID, latestLoaderVersion)
 	downloadURL := fmt.Sprintf("https://maven.minecraftforge.net/net/minecraftforge/forge/%s/forge-%s-installer.jar", forgeVersion, forgeVersion)
@@ -112,7 +142,7 @@ func (l *ForgeLoader) Load(versionID string, destDir string, progressChan chan<-
 
 	err = l.downloadFile(downloadURL, installerPath, progressChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if progressChan != nil {
@@ -124,20 +154,20 @@ func (l *ForgeLoader) Load(versionID string, destDir string, progressChan chan<-
 	cmd.Stderr = io.Discard
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error running Forge installer: %w", err)
+		return "", fmt.Errorf("error running Forge installer: %w", err)
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Cleaning up installation files..."}
 	}
 	if err := os.Remove(installerPath); err != nil {
-		return fmt.Errorf("error removing installer: %w", err)
+		return "", fmt.Errorf("error removing installer: %w", err)
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Forge installation completed.", Progress: 100}
 	}
-	return nil
+	return versionID, nil
 }
 
 func (l *ForgeLoader) downloadFile(url string, dest string, progressChan chan<- domain.ProgressEvent) error {

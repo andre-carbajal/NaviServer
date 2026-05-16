@@ -89,6 +89,24 @@ export const api = {
   getLoaders: () => apiInstance.get<string[]>('/loaders'),
   getLoaderVersions: (loader: string) =>
     apiInstance.get<string[]>(`/loaders/${loader}/versions`),
+  getLoaderMetadata: (
+    loader: string,
+    options?: {
+      mcVersion?: string;
+      includeSnapshots?: boolean;
+      includeUnstable?: boolean;
+      buildVersion?: string;
+      loaderVersion?: string;
+      installerVersion?: string;
+    },
+  ) =>
+    apiInstance.get<{
+      latestVersion?: string;
+      minecraftVersions?: string[];
+      buildVersions?: string[];
+      loaderVersions?: string[];
+      installerVersions?: string[];
+    }>(`/loaders/${loader}/metadata`, { params: options }),
   getServers: () => apiInstance.get<Server[]>('/servers'),
   getServer: (id: string) => apiInstance.get<Server>(`/servers/${id}`),
   getServerStats: (id: string) =>
@@ -105,11 +123,21 @@ export const api = {
       },
     });
   },
-  createServer: (
-    data: Omit<Server, 'id' | 'status' | 'port'> & {
-      requestId?: string;
-    },
-  ) => apiInstance.post<Server>('/servers', data),
+  createServer: (data: {
+    name: string;
+    loader: string;
+    version?: string;
+    ram: number;
+    requestId?: string;
+    loaderOptions?: {
+      mcVersion?: string;
+      includeSnapshots?: boolean;
+      includeUnstable?: boolean;
+      buildVersion?: string;
+      loaderVersion?: string;
+      installerVersion?: string;
+    };
+  }) => apiInstance.post<Server>('/servers', data),
   updateServer: (
     id: string,
     data: {

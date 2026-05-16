@@ -7,6 +7,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"naviserver/internal/domain"
+	"naviserver/internal/loader"
 	"net/http"
 )
 
@@ -67,11 +68,12 @@ func (h *ServerHandler) HandleListServers(w http.ResponseWriter, r *http.Request
 
 func (h *ServerHandler) HandleCreateServer(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name      string `json:"name"`
-		Version   string `json:"version"`
-		Loader    string `json:"loader"`
-		RAM       int    `json:"ram"`
-		RequestID string `json:"requestId"`
+		Name          string               `json:"name"`
+		Version       string               `json:"version"`
+		Loader        string               `json:"loader"`
+		LoaderOptions loader.LoaderOptions `json:"loaderOptions"`
+		RAM           int                  `json:"ram"`
+		RequestID     string               `json:"requestId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -95,7 +97,10 @@ func (h *ServerHandler) HandleCreateServer(w http.ResponseWriter, r *http.Reques
 		}
 	}()
 
-	h.Manager.StartCreateServerJob(req.Name, req.Loader, req.Version, req.RAM, progressChan)
+	if req.LoaderOptions.MCVersion == "" && req.Version != "" {
+		req.LoaderOptions.MCVersion = req.Version
+	}
+	h.Manager.StartCreateServerJob(req.Name, req.Loader, req.LoaderOptions, req.Version, req.RAM, progressChan)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

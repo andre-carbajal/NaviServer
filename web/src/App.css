@@ -312,6 +312,16 @@ nav {
   color: var(--text-muted);
 }
 
+.checkbox-row {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

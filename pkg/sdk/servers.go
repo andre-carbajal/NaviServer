@@ -48,6 +48,21 @@ func (c *Client) ListLoaderVersions(loader string) ([]string, error) {
 	return versions, err
 }
 
+func (c *Client) GetLoaderMetadata(loader string, options LoaderOptions) (*LoaderMetadata, error) {
+	path := fmt.Sprintf("/loaders/%s/metadata?mcVersion=%s&includeSnapshots=%t&includeUnstable=%t&buildVersion=%s&loaderVersion=%s&installerVersion=%s",
+		loader,
+		options.MCVersion,
+		options.IncludeSnapshots,
+		options.IncludeUnstable,
+		options.BuildVersion,
+		options.LoaderVersion,
+		options.InstallerVersion,
+	)
+	var md LoaderMetadata
+	err := c.get(path, &md)
+	return &md, err
+}
+
 func (c *Client) CheckUpdates() (*UpdateInfo, error) {
 	var info UpdateInfo
 	err := c.get("/updates", &info)

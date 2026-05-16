@@ -108,6 +108,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 
 	mux.Handle("GET /loaders", protect(loadersHandler.HandleGetLoaders, ""))
 	mux.Handle("GET /loaders/{name}/versions", protect(loadersHandler.HandleGetLoaderVersions, ""))
+	mux.Handle("GET /loaders/{name}/metadata", protect(loadersHandler.HandleGetLoaderMetadata, ""))
 
 	mux.Handle("GET /servers", protect(serverHandler.HandleListServers, ""))
 	mux.Handle("GET /servers-stats", protect(serverHandler.HandleGetAllServerStats, ""))

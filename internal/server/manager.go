@@ -39,10 +39,10 @@ func sanitizeFolderName(name string) string {
 	return sanitized
 }
 
-func (m *Manager) StartCreateServerJob(name, loaderType, version string, ram int, progressChan chan<- domain.ProgressEvent) {
+func (m *Manager) StartCreateServerJob(name, loaderType string, options loader.LoaderOptions, version string, ram int, progressChan chan<- domain.ProgressEvent) {
 	go func() {
 		defer close(progressChan)
-		srv, err := m.CreateServer(name, loaderType, version, ram, progressChan)
+		srv, err := m.CreateServer(name, loaderType, options, version, ram, progressChan)
 		if err != nil {
 			fmt.Printf("Error creating server: %v\n", err)
 			event := domain.ProgressEvent{
@@ -63,7 +63,7 @@ func (m *Manager) StartCreateServerJob(name, loaderType, version string, ram int
 	}()
 }
 
-func (m *Manager) CreateServer(name string, loaderType string, version string, ram int, progressChan chan<- domain.ProgressEvent) (*domain.Server, error) {
+func (m *Manager) CreateServer(name string, loaderType string, options loader.LoaderOptions, version string, ram int, progressChan chan<- domain.ProgressEvent) (*domain.Server, error) {
 	if strings.ContainsAny(name, "\\/:*?\"<>|") || strings.Contains(name, "..") {
 		return nil, fmt.Errorf("invalid server name: contains forbidden characters")
 	}
@@ -95,9 +95,19 @@ func (m *Manager) CreateServer(name string, loaderType string, version string, r
 		return nil, fmt.Errorf("filesystem error: %w", err)
 	}
 
-	if err := downloader.Load(version, serverDir, progressChan); err != nil {
+	resolvedVersion, err := downloader.Load(options, serverDir, progressChan)
+	if err != nil {
 		os.RemoveAll(serverDir)
 		return nil, fmt.Errorf("download error: %w", err)
+	}
+	if strings.TrimSpace(resolvedVersion) != "" {
+		version = resolvedVersion
+	}
+	if version == "" {
+		version = options.MCVersion
+	}
+	if version == "" {
+		version = "latest"
 	}
 
 	if progressChan != nil {

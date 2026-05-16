@@ -1,10 +1,19 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { api } from '../services/api.ts';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+
+const loaderLogoMap: Record<string, string> = {
+  paper: '/loaders/paper.webp',
+  vanilla: '/loaders/vanilla.webp',
+  fabric: '/loaders/fabric.webp',
+  forge: '/loaders/forge.webp',
+  neoforge: '/loaders/neoforge.webp',
+  quilt: '/loaders/quilt.webp',
+};
 
 interface CreateModalProps {
   isOpen: boolean;
@@ -12,67 +21,118 @@ interface CreateModalProps {
   onCreate: (data: {
     name: string;
     loader: string;
-    version: string;
+    version?: string;
     ram: number;
     requestId?: string;
+    loaderOptions?: {
+      mcVersion?: string;
+      includeSnapshots?: boolean;
+      includeUnstable?: boolean;
+      buildVersion?: string;
+      loaderVersion?: string;
+      installerVersion?: string;
+    };
   }) => void;
 }
 
-const CreateModal: React.FC<CreateModalProps> = ({
-  isOpen,
-  onClose,
-  onCreate,
-}) => {
+const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) => {
   const [name, setName] = useState('');
   const [loader, setLoader] = useState('vanilla');
-  const [version, setVersion] = useState('1.20.1');
   const [ram, setRam] = useState(2048);
   const [loaders, setLoaders] = useState<string[]>([]);
-  const [versions, setVersions] = useState<string[]>([]);
+  const [mcVersion, setMcVersion] = useState('');
+  const [includeSnapshots, setIncludeSnapshots] = useState(false);
+  const [includeUnstable, setIncludeUnstable] = useState(false);
+  const [buildVersion, setBuildVersion] = useState('');
+  const [loaderVersion, setLoaderVersion] = useState('');
+  const [installerVersion, setInstallerVersion] = useState('');
+  const [metadata, setMetadata] = useState<{
+    latestVersion?: string;
+    minecraftVersions?: string[];
+    buildVersions?: string[];
+    loaderVersions?: string[];
+    installerVersions?: string[];
+  }>({});
 
   useEffect(() => {
-    if (isOpen) {
-      api
-        .getLoaders()
-        .then((response) => {
-          setLoaders(response.data);
-          if (response.data.length > 0) {
-            setLoader(response.data[0]);
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to fetch loaders', error);
-        });
-    }
+    if (!isOpen) return;
+    api.getLoaders().then((response) => {
+      setLoaders(response.data);
+      if (response.data.length > 0) setLoader(response.data[0]);
+    });
   }, [isOpen]);
 
   useEffect(() => {
-    if (loader) {
-      api
-        .getLoaderVersions(loader)
-        .then((response) => {
-          setVersions(response.data);
-          if (response.data.length > 0) {
-            setVersion(response.data[0]);
-          }
-        })
-        .catch((error) => {
-          console.error(`Failed to fetch versions for ${loader}`, error);
-        });
-    }
+    setMcVersion('');
+    setBuildVersion('');
+    setLoaderVersion('');
+    setInstallerVersion('');
+    setIncludeSnapshots(false);
+    setIncludeUnstable(false);
+    setMetadata({});
   }, [loader]);
+
+  useEffect(() => {
+    if (!loader || !isOpen) return;
+    api
+      .getLoaderMetadata(loader, { mcVersion, includeSnapshots, includeUnstable })
+      .then((response) => {
+        const md = response.data;
+        setMetadata(md);
+        if (
+          md.latestVersion &&
+          (!mcVersion || !(md.minecraftVersions || []).includes(mcVersion))
+        ) {
+          setMcVersion(md.latestVersion);
+        }
+        if (
+          md.buildVersions?.length &&
+          (!buildVersion || !md.buildVersions.includes(buildVersion))
+        ) {
+          setBuildVersion(md.buildVersions[0]);
+        }
+        if (
+          md.loaderVersions?.length &&
+          (!loaderVersion || !md.loaderVersions.includes(loaderVersion))
+        ) {
+          setLoaderVersion(md.loaderVersions[0]);
+        }
+        if (
+          md.installerVersions?.length &&
+          (!installerVersion ||
+            !md.installerVersions.includes(installerVersion))
+        ) {
+          setInstallerVersion(md.installerVersions[0]);
+        }
+      });
+  }, [loader, isOpen, mcVersion, includeSnapshots, includeUnstable]);
+
+  const showUnstableToggle = useMemo(
+    () => ['fabric', 'neoforge', 'quilt'].includes(loader),
+    [loader],
+  );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newRequestId = uuidv4();
-
-    onCreate({ name, loader, version, ram, requestId: newRequestId });
-
+    onCreate({
+      name,
+      loader,
+      ram,
+      requestId: newRequestId,
+      loaderOptions: {
+        mcVersion,
+        includeSnapshots,
+        includeUnstable,
+        buildVersion: loader === 'paper' ? buildVersion : undefined,
+        loaderVersion: ['fabric', 'forge', 'neoforge', 'quilt'].includes(loader)
+          ? loaderVersion
+          : undefined,
+        installerVersion: loader === 'quilt' ? installerVersion : undefined,
+      },
+      version: mcVersion,
+    });
     onClose();
-    setName('');
-    setLoader(loaders.length > 0 ? loaders[0] : 'vanilla');
-    setVersion('1.20.1');
-    setRam(2048);
   };
 
   return (
@@ -80,69 +140,73 @@ const CreateModal: React.FC<CreateModalProps> = ({
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Server Name</label>
-          <input
-            type="text"
-            className="form-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="My Survival World"
-            required
-          />
+          <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '15px',
-          }}
-        >
-          <div className="form-group">
-            <label>Loader</label>
-            <select
-              className="form-select"
-              value={loader}
-              onChange={(e) => setLoader(e.target.value)}
-            >
-              {loaders.map((l) => (
-                <option key={l} value={l}>
-                  {l.charAt(0).toUpperCase() + l.slice(1)}
-                </option>
-              ))}
+        <div className="form-group">
+          <label>Loader</label>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <select className="form-select" value={loader} onChange={(e) => setLoader(e.target.value)}>
+              {loaders.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
-          </div>
-          <div className="form-group">
-            <label>Version</label>
-            <select
-              className="form-select"
-              value={version}
-              onChange={(e) => setVersion(e.target.value)}
-            >
-              {versions.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
+            <img src={loaderLogoMap[loader]} alt={`${loader} logo`} style={{ width: 32, height: 32 }} />
           </div>
         </div>
-
+        <div className="form-group">
+          <label>Minecraft Version</label>
+          <select className="form-select" value={mcVersion} onChange={(e) => setMcVersion(e.target.value)}>
+            {(metadata.minecraftVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+        {loader === 'vanilla' && (
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={includeSnapshots}
+              onChange={(e) => setIncludeSnapshots(e.target.checked)}
+            />{' '}
+            Show snapshots
+          </label>
+        )}
+        {showUnstableToggle && (
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={includeUnstable}
+              onChange={(e) => setIncludeUnstable(e.target.checked)}
+            />{' '}
+            Show unstable
+          </label>
+        )}
+        {loader === 'paper' && (
+          <div className="form-group">
+            <label>Build version</label>
+            <select className="form-select" value={buildVersion} onChange={(e) => setBuildVersion(e.target.value)}>
+              {(metadata.buildVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        )}
+        {['fabric', 'forge', 'neoforge', 'quilt'].includes(loader) && (
+          <div className="form-group">
+            <label>Loader version</label>
+            <select className="form-select" value={loaderVersion} onChange={(e) => setLoaderVersion(e.target.value)}>
+              {(metadata.loaderVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        )}
+        {loader === 'quilt' && (
+          <div className="form-group">
+            <label>Installer version</label>
+            <select className="form-select" value={installerVersion} onChange={(e) => setInstallerVersion(e.target.value)}>
+              {(metadata.installerVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        )}
         <div className="form-group">
           <label>RAM (MB)</label>
-          <input
-            type="number"
-            className="form-input"
-            value={ram}
-            onChange={(e) => setRam(Number(e.target.value))}
-            min="1024"
-            step="512"
-          />
+          <input type="number" className="form-input" value={ram} onChange={(e) => setRam(Number(e.target.value))} min="1024" step="512" />
         </div>
-
         <div className="modal-actions">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="submit">Create Server</Button>
         </div>
       </form>

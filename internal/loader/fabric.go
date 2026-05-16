@@ -32,18 +32,42 @@ func NewFabricLoader() *FabricLoader {
 	return &FabricLoader{}
 }
 
-func (l *FabricLoader) GetSupportedVersions() ([]string, error) {
-	return l.getGameVersions()
+func (l *FabricLoader) GetSupportedVersions(options LoaderOptions) ([]string, error) {
+	return l.getGameVersions(options.IncludeUnstable)
 }
 
-func (l *FabricLoader) Load(versionID string, destDir string, progressChan chan<- domain.ProgressEvent) error {
+func (l *FabricLoader) GetMetadata(options LoaderOptions) (*LoaderMetadata, error) {
+	gameVersions, err := l.getGameVersions(options.IncludeUnstable)
+	if err != nil {
+		return nil, err
+	}
+	loaderVersions, _ := l.getLoaderVersions()
+	metadata := &LoaderMetadata{
+		MinecraftVersions: gameVersions,
+		LoaderVersions:    loaderVersions,
+	}
+	if len(gameVersions) > 0 {
+		metadata.LatestVersion = gameVersions[0]
+	}
+	return metadata, nil
+}
+
+func (l *FabricLoader) Load(options LoaderOptions, destDir string, progressChan chan<- domain.ProgressEvent) (string, error) {
+	versionID := options.MCVersion
+	if versionID == "" {
+		versions, err := l.getGameVersions(options.IncludeUnstable)
+		if err != nil || len(versions) == 0 {
+			return "", fmt.Errorf("error getting Fabric versions: %w", err)
+		}
+		versionID = versions[0]
+	}
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Searching for version %s...", versionID)}
 	}
 
-	gameVersions, err := l.getGameVersions()
+	gameVersions, err := l.getGameVersions(options.IncludeUnstable)
 	if err != nil {
-		return fmt.Errorf("error getting Fabric versions: %w", err)
+		return "", fmt.Errorf("error getting Fabric versions: %w", err)
 	}
 
 	versionExists := false
@@ -55,7 +79,7 @@ func (l *FabricLoader) Load(versionID string, destDir string, progressChan chan<
 	}
 
 	if !versionExists {
-		return fmt.Errorf("version %s not found in Fabric", versionID)
+		return "", fmt.Errorf("version %s not found in Fabric", versionID)
 	}
 
 	if progressChan != nil {
@@ -63,19 +87,25 @@ func (l *FabricLoader) Load(versionID string, destDir string, progressChan chan<
 	}
 	loaderVersions, err := l.getLoaderVersions()
 	if err != nil {
-		return fmt.Errorf("error getting Fabric loader versions: %w", err)
+		return "", fmt.Errorf("error getting Fabric loader versions: %w", err)
 	}
 	if len(loaderVersions) == 0 {
-		return fmt.Errorf("no loader versions found for Fabric")
+		return "", fmt.Errorf("no loader versions found for Fabric")
 	}
 	latestLoaderVersion := loaderVersions[0]
+	if options.LoaderVersion != "" {
+		latestLoaderVersion = options.LoaderVersion
+	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Getting latest installer version..."}
 	}
 	installerVersion, err := l.getLatestInstallerVersion()
 	if err != nil {
-		return fmt.Errorf("error getting latest installer version: %w", err)
+		return "", fmt.Errorf("error getting latest installer version: %w", err)
+	}
+	if options.InstallerVersion != "" {
+		installerVersion = options.InstallerVersion
 	}
 
 	downloadURL := fmt.Sprintf("%sloader/%s/%s/%s/server/jar",
@@ -88,16 +118,16 @@ func (l *FabricLoader) Load(versionID string, destDir string, progressChan chan<
 
 	err = l.downloadFile(downloadURL, finalPath, progressChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Installation completed.", Progress: 100}
 	}
-	return nil
+	return versionID, nil
 }
 
-func (l *FabricLoader) getGameVersions() ([]string, error) {
+func (l *FabricLoader) getGameVersions(includeUnstable bool) ([]string, error) {
 	resp, err := http.Get(FabricAPIURL + "game")
 	if err != nil {
 		return nil, err
@@ -115,7 +145,7 @@ func (l *FabricLoader) getGameVersions() ([]string, error) {
 
 	var stableVersions []string
 	for _, v := range versions {
-		if v.Stable {
+		if includeUnstable || v.Stable {
 			stableVersions = append(stableVersions, v.Version)
 		}
 	}

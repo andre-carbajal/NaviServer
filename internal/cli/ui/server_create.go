@@ -364,9 +364,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(
 					connectToProgress(m.client, m.requestID),
 					createServer(m.client, sdk.CreateServerRequest{
-						Name:      m.nameInput.Value(),
-						Loader:    m.selectedLoader,
-						Version:   m.selectedVersion,
+						Name:    m.nameInput.Value(),
+						Loader:  m.selectedLoader,
+						Version: m.selectedVersion,
+						LoaderOptions: sdk.LoaderOptions{
+							MCVersion: m.selectedVersion,
+						},
 						Ram:       ram,
 						RequestID: m.requestID,
 					}),

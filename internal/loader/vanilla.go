@@ -16,8 +16,10 @@ type Manifest struct {
 	Versions []Version `json:"versions"`
 }
 type Version struct {
-	ID  string `json:"id"`
-	URL string `json:"url"`
+	ID      string `json:"id"`
+	URL     string `json:"url"`
+	Type    string `json:"type"`
+	Release string `json:"releaseTime"`
 }
 type VersionDetails struct {
 	Downloads Downloads `json:"downloads"`
@@ -35,7 +37,7 @@ func NewVanillaLoader() *VanillaLoader {
 	return &VanillaLoader{}
 }
 
-func (l *VanillaLoader) GetSupportedVersions() ([]string, error) {
+func (l *VanillaLoader) GetSupportedVersions(options LoaderOptions) ([]string, error) {
 	manifest, err := l.fetchManifest()
 	if err != nil {
 		return nil, fmt.Errorf("could not get version manifest: %w", err)
@@ -43,20 +45,50 @@ func (l *VanillaLoader) GetSupportedVersions() ([]string, error) {
 
 	var versions []string
 	for _, v := range manifest.Versions {
+		if !options.IncludeSnapshots && v.Type == "snapshot" {
+			continue
+		}
 		versions = append(versions, v.ID)
 	}
 
 	return versions, nil
 }
 
-func (l *VanillaLoader) Load(versionID string, destDir string, progressChan chan<- domain.ProgressEvent) error {
+func (l *VanillaLoader) GetMetadata(options LoaderOptions) (*LoaderMetadata, error) {
+	versions, err := l.GetSupportedVersions(options)
+	if err != nil {
+		return nil, err
+	}
+	latest := ""
+	if len(versions) > 0 {
+		latest = versions[0]
+	}
+	return &LoaderMetadata{
+		LatestVersion:     latest,
+		MinecraftVersions: versions,
+	}, nil
+}
+
+func (l *VanillaLoader) Load(options LoaderOptions, destDir string, progressChan chan<- domain.ProgressEvent) (string, error) {
+	versionID := options.MCVersion
+	if versionID == "" {
+		versions, err := l.GetSupportedVersions(options)
+		if err != nil {
+			return "", fmt.Errorf("could not get version manifest: %w", err)
+		}
+		if len(versions) == 0 {
+			return "", fmt.Errorf("no versions available")
+		}
+		versionID = versions[0]
+	}
+
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Searching for version %s...", versionID)}
 	}
 
 	manifest, err := l.fetchManifest()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var versionURL string
@@ -67,7 +99,7 @@ func (l *VanillaLoader) Load(versionID string, destDir string, progressChan chan
 		}
 	}
 	if versionURL == "" {
-		return fmt.Errorf("version %s not found in Mojang", versionID)
+		return "", fmt.Errorf("version %s not found in Mojang", versionID)
 	}
 
 	if progressChan != nil {
@@ -75,7 +107,7 @@ func (l *VanillaLoader) Load(versionID string, destDir string, progressChan chan
 	}
 	details, err := l.fetchVersionDetails(versionURL)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	finalPath := filepath.Join(destDir, "server.jar")
@@ -85,13 +117,13 @@ func (l *VanillaLoader) Load(versionID string, destDir string, progressChan chan
 
 	err = l.downloadFile(details.Downloads.Server.URL, finalPath, progressChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Installation completed.", Progress: 100}
 	}
-	return nil
+	return versionID, nil
 }
 
 func (l *VanillaLoader) fetchManifest() (*Manifest, error) {

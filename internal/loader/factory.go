@@ -14,19 +14,29 @@ func GetLoader(loaderType string) (ServerLoader, error) {
 		return NewForgeLoader(), nil
 	case "neoforge":
 		return NewNeoForgeLoader(), nil
+	case "quilt":
+		return NewQuiltLoader(), nil
 	default:
 		return nil, fmt.Errorf("loader type '%s' not supported", loaderType)
 	}
 }
 
-func GetLoaderVersions(loaderType string) ([]string, error) {
+func GetLoaderVersions(loaderType string, options LoaderOptions) ([]string, error) {
 	loader, err := GetLoader(loaderType)
 	if err != nil {
 		return nil, err
 	}
-	return loader.GetSupportedVersions()
+	return loader.GetSupportedVersions(options)
+}
+
+func GetLoaderMetadata(loaderType string, options LoaderOptions) (*LoaderMetadata, error) {
+	loader, err := GetLoader(loaderType)
+	if err != nil {
+		return nil, err
+	}
+	return loader.GetMetadata(options)
 }
 
 func GetAvailableLoaders() []string {
-	return []string{"vanilla", "paper", "fabric", "forge", "neoforge"}
+	return []string{"vanilla", "paper", "fabric", "forge", "neoforge", "quilt"}
 }

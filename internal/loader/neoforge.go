@@ -24,7 +24,7 @@ type NeoForgeVersionsResponse struct {
 	Versions []string `json:"versions"`
 }
 
-func (l *NeoForgeLoader) GetSupportedVersions() ([]string, error) {
+func (l *NeoForgeLoader) getSupportedVersions(includeUnstable bool) ([]string, error) {
 	resp, err := http.Get(NeoForgeAPIURL)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (l *NeoForgeLoader) GetSupportedVersions() ([]string, error) {
 	seen := make(map[string]bool)
 
 	for _, version := range response.Versions {
-		if strings.HasPrefix(version, "0.") || strings.Contains(version, "snapshot") || strings.Contains(version, "alpha") {
+		if !includeUnstable && (strings.HasPrefix(version, "0.") || strings.Contains(version, "snapshot") || strings.Contains(version, "alpha")) {
 			continue
 		}
 
@@ -72,6 +72,29 @@ func (l *NeoForgeLoader) GetSupportedVersions() ([]string, error) {
 
 	SortVersions(versionsList)
 	return versionsList, nil
+}
+
+func (l *NeoForgeLoader) GetSupportedVersions(options LoaderOptions) ([]string, error) {
+	return l.getSupportedVersions(options.IncludeUnstable)
+}
+
+func (l *NeoForgeLoader) GetMetadata(options LoaderOptions) (*LoaderMetadata, error) {
+	versions, err := l.getSupportedVersions(options.IncludeUnstable)
+	if err != nil {
+		return nil, err
+	}
+	md := &LoaderMetadata{MinecraftVersions: versions}
+	if len(versions) > 0 {
+		md.LatestVersion = versions[0]
+	}
+	target := options.MCVersion
+	if target == "" && len(versions) > 0 {
+		target = versions[0]
+	}
+	if target != "" {
+		md.LoaderVersions, _ = l.getLoaderVersions(target)
+	}
+	return md, nil
 }
 
 func (l *NeoForgeLoader) getLoaderVersions(minecraftVersion string) ([]string, error) {
@@ -135,14 +158,22 @@ func (l *NeoForgeLoader) getLoaderVersions(minecraftVersion string) ([]string, e
 	return loaderVersionsList, nil
 }
 
-func (l *NeoForgeLoader) Load(versionID string, destDir string, progressChan chan<- domain.ProgressEvent) error {
+func (l *NeoForgeLoader) Load(options LoaderOptions, destDir string, progressChan chan<- domain.ProgressEvent) (string, error) {
+	versionID := options.MCVersion
+	if versionID == "" {
+		versions, err := l.getSupportedVersions(options.IncludeUnstable)
+		if err != nil || len(versions) == 0 {
+			return "", fmt.Errorf("error getting NeoForge versions: %w", err)
+		}
+		versionID = versions[0]
+	}
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Searching for version %s...", versionID)}
 	}
 
-	supportedVersions, err := l.GetSupportedVersions()
+	supportedVersions, err := l.getSupportedVersions(options.IncludeUnstable)
 	if err != nil {
-		return fmt.Errorf("error getting NeoForge versions: %w", err)
+		return "", fmt.Errorf("error getting NeoForge versions: %w", err)
 	}
 
 	versionExists := false
@@ -154,7 +185,7 @@ func (l *NeoForgeLoader) Load(versionID string, destDir string, progressChan cha
 	}
 
 	if !versionExists {
-		return fmt.Errorf("version %s not found in NeoForge", versionID)
+		return "", fmt.Errorf("version %s not found in NeoForge", versionID)
 	}
 
 	if progressChan != nil {
@@ -162,13 +193,16 @@ func (l *NeoForgeLoader) Load(versionID string, destDir string, progressChan cha
 	}
 	loaderVersions, err := l.getLoaderVersions(versionID)
 	if err != nil {
-		return fmt.Errorf("error getting NeoForge loader versions: %w", err)
+		return "", fmt.Errorf("error getting NeoForge loader versions: %w", err)
 	}
 	if len(loaderVersions) == 0 {
-		return fmt.Errorf("no loader versions found for NeoForge on minecraft version %s", versionID)
+		return "", fmt.Errorf("no loader versions found for NeoForge on minecraft version %s", versionID)
 	}
 
 	latestLoaderVersion := loaderVersions[0]
+	if options.LoaderVersion != "" {
+		latestLoaderVersion = options.LoaderVersion
+	}
 
 	downloadURL := fmt.Sprintf("https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-installer.jar", latestLoaderVersion, latestLoaderVersion)
 
@@ -179,7 +213,7 @@ func (l *NeoForgeLoader) Load(versionID string, destDir string, progressChan cha
 
 	err = l.downloadFile(downloadURL, installerPath, progressChan)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if progressChan != nil {
@@ -191,20 +225,20 @@ func (l *NeoForgeLoader) Load(versionID string, destDir string, progressChan cha
 	cmd.Stderr = io.Discard
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error running NeoForge installer: %w", err)
+		return "", fmt.Errorf("error running NeoForge installer: %w", err)
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Cleaning up installation files..."}
 	}
 	if err := os.Remove(installerPath); err != nil {
-		return fmt.Errorf("error removing installer: %w", err)
+		return "", fmt.Errorf("error removing installer: %w", err)
 	}
 
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "NeoForge installation completed.", Progress: 100}
 	}
-	return nil
+	return versionID, nil
 }
 
 func (l *NeoForgeLoader) downloadFile(url string, dest string, progressChan chan<- domain.ProgressEvent) error {
