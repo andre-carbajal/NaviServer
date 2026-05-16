@@ -569,16 +569,18 @@ func (m usersDashboardModel) updateDeleteConfirm(msg tea.KeyMsg) (tea.Model, tea
 		return m, nil
 	}
 
+	if msg.String() == "y" || msg.Type == tea.KeyEnter {
+		m.message = "Deleting user..."
+		m.err = nil
+		return m, deleteUserCmd(m.client, m.activeUser.ID)
+	}
+
 	switch msg.String() {
 	case "q", "n", "esc":
 		m.mode = UsersViewList
 		m.message = "Deletion cancelled"
 		m.err = nil
 		return m, nil
-	case "y", "enter":
-		m.message = "Deleting user..."
-		m.err = nil
-		return m, deleteUserCmd(m.client, m.activeUser.ID)
 	}
 
 	return m, nil

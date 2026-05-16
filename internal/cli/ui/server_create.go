@@ -5,6 +5,7 @@ import (
 	"naviserver/pkg/sdk"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -37,32 +38,44 @@ type WizardStep int
 const (
 	StepName WizardStep = iota
 	StepLoader
-	StepVersion
+	StepIncludeSnapshots
+	StepIncludeUnstable
+	StepMCVersion
+	StepBuildVersion
+	StepLoaderVersion
+	StepInstallerVersion
 	StepRAM
 	StepConfirm
 )
 
 type WizardModel struct {
-	client          *sdk.Client
-	step            WizardStep
-	nameInput       textinput.Model
-	ramInput        textinput.Model
-	loaderList      list.Model
-	versionList     list.Model
-	selectedLoader  string
-	selectedVersion string
-	width           int
-	height          int
-	err             error
-	creating        bool
-	progress        progress.Model
-	spinner         spinner.Model
-	steps           []ProgressStep
-	progressConn    *websocket.Conn
-	requestID       string
-	showHelp        bool
-	createState     asyncFlowState
-	createStatus    string
+	client                   *sdk.Client
+	step                     WizardStep
+	nameInput                textinput.Model
+	ramInput                 textinput.Model
+	loaderList               list.Model
+	versionList              list.Model
+	boolList                 list.Model
+	selectedLoader           string
+	selectedVersion          string
+	selectedBuildVersion     string
+	selectedLoaderVersion    string
+	selectedInstallerVersion string
+	includeSnapshots         bool
+	includeUnstable          bool
+	metadata                 *sdk.LoaderMetadata
+	width                    int
+	height                   int
+	err                      error
+	creating                 bool
+	progress                 progress.Model
+	spinner                  spinner.Model
+	steps                    []ProgressStep
+	progressConn             *websocket.Conn
+	requestID                string
+	showHelp                 bool
+	createState              asyncFlowState
+	createStatus             string
 }
 
 type asyncFlowState int
@@ -79,6 +92,9 @@ type WizardCancelMsg struct{}
 
 type loadersMsg []string
 type versionsMsg []string
+type loaderMetadataMsg struct {
+	data *sdk.LoaderMetadata
+}
 type serverCreatedMsg struct{}
 type progressMsg sdk.ProgressEvent
 type progressConnMsg *websocket.Conn
@@ -103,8 +119,12 @@ func NewWizardModel(client *sdk.Client, width, height int) WizardModel {
 	l.SetShowHelp(false)
 
 	v := list.New([]list.Item{}, list.NewDefaultDelegate(), 30, 20)
-	v.Title = "Select Version"
+	v.Title = "Select Option"
 	v.SetShowHelp(false)
+
+	b := list.New([]list.Item{item("No"), item("Yes")}, list.NewDefaultDelegate(), 30, 8)
+	b.Title = "Select"
+	b.SetShowHelp(false)
 
 	prog := progress.New(progress.WithDefaultGradient())
 	s := spinner.New()
@@ -118,6 +138,7 @@ func NewWizardModel(client *sdk.Client, width, height int) WizardModel {
 		ramInput:    tiRam,
 		loaderList:  l,
 		versionList: v,
+		boolList:    b,
 		width:       width,
 		height:      height,
 		progress:    prog,
@@ -135,6 +156,20 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.creating {
 		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
+			// Allow leaving failed/running screen with Esc.
+			if msg.String() == "esc" {
+				m.creating = false
+				if m.progressConn != nil {
+					_ = m.progressConn.Close()
+					m.progressConn = nil
+				}
+				return m, nil
+			}
+			return m, nil
 		case serverCreatedMsg:
 			return m, nil
 		case progressConnMsg:
@@ -162,7 +197,7 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, func() tea.Msg { return WizardDoneMsg{} }
 			}
-			if msg.Progress == -1 {
+			if msg.Progress == -1 || strings.HasPrefix(strings.ToLower(strings.TrimSpace(msg.Message)), "error:") {
 				m.creating = false
 				m.createState = asyncStateFailed
 				m.createStatus = "Failed"
@@ -278,9 +313,12 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.versionList.SetItems(items)
 		m.versionList.SetSize(m.width-8, m.height-14)
-		m.step = StepVersion
+		m.step = StepMCVersion
 		m.versionList.ResetSelected()
 		return m, nil
+	case loaderMetadataMsg:
+		m.metadata = msg.data
+		return m, setupCurrentStepList(&m)
 	case errMsg:
 		m.err = msg
 		return m, nil
@@ -309,23 +347,86 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				i, ok := m.loaderList.SelectedItem().(item)
 				if ok {
 					m.selectedLoader = string(i)
-					return m, fetchVersions(m.client, m.selectedLoader)
+					m.includeSnapshots = false
+					m.includeUnstable = false
+					m.selectedVersion = ""
+					m.selectedBuildVersion = ""
+					m.selectedLoaderVersion = ""
+					m.selectedInstallerVersion = ""
+					return m, fetchLoaderMetadata(m.client, m.selectedLoader, sdk.LoaderOptions{})
 				}
 			}
 		}
 		m.loaderList, cmd = m.loaderList.Update(msg)
 		return m, cmd
 
-	case StepVersion:
+	case StepIncludeSnapshots:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if msg.Type == tea.KeyEnter {
+				i, ok := m.boolList.SelectedItem().(item)
+				if ok {
+					m.includeSnapshots = string(i) == "Yes"
+					return m, fetchLoaderMetadata(m.client, m.selectedLoader, m.currentOptions())
+				}
+			}
+		}
+		m.boolList, cmd = m.boolList.Update(msg)
+		return m, cmd
+
+	case StepIncludeUnstable:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if msg.Type == tea.KeyEnter {
+				i, ok := m.boolList.SelectedItem().(item)
+				if ok {
+					m.includeUnstable = string(i) == "Yes"
+					return m, fetchLoaderMetadata(m.client, m.selectedLoader, m.currentOptions())
+				}
+			}
+		}
+		m.boolList, cmd = m.boolList.Update(msg)
+		return m, cmd
+
+	case StepMCVersion:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			if msg.Type == tea.KeyEnter {
 				i, ok := m.versionList.SelectedItem().(item)
 				if ok {
 					m.selectedVersion = string(i)
-					m.step = StepRAM
-					m.ramInput.Focus()
-					return m, textinput.Blink
+					m.step = nextStepAfterSelection(m)
+					if m.step == StepRAM {
+						m.ramInput.Focus()
+						return m, textinput.Blink
+					}
+					return m, fetchLoaderMetadata(m.client, m.selectedLoader, m.currentOptions())
+				}
+			}
+		}
+		m.versionList, cmd = m.versionList.Update(msg)
+		return m, cmd
+
+	case StepBuildVersion, StepLoaderVersion, StepInstallerVersion:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if msg.Type == tea.KeyEnter {
+				i, ok := m.versionList.SelectedItem().(item)
+				if ok {
+					switch m.step {
+					case StepBuildVersion:
+						m.selectedBuildVersion = string(i)
+					case StepLoaderVersion:
+						m.selectedLoaderVersion = string(i)
+					case StepInstallerVersion:
+						m.selectedInstallerVersion = string(i)
+					}
+					m.step = nextStepAfterSelection(m)
+					if m.step == StepRAM {
+						m.ramInput.Focus()
+						return m, textinput.Blink
+					}
+					return m, setupCurrentStepList(&m)
 				}
 			}
 		}
@@ -364,11 +465,15 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Batch(
 					connectToProgress(m.client, m.requestID),
 					createServer(m.client, sdk.CreateServerRequest{
-						Name:    m.nameInput.Value(),
-						Loader:  m.selectedLoader,
-						Version: m.selectedVersion,
+						Name:   m.nameInput.Value(),
+						Loader: m.selectedLoader,
 						LoaderOptions: sdk.LoaderOptions{
-							MCVersion: m.selectedVersion,
+							MCVersion:        m.selectedVersion,
+							IncludeSnapshots: m.includeSnapshots,
+							IncludeUnstable:  m.includeUnstable,
+							BuildVersion:     m.selectedBuildVersion,
+							LoaderVersion:    m.selectedLoaderVersion,
+							InstallerVersion: m.selectedInstallerVersion,
 						},
 						Ram:       ram,
 						RequestID: m.requestID,
@@ -405,16 +510,47 @@ func (m WizardModel) View() string {
 	case StepLoader:
 		stepTitle = "Select Loader"
 		content += "\n" + m.loaderList.View()
-	case StepVersion:
-		stepTitle = fmt.Sprintf("Select Version for %s", m.selectedLoader)
+	case StepIncludeSnapshots:
+		stepTitle = "Show snapshots?"
+		content += "\n" + m.boolList.View()
+	case StepIncludeUnstable:
+		stepTitle = "Show unstable?"
+		content += "\n" + m.boolList.View()
+	case StepMCVersion:
+		stepTitle = fmt.Sprintf("Select MC version for %s", m.selectedLoader)
+		content += "\n" + m.versionList.View()
+	case StepBuildVersion:
+		stepTitle = "Select Paper build version"
+		content += "\n" + m.versionList.View()
+	case StepLoaderVersion:
+		stepTitle = "Select loader version"
+		content += "\n" + m.versionList.View()
+	case StepInstallerVersion:
+		stepTitle = "Select installer version"
 		content += "\n" + m.versionList.View()
 	case StepRAM:
 		stepTitle = "Enter RAM (MB)"
 		content += fmt.Sprintf("\n%s", m.ramInput.View())
 	case StepConfirm:
 		stepTitle = "Confirm Creation"
-		content += fmt.Sprintf("\nName: %s\nLoader: %s\nVersion: %s\nRAM: %s MB",
-			m.nameInput.Value(), m.selectedLoader, m.selectedVersion, m.ramInput.Value())
+		content += fmt.Sprintf("\nName: %s\nLoader: %s\nMC Version: %s",
+			m.nameInput.Value(), m.selectedLoader, m.selectedVersion)
+		if m.selectedBuildVersion != "" {
+			content += fmt.Sprintf("\nBuild: %s", m.selectedBuildVersion)
+		}
+		if m.selectedLoaderVersion != "" {
+			content += fmt.Sprintf("\nLoader Version: %s", m.selectedLoaderVersion)
+		}
+		if m.selectedInstallerVersion != "" {
+			content += fmt.Sprintf("\nInstaller Version: %s", m.selectedInstallerVersion)
+		}
+		if m.includeSnapshots {
+			content += "\nInclude snapshots: yes"
+		}
+		if m.includeUnstable {
+			content += "\nInclude unstable: yes"
+		}
+		content += fmt.Sprintf("\nRAM: %s MB", m.ramInput.Value())
 		content = content + "\n" + confirmHint()
 	}
 
@@ -529,6 +665,98 @@ func fetchVersions(client *sdk.Client, loader string) tea.Cmd {
 		}
 		return versionsMsg(versions)
 	}
+}
+
+func fetchLoaderMetadata(client *sdk.Client, loader string, options sdk.LoaderOptions) tea.Cmd {
+	return func() tea.Msg {
+		md, err := client.GetLoaderMetadata(loader, options)
+		if err != nil {
+			return errMsg(err)
+		}
+		return loaderMetadataMsg{data: md}
+	}
+}
+
+func (m WizardModel) currentOptions() sdk.LoaderOptions {
+	return sdk.LoaderOptions{
+		MCVersion:        m.selectedVersion,
+		IncludeSnapshots: m.includeSnapshots,
+		IncludeUnstable:  m.includeUnstable,
+		BuildVersion:     m.selectedBuildVersion,
+		LoaderVersion:    m.selectedLoaderVersion,
+		InstallerVersion: m.selectedInstallerVersion,
+	}
+}
+
+func setupCurrentStepList(m *WizardModel) tea.Cmd {
+	if m.metadata == nil {
+		return nil
+	}
+	// step routing
+	if m.selectedLoader == "vanilla" && m.step <= StepMCVersion {
+		if m.step != StepIncludeSnapshots && m.step != StepMCVersion {
+			m.step = StepIncludeSnapshots
+		} else if m.step == StepIncludeSnapshots {
+			m.step = StepMCVersion
+		}
+	} else if (m.selectedLoader == "fabric" || m.selectedLoader == "neoforge") && m.step <= StepMCVersion {
+		if m.step != StepIncludeUnstable && m.step != StepMCVersion {
+			m.step = StepIncludeUnstable
+		} else if m.step == StepIncludeUnstable {
+			m.step = StepMCVersion
+		}
+	} else if m.step <= StepMCVersion {
+		m.step = StepMCVersion
+	}
+
+	if m.selectedVersion == "" && m.metadata.LatestVersion != "" {
+		m.selectedVersion = m.metadata.LatestVersion
+	}
+
+	switch m.step {
+	case StepMCVersion:
+		setListItems(&m.versionList, m.metadata.MinecraftVersions, m.width, m.height)
+	case StepBuildVersion:
+		if m.selectedBuildVersion == "" && len(m.metadata.BuildVersions) > 0 {
+			m.selectedBuildVersion = m.metadata.BuildVersions[0]
+		}
+		setListItems(&m.versionList, m.metadata.BuildVersions, m.width, m.height)
+	case StepLoaderVersion:
+		if m.selectedLoaderVersion == "" && len(m.metadata.LoaderVersions) > 0 {
+			m.selectedLoaderVersion = m.metadata.LoaderVersions[0]
+		}
+		setListItems(&m.versionList, m.metadata.LoaderVersions, m.width, m.height)
+	case StepInstallerVersion:
+		if m.selectedInstallerVersion == "" && len(m.metadata.InstallerVersions) > 0 {
+			m.selectedInstallerVersion = m.metadata.InstallerVersions[0]
+		}
+		setListItems(&m.versionList, m.metadata.InstallerVersions, m.width, m.height)
+	}
+	return nil
+}
+
+func nextStepAfterSelection(m WizardModel) WizardStep {
+	switch m.selectedLoader {
+	case "paper":
+		if m.step <= StepMCVersion {
+			return StepBuildVersion
+		}
+	case "fabric", "forge", "neoforge":
+		if m.step <= StepMCVersion {
+			return StepLoaderVersion
+		}
+	}
+	return StepRAM
+}
+
+func setListItems(l *list.Model, values []string, width, height int) {
+	items := make([]list.Item, 0, len(values))
+	for _, v := range values {
+		items = append(items, item(v))
+	}
+	l.SetItems(items)
+	l.SetSize(width-8, height-14)
+	l.ResetSelected()
 }
 
 func createServer(client *sdk.Client, req sdk.CreateServerRequest) tea.Cmd {

@@ -12,7 +12,6 @@ const loaderLogoMap: Record<string, string> = {
   fabric: '/loaders/fabric.webp',
   forge: '/loaders/forge.webp',
   neoforge: '/loaders/neoforge.webp',
-  quilt: '/loaders/quilt.webp',
 };
 
 interface CreateModalProps {
@@ -30,7 +29,6 @@ interface CreateModalProps {
       includeUnstable?: boolean;
       buildVersion?: string;
       loaderVersion?: string;
-      installerVersion?: string;
     };
   }) => void;
 }
@@ -45,13 +43,11 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
   const [includeUnstable, setIncludeUnstable] = useState(false);
   const [buildVersion, setBuildVersion] = useState('');
   const [loaderVersion, setLoaderVersion] = useState('');
-  const [installerVersion, setInstallerVersion] = useState('');
   const [metadata, setMetadata] = useState<{
     latestVersion?: string;
     minecraftVersions?: string[];
     buildVersions?: string[];
     loaderVersions?: string[];
-    installerVersions?: string[];
   }>({});
 
   useEffect(() => {
@@ -66,7 +62,6 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
     setMcVersion('');
     setBuildVersion('');
     setLoaderVersion('');
-    setInstallerVersion('');
     setIncludeSnapshots(false);
     setIncludeUnstable(false);
     setMetadata({});
@@ -97,18 +92,11 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
         ) {
           setLoaderVersion(md.loaderVersions[0]);
         }
-        if (
-          md.installerVersions?.length &&
-          (!installerVersion ||
-            !md.installerVersions.includes(installerVersion))
-        ) {
-          setInstallerVersion(md.installerVersions[0]);
-        }
       });
   }, [loader, isOpen, mcVersion, includeSnapshots, includeUnstable]);
 
   const showUnstableToggle = useMemo(
-    () => ['fabric', 'neoforge', 'quilt'].includes(loader),
+    () => ['fabric', 'neoforge'].includes(loader),
     [loader],
   );
 
@@ -125,10 +113,9 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
         includeSnapshots,
         includeUnstable,
         buildVersion: loader === 'paper' ? buildVersion : undefined,
-        loaderVersion: ['fabric', 'forge', 'neoforge', 'quilt'].includes(loader)
+        loaderVersion: ['fabric', 'forge', 'neoforge'].includes(loader)
           ? loaderVersion
           : undefined,
-        installerVersion: loader === 'quilt' ? installerVersion : undefined,
       },
       version: mcVersion,
     });
@@ -185,19 +172,11 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
             </select>
           </div>
         )}
-        {['fabric', 'forge', 'neoforge', 'quilt'].includes(loader) && (
+        {['fabric', 'forge', 'neoforge'].includes(loader) && (
           <div className="form-group">
             <label>Loader version</label>
             <select className="form-select" value={loaderVersion} onChange={(e) => setLoaderVersion(e.target.value)}>
               {(metadata.loaderVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
-        )}
-        {loader === 'quilt' && (
-          <div className="form-group">
-            <label>Installer version</label>
-            <select className="form-select" value={installerVersion} onChange={(e) => setInstallerVersion(e.target.value)}>
-              {(metadata.installerVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
         )}

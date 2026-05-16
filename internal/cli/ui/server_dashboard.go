@@ -264,14 +264,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.mode == ViewDeleteConfirm {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			switch msg.String() {
-			case "y", "enter":
+			if msg.String() == "y" || msg.Type == tea.KeyEnter {
 				go m.client.DeleteServer(m.deleteServerID)
 				m.message = fmt.Sprintf("Deleting server %s...", m.deleteServerName)
 				m.mode = ViewDashboard
 				return m, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
 					return "clear_message"
 				})
+			}
+			switch msg.String() {
 			case "n", "esc":
 				m.mode = ViewDashboard
 				m.message = "Deletion cancelled"

@@ -42,7 +42,6 @@ var serverListCmd = &cobra.Command{
 var (
 	createName             string
 	createLoader           string
-	createVersion          string
 	createRAM              int
 	createAsync            bool
 	createMCVersion        string
@@ -50,13 +49,15 @@ var (
 	createIncludeUnstable  bool
 	createBuildVersion     string
 	createLoaderVersion    string
-	createInstallerVersion string
 )
 
 var serverCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a server",
-	Args:  cobra.NoArgs,
+	Long:  "Create a server with loader-specific options using structured loader fields.",
+	Example: "  naviserver-cli server create --name MyServer --loader vanilla --mc-version 1.21.6 --ram 4096\n" +
+		"  naviserver-cli server create --name MyPaper --loader paper --mc-version 1.21.6 --build-version 224 --ram 4096",
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if strings.TrimSpace(createName) == "" {
 			return newValidationError("you must specify --name")
@@ -64,7 +65,10 @@ var serverCreateCmd = &cobra.Command{
 		if createRAM <= 0 {
 			return newValidationError("--ram must be greater than 0")
 		}
-		return handleCreateServer(createName, createLoader, createVersion, createRAM, createAsync)
+		if err := validateCreateLoaderFlags(); err != nil {
+			return err
+		}
+		return handleCreateServer(createName, createLoader, createRAM, createAsync)
 	},
 }
 
@@ -89,18 +93,40 @@ var serverStopCmd = &cobra.Command{
 func init() {
 	serverCreateCmd.Flags().StringVar(&createName, "name", "", "Server name")
 	serverCreateCmd.Flags().StringVar(&createLoader, "loader", "vanilla", "Server loader")
-	serverCreateCmd.Flags().StringVar(&createVersion, "version", "1.20.1", "Server version")
 	serverCreateCmd.Flags().IntVar(&createRAM, "ram", 2048, "Server RAM in MB")
 	serverCreateCmd.Flags().BoolVar(&createAsync, "async", false, "Run create request asynchronously")
 	serverCreateCmd.Flags().StringVar(&createMCVersion, "mc-version", "", "Minecraft version (default: latest stable)")
 	serverCreateCmd.Flags().BoolVar(&createIncludeSnapshots, "include-snapshots", false, "Include snapshots (vanilla)")
-	serverCreateCmd.Flags().BoolVar(&createIncludeUnstable, "include-unstable", false, "Include unstable versions")
+	serverCreateCmd.Flags().BoolVar(&createIncludeUnstable, "include-unstable", false, "Include unstable versions (fabric/neoforge)")
 	serverCreateCmd.Flags().StringVar(&createBuildVersion, "build-version", "", "Build version (paper)")
-	serverCreateCmd.Flags().StringVar(&createLoaderVersion, "loader-version", "", "Loader version (fabric/forge/neoforge/quilt)")
-	serverCreateCmd.Flags().StringVar(&createInstallerVersion, "installer-version", "", "Installer version (quilt/fabric)")
+	serverCreateCmd.Flags().StringVar(&createLoaderVersion, "loader-version", "", "Loader version (fabric/forge/neoforge)")
 
 	serverCmd.AddCommand(serverListCmd, serverCreateCmd, serverDeleteCmd, serverStartCmd, serverStopCmd)
 	RootCmd.AddCommand(serverCmd)
+}
+
+func validateCreateLoaderFlags() error {
+	is := func(value string, allowed ...string) bool {
+		for _, a := range allowed {
+			if value == a {
+				return true
+			}
+		}
+		return false
+	}
+	if createBuildVersion != "" && createLoader != "paper" {
+		return newValidationError("--build-version only applies to --loader paper")
+	}
+	if createIncludeSnapshots && createLoader != "vanilla" {
+		return newValidationError("--include-snapshots only applies to --loader vanilla")
+	}
+	if createIncludeUnstable && !is(createLoader, "fabric", "neoforge") {
+		return newValidationError("--include-unstable only applies to --loader fabric|neoforge")
+	}
+	if createLoaderVersion != "" && !is(createLoader, "fabric", "forge", "neoforge") {
+		return newValidationError("--loader-version only applies to --loader fabric|forge|neoforge")
+	}
+	return nil
 }
 
 func handleListServers() error {
@@ -134,24 +160,19 @@ func handleListServers() error {
 	return nil
 }
 
-func handleCreateServer(name, loader, version string, ram int, async bool) error {
+func handleCreateServer(name, loader string, ram int, async bool) error {
 	req := sdk.CreateServerRequest{
-		Name:    name,
-		Loader:  loader,
-		Version: version,
+		Name:   name,
+		Loader: loader,
 		LoaderOptions: sdk.LoaderOptions{
 			MCVersion:        createMCVersion,
 			IncludeSnapshots: createIncludeSnapshots,
 			IncludeUnstable:  createIncludeUnstable,
 			BuildVersion:     createBuildVersion,
 			LoaderVersion:    createLoaderVersion,
-			InstallerVersion: createInstallerVersion,
 		},
 		Ram:       ram,
 		RequestID: uuid.New().String(),
-	}
-	if req.LoaderOptions.MCVersion == "" && version != "" {
-		req.LoaderOptions.MCVersion = version
 	}
 
 	if async {

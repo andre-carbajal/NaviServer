@@ -326,14 +326,15 @@ func (m BackupDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case BackupViewDeleteConfirm:
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
-			switch msg.String() {
-			case "y", "enter":
+			if msg.String() == "y" || msg.Type == tea.KeyEnter {
 				go m.client.DeleteBackup(m.deleteBackupName)
 				m.message = fmt.Sprintf("Deleting backup %s...", m.deleteBackupName)
 				m.mode = BackupViewList
 				return m, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
 					return fetchBackups(m.client)()
 				})
+			}
+			switch msg.String() {
 			case "n", "esc":
 				m.mode = BackupViewList
 				m.message = "Deletion cancelled"

@@ -1,6 +1,9 @@
 package sdk
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+)
 
 func (c *Client) ListServers() ([]Server, error) {
 	var servers []Server
@@ -49,15 +52,29 @@ func (c *Client) ListLoaderVersions(loader string) ([]string, error) {
 }
 
 func (c *Client) GetLoaderMetadata(loader string, options LoaderOptions) (*LoaderMetadata, error) {
-	path := fmt.Sprintf("/loaders/%s/metadata?mcVersion=%s&includeSnapshots=%t&includeUnstable=%t&buildVersion=%s&loaderVersion=%s&installerVersion=%s",
-		loader,
-		options.MCVersion,
-		options.IncludeSnapshots,
-		options.IncludeUnstable,
-		options.BuildVersion,
-		options.LoaderVersion,
-		options.InstallerVersion,
-	)
+	query := url.Values{}
+	if options.MCVersion != "" {
+		query.Set("mcVersion", options.MCVersion)
+	}
+	if options.IncludeSnapshots {
+		query.Set("includeSnapshots", "true")
+	}
+	if options.IncludeUnstable {
+		query.Set("includeUnstable", "true")
+	}
+	if options.BuildVersion != "" {
+		query.Set("buildVersion", options.BuildVersion)
+	}
+	if options.LoaderVersion != "" {
+		query.Set("loaderVersion", options.LoaderVersion)
+	}
+	if options.InstallerVersion != "" {
+		query.Set("installerVersion", options.InstallerVersion)
+	}
+	path := fmt.Sprintf("/loaders/%s/metadata", loader)
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
 	var md LoaderMetadata
 	err := c.get(path, &md)
 	return &md, err

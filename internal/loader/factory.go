@@ -14,8 +14,6 @@ func GetLoader(loaderType string) (ServerLoader, error) {
 		return NewForgeLoader(), nil
 	case "neoforge":
 		return NewNeoForgeLoader(), nil
-	case "quilt":
-		return NewQuiltLoader(), nil
 	default:
 		return nil, fmt.Errorf("loader type '%s' not supported", loaderType)
 	}
@@ -38,5 +36,5 @@ func GetLoaderMetadata(loaderType string, options LoaderOptions) (*LoaderMetadat
 }
 
 func GetAvailableLoaders() []string {
-	return []string{"vanilla", "paper", "fabric", "forge", "neoforge", "quilt"}
+	return []string{"vanilla", "paper", "fabric", "forge", "neoforge"}
 }
