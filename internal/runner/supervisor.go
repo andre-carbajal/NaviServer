@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"naviserver/internal/domain"
 
@@ -35,9 +36,10 @@ type Supervisor struct {
 }
 
 type ActiveProcess struct {
-	Cmd    *exec.Cmd
-	Stdin  io.WriteCloser
-	Cancel context.CancelFunc
+	Cmd       *exec.Cmd
+	Stdin     io.WriteCloser
+	Cancel    context.CancelFunc
+	StartedAt time.Time
 }
 
 func NewSupervisor(store *storage.GormStore, jvm *jvm.Manager, hubManager *ws.HubManager, serversPath string) *Supervisor {
@@ -182,9 +184,10 @@ func (s *Supervisor) StartServer(serverID string) error {
 	}
 
 	s.processes[serverID] = &ActiveProcess{
-		Cmd:    cmd,
-		Stdin:  stdin,
-		Cancel: cancel,
+		Cmd:       cmd,
+		Stdin:     stdin,
+		Cancel:    cancel,
+		StartedAt: time.Now(),
 	}
 
 	go func(id string, c *exec.Cmd, cancelFunc context.CancelFunc) {
@@ -233,6 +236,71 @@ func (s *Supervisor) StopServer(serverID string) error {
 	return err
 }
 
+func (s *Supervisor) RestartServer(serverID string) error {
+	s.mu.Lock()
+	_, exists := s.processes[serverID]
+	s.mu.Unlock()
+
+	if !exists {
+		return s.StartServer(serverID)
+	}
+
+	if err := s.StopServer(serverID); err != nil {
+		return err
+	}
+
+	timeout := time.After(45 * time.Second)
+	ticker := time.NewTicker(250 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for server to stop before restart")
+		case <-ticker.C:
+			s.mu.Lock()
+			_, stillRunning := s.processes[serverID]
+			s.mu.Unlock()
+
+			if !stillRunning {
+				return s.StartServer(serverID)
+			}
+		}
+	}
+}
+
+func (s *Supervisor) KillServer(serverID string) error {
+	s.mu.Lock()
+	proc, exists := s.processes[serverID]
+	s.mu.Unlock()
+
+	if !exists {
+		return fmt.Errorf("server is not running")
+	}
+
+	if err := s.Store.UpdateStatus(serverID, "STOPPING"); err != nil {
+		slog.Warn("could not update status to STOPPING", "error", err)
+	}
+
+	if proc.Cancel != nil {
+		proc.Cancel()
+	}
+
+	if proc.Cmd == nil || proc.Cmd.Process == nil {
+		return fmt.Errorf("server process is not available")
+	}
+
+	if err := proc.Cmd.Process.Kill(); err != nil {
+		return fmt.Errorf("failed to kill server process: %w", err)
+	}
+
+	if err := s.Store.UpdateStatus(serverID, "STOPPED"); err != nil {
+		slog.Warn("could not update status to STOPPED after kill", "error", err)
+	}
+
+	return nil
+}
+
 func (s *Supervisor) SendCommand(serverID string, cmd string) error {
 	s.mu.Lock()
 	proc, exists := s.processes[serverID]
@@ -252,9 +320,10 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 	s.mu.Unlock()
 
 	stats := &domain.ServerStats{
-		CPU:  0,
-		RAM:  0,
-		Disk: 0,
+		CPU:     0,
+		RAM:     0,
+		Disk:    0,
+		Players: []domain.Player{},
 	}
 
 	srv, err := s.Store.GetServerByID(serverID)
@@ -283,6 +352,14 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 					if s, ok := status.(*mcstatus.JavaStatusResponse); ok {
 						stats.OnlinePlayers = s.Players.Online
 						stats.MaxPlayers = s.Players.Max
+						players := make([]domain.Player, 0, len(s.Players.Sample))
+						for _, player := range s.Players.Sample {
+							players = append(players, domain.Player{
+								Name: player.Name,
+								ID:   player.ID,
+							})
+						}
+						stats.Players = players
 					}
 				}
 			}
@@ -302,6 +379,10 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 		}
 	}
 
+	if !proc.StartedAt.IsZero() {
+		stats.UptimeSeconds = int64(time.Since(proc.StartedAt).Seconds())
+	}
+
 	mcServer, err := mcstatus.NewJavaServer(fmt.Sprintf("127.0.0.1:%d", srv.Port))
 	if err == nil {
 		status, err := mcServer.Status()
@@ -309,6 +390,14 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 			if s, ok := status.(*mcstatus.JavaStatusResponse); ok {
 				stats.OnlinePlayers = s.Players.Online
 				stats.MaxPlayers = s.Players.Max
+				players := make([]domain.Player, 0, len(s.Players.Sample))
+				for _, player := range s.Players.Sample {
+					players = append(players, domain.Player{
+						Name: player.Name,
+						ID:   player.ID,
+					})
+				}
+				stats.Players = players
 			}
 		}
 	}

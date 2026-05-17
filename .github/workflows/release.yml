@@ -26,7 +26,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26.1"
+          go-version: "1.26.3"
           check-latest: true
 
       - name: Install Linux Dependencies
@@ -38,7 +38,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: web/package-lock.json
 

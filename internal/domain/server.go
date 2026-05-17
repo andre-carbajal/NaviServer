@@ -30,9 +30,16 @@ type ProgressEvent struct {
 }
 
 type ServerStats struct {
-	CPU           float64 `json:"cpu"`
-	RAM           uint64  `json:"ram"`
-	Disk          int64   `json:"disk"`
-	OnlinePlayers int     `json:"onlinePlayers"`
-	MaxPlayers    int     `json:"maxPlayers"`
+	CPU           float64  `json:"cpu"`
+	RAM           uint64   `json:"ram"`
+	Disk          int64    `json:"disk"`
+	OnlinePlayers int      `json:"onlinePlayers"`
+	MaxPlayers    int      `json:"maxPlayers"`
+	UptimeSeconds int64    `json:"uptimeSeconds"`
+	Players       []Player `json:"players"`
+}
+
+type Player struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
 }

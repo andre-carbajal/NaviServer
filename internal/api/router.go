@@ -131,6 +131,8 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 
 	mux.Handle("POST /servers/{id}/start", protect(serverHandler.HandleStartServer, ""))
 	mux.Handle("POST /servers/{id}/stop", protect(serverHandler.HandleStopServer, ""))
+	mux.Handle("POST /servers/{id}/restart", protect(serverHandler.HandleRestartServer, ""))
+	mux.Handle("POST /servers/{id}/kill", protect(serverHandler.HandleKillServer, ""))
 	mux.Handle("POST /servers/{id}/backup", protect(serverHandler.HandleBackupServer, ""))
 	mux.Handle("GET /servers/{id}/backups", protect(backupHandler.HandleListBackupsByServer, ""))
 

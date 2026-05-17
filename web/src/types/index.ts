@@ -36,6 +36,13 @@ export interface ServerStats {
   disk: number;
   onlinePlayers: number;
   maxPlayers: number;
+  uptimeSeconds: number;
+  players: PlayerInfo[];
+}
+
+export interface PlayerInfo {
+  name: string;
+  id: string;
 }
 
 export interface User {

@@ -149,6 +149,8 @@ export const api = {
   deleteServer: (id: string) => apiInstance.delete(`/servers/${id}`),
   startServer: (id: string) => apiInstance.post(`/servers/${id}/start`),
   stopServer: (id: string) => apiInstance.post(`/servers/${id}/stop`),
+  restartServer: (id: string) => apiInstance.post(`/servers/${id}/restart`),
+  killServer: (id: string) => apiInstance.post(`/servers/${id}/kill`),
   getPortRange: () => apiInstance.get('/settings/port-range'),
   updatePortRange: (data: { start: number; end: number }) =>
     apiInstance.put('/settings/port-range', data),

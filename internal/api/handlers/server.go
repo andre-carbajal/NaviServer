@@ -234,6 +234,10 @@ func (h *ServerHandler) HandleStartServer(w http.ResponseWriter, r *http.Request
 
 func (h *ServerHandler) HandleStopServer(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
 
 	if !h.checkPermission(r, id, func(p *domain.Permission) bool {
 		return p.CanControlPower || p.CanViewConsole
@@ -247,6 +251,50 @@ func (h *ServerHandler) HandleStopServer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.Write([]byte(`{"status": "stopping"}`))
+}
+
+func (h *ServerHandler) HandleRestartServer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	if !h.checkPermission(r, id, func(p *domain.Permission) bool {
+		return p.CanControlPower || p.CanViewConsole
+	}) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if err := h.Supervisor.RestartServer(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte(`{"status": "restarting"}`))
+}
+
+func (h *ServerHandler) HandleKillServer(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	if !h.checkPermission(r, id, func(p *domain.Permission) bool {
+		return p.CanControlPower || p.CanViewConsole
+	}) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if err := h.Supervisor.KillServer(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte(`{"status": "killed"}`))
 }
 
 func (h *ServerHandler) HandleGetServerStats(w http.ResponseWriter, r *http.Request) {

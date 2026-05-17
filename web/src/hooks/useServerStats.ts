@@ -10,6 +10,8 @@ export const useServerStats = (serverId: string, isRunning: boolean) => {
     disk: 0,
     onlinePlayers: 0,
     maxPlayers: 0,
+    uptimeSeconds: 0,
+    players: [],
   });
   const [loading, setLoading] = useState(true);
 
