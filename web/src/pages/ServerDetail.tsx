@@ -1,23 +1,29 @@
 import axios from 'axios';
 import {
   ArrowLeft,
+  Ban,
   BarChart3,
   Clock3,
   Cpu,
+  Globe,
   HardDrive,
   LoaderCircle,
   MemoryStick,
   MoreVertical,
   Play,
   RotateCcw,
+  Search,
   Settings2,
   Share2,
+  Shield,
   Skull,
   Square,
   Terminal,
+  Trash2,
+  UserX,
   Users,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   CartesianGrid,
   Legend,
@@ -28,13 +34,21 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useNavigate, useParams } from 'react-router-dom';
+
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import ConsoleView from '../components/ConsoleView';
 import FileExplorer from '../components/FileExplorer';
 import ShareModal from '../components/ShareModal';
 import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
+import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useConsole } from '../hooks/useConsole';
 import { useCopy } from '../hooks/useCopy';
@@ -44,11 +58,57 @@ import type { PlayerInfo, Server } from '../types';
 
 type DetailTab = 'performance' | 'console' | 'players' | 'files' | 'settings';
 type ChartRange = '1m' | '5m' | '30m' | '1h' | '4h';
+type PlayerFilter = 'all' | 'admins' | 'banned';
 
 interface StatSnapshot {
   ts: number;
   cpu: number;
   ramMb: number;
+}
+
+interface OperatorEntry {
+  uuid?: string;
+  name?: string;
+  level?: number;
+  bypassesPlayerLimit?: boolean;
+}
+
+interface BannedPlayerEntry {
+  uuid?: string;
+  name?: string;
+  created?: string;
+  source?: string;
+  expires?: string;
+  reason?: string;
+}
+
+interface BannedIPEntry {
+  ip?: string;
+  created?: string;
+  source?: string;
+  expires?: string;
+  reason?: string;
+}
+
+interface PlayerListItem {
+  key: string;
+  name: string;
+  uuid?: string;
+  isOnline: boolean;
+  source: 'online' | 'operator';
+}
+
+interface BannedListItem {
+  key: string;
+  type: 'player' | 'ip';
+  label: string;
+  uuid?: string;
+  detail?: string;
+}
+
+interface SelectedPlayerAction extends PlayerInfo {
+  isOnline: boolean;
+  isOperator: boolean;
 }
 
 const RANGE_TO_MS: Record<ChartRange, number> = {
@@ -112,6 +172,15 @@ const ServerDetail: React.FC = () => {
   const [settingsCustomArgs, setSettingsCustomArgs] = useState('');
   const [settingsIcon, setSettingsIcon] = useState<File | undefined>(undefined);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [playerFilter, setPlayerFilter] = useState<PlayerFilter>('all');
+  const [playersSearch, setPlayersSearch] = useState('');
+  const [operators, setOperators] = useState<OperatorEntry[]>([]);
+  const [bannedPlayers, setBannedPlayers] = useState<BannedPlayerEntry[]>([]);
+  const [bannedIps, setBannedIps] = useState<BannedIPEntry[]>([]);
+  const [selectedPlayer, setSelectedPlayer] =
+    useState<SelectedPlayerAction | null>(null);
+  const [isPlayerActionsOpen, setIsPlayerActionsOpen] = useState(false);
+  const [isPlayerActionLoading, setIsPlayerActionLoading] = useState(false);
   const [publicIP, setPublicIP] = useState<string>(
     typeof window !== 'undefined' ? window.location.hostname : 'localhost',
   );
@@ -171,6 +240,40 @@ const ServerDetail: React.FC = () => {
     setSettingsCustomArgs(server.customArgs || '');
     setSettingsIcon(undefined);
   }, [server]);
+
+  const readJsonList = useCallback(
+    async <T,>(path: string): Promise<T[]> => {
+      if (!id) return [];
+      try {
+        const res = await api.getFileContent(id, path);
+        const parsed = JSON.parse(String(res.data));
+        return Array.isArray(parsed) ? (parsed as T[]) : [];
+      } catch (err) {
+        console.debug(`Unable to read ${path}:`, err);
+        return [];
+      }
+    },
+    [id],
+  );
+
+  const refreshPlayerLists = useCallback(async () => {
+    const [nextOps, nextBannedPlayers, nextBannedIps] = await Promise.all([
+      readJsonList<OperatorEntry>('/ops.json'),
+      readJsonList<BannedPlayerEntry>('/banned-players.json'),
+      readJsonList<BannedIPEntry>('/banned-ips.json'),
+    ]);
+    setOperators(nextOps);
+    setBannedPlayers(nextBannedPlayers);
+    setBannedIps(nextBannedIps);
+  }, [readJsonList]);
+
+  useEffect(() => {
+    if (!id || activeTab !== 'players') return;
+
+    refreshPlayerLists();
+    const interval = setInterval(refreshPlayerLists, 8000);
+    return () => clearInterval(interval);
+  }, [activeTab, id, refreshPlayerLists]);
 
   useEffect(() => {
     if (server?.status !== 'RUNNING') {
@@ -379,6 +482,203 @@ const ServerDetail: React.FC = () => {
     [selectedRangeMs],
   );
 
+  const players = stats.players || [];
+  const canModeratePlayers = Boolean(server?.permissions?.canViewConsole);
+  const normalizedSearch = playersSearch.trim().toLowerCase();
+
+  const onlineNameSet = useMemo(
+    () => new Set(players.map((player) => player.name.toLowerCase())),
+    [players],
+  );
+
+  const onlineIdSet = useMemo(
+    () =>
+      new Set(
+        players
+          .map((player) => player.id)
+          .filter(Boolean)
+          .map((playerId) => playerId.toLowerCase()),
+      ),
+    [players],
+  );
+
+  const onlineItems = useMemo<PlayerListItem[]>(
+    () =>
+      players.map((player, idx) => ({
+        key: `${player.id || player.name}-${idx}`,
+        name: player.name,
+        uuid: player.id,
+        isOnline: true,
+        source: 'online',
+      })),
+    [players],
+  );
+
+  const operatorItems = useMemo<PlayerListItem[]>(
+    () =>
+      operators.map((operator, idx) => {
+        const normalizedName = operator.name?.toLowerCase();
+        const normalizedUuid = operator.uuid?.toLowerCase();
+        const isOnline = Boolean(
+          (normalizedName && onlineNameSet.has(normalizedName)) ||
+          (normalizedUuid && onlineIdSet.has(normalizedUuid)),
+        );
+        const fallbackName =
+          operator.name || operator.uuid || `Operator ${idx + 1}`;
+        return {
+          key: `op-${operator.uuid || operator.name || idx}`,
+          name: fallbackName,
+          uuid: operator.uuid,
+          isOnline,
+          source: 'operator',
+        };
+      }),
+    [operators, onlineIdSet, onlineNameSet],
+  );
+
+  const operatorNameSet = useMemo(
+    () =>
+      new Set(
+        operators
+          .map((operator) => operator.name)
+          .filter(Boolean)
+          .map((name) => String(name).toLowerCase()),
+      ),
+    [operators],
+  );
+
+  const operatorUuidSet = useMemo(
+    () =>
+      new Set(
+        operators
+          .map((operator) => operator.uuid)
+          .filter(Boolean)
+          .map((uuid) => String(uuid).toLowerCase()),
+      ),
+    [operators],
+  );
+
+  const bannedItems = useMemo<BannedListItem[]>(
+    () => [
+      ...bannedPlayers.map((bannedPlayer, idx) => ({
+        key: `bp-${bannedPlayer.uuid || bannedPlayer.name || idx}`,
+        type: 'player' as const,
+        label:
+          bannedPlayer.name || bannedPlayer.uuid || `Banned player ${idx + 1}`,
+        uuid: bannedPlayer.uuid,
+        detail: bannedPlayer.reason || bannedPlayer.source,
+      })),
+      ...bannedIps.map((bannedIp, idx) => ({
+        key: `bi-${bannedIp.ip || idx}`,
+        type: 'ip' as const,
+        label: bannedIp.ip || `Banned IP ${idx + 1}`,
+        detail: bannedIp.reason || bannedIp.source,
+      })),
+    ],
+    [bannedIps, bannedPlayers],
+  );
+
+  const filteredOnlineItems = useMemo(
+    () =>
+      onlineItems.filter((player) => {
+        if (!normalizedSearch) return true;
+        return (
+          player.name.toLowerCase().includes(normalizedSearch) ||
+          player.uuid?.toLowerCase().includes(normalizedSearch)
+        );
+      }),
+    [normalizedSearch, onlineItems],
+  );
+
+  const filteredOperatorItems = useMemo(() => {
+    const sortedOperators = [...operatorItems].sort((a, b) => {
+      if (a.isOnline !== b.isOnline) {
+        return a.isOnline ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    return sortedOperators.filter((player) => {
+      if (!normalizedSearch) return true;
+      return (
+        player.name.toLowerCase().includes(normalizedSearch) ||
+        player.uuid?.toLowerCase().includes(normalizedSearch)
+      );
+    });
+  }, [normalizedSearch, operatorItems]);
+
+  const filteredBannedItems = useMemo(
+    () =>
+      bannedItems.filter((entry) => {
+        if (!normalizedSearch) return true;
+        return (
+          entry.label.toLowerCase().includes(normalizedSearch) ||
+          entry.detail?.toLowerCase().includes(normalizedSearch) ||
+          entry.uuid?.toLowerCase().includes(normalizedSearch)
+        );
+      }),
+    [bannedItems, normalizedSearch],
+  );
+
+  const selectedPlayerCanDeleteData = Boolean(selectedPlayer?.id?.trim());
+
+  const queuePlayerDataRefresh = () => {
+    setTimeout(() => {
+      refreshPlayerLists();
+    }, 1200);
+  };
+
+  const runConsoleAction = async (command: string) => {
+    if (!canModeratePlayers) {
+      alert('You do not have permission to perform this action.');
+      return;
+    }
+    if (!isConnected) {
+      alert('Console is disconnected. Please wait and try again.');
+      return;
+    }
+
+    setIsPlayerActionLoading(true);
+    try {
+      sendCommand(command);
+      queuePlayerDataRefresh();
+    } finally {
+      setIsPlayerActionLoading(false);
+    }
+  };
+
+  const handleDeletePlayerData = async () => {
+    if (!id || !selectedPlayer || !selectedPlayer.id || !canModeratePlayers) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${selectedPlayer.name} playerdata file from this server?`,
+    );
+    if (!confirmed) return;
+
+    setIsPlayerActionLoading(true);
+    try {
+      await api.deleteFile(id, `/world/playerdata/${selectedPlayer.id}.dat`);
+      alert('Player data deleted successfully.');
+      setIsPlayerActionsOpen(false);
+    } catch (err) {
+      console.error('Failed to delete player data:', err);
+      alert('Failed to delete player data.');
+    } finally {
+      setIsPlayerActionLoading(false);
+    }
+  };
+
+  const handlePardon = async (item: BannedListItem) => {
+    if (!canModeratePlayers) return;
+    if (item.type === 'player') {
+      await runConsoleAction(`pardon ${item.label}`);
+    } else {
+      await runConsoleAction(`pardon-ip ${item.label}`);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (!server) return <div>Server not found</div>;
 
@@ -386,7 +686,6 @@ const ServerDetail: React.FC = () => {
   const isPowerDisabled =
     server.status === 'STARTING' || server.status === 'STOPPING';
   const isStoppedLike = server.status === 'STOPPED';
-  const players = stats.players || [];
 
   return (
     <div className="server-v2">
@@ -544,7 +843,9 @@ const ServerDetail: React.FC = () => {
                 <div className="server-v2-card-label">
                   <HardDrive size={16} /> Disk
                 </div>
-                <div className="server-v2-card-value">{formatBytes(stats.disk)}</div>
+                <div className="server-v2-card-value">
+                  {formatBytes(stats.disk)}
+                </div>
               </div>
 
               <div className="server-v2-chart-card">
@@ -594,12 +895,16 @@ const ServerDetail: React.FC = () => {
                         yAxisId="ram"
                         orientation="right"
                         domain={[0, ramDomainMax]}
-                        tickFormatter={(value) => `${Math.round(Number(value))}MB`}
+                        tickFormatter={(value) =>
+                          `${Math.round(Number(value))}MB`
+                        }
                         stroke="var(--text-muted)"
                         width={60}
                       />
                       <Tooltip
-                        labelFormatter={(value) => formatTimeTick(Number(value))}
+                        labelFormatter={(value) =>
+                          formatTimeTick(Number(value))
+                        }
                         formatter={(value, name) => {
                           const numericValue = Number(value ?? 0);
                           if (name === 'CPU %') {
@@ -685,26 +990,178 @@ const ServerDetail: React.FC = () => {
           {activeTab === 'players' && (
             <div className="server-v2-players-card">
               <div className="server-v2-players-head">
-                <h2>Online Players</h2>
+                <h2>Player Management</h2>
                 <span>
-                  {stats.onlinePlayers}/{stats.maxPlayers}
+                  Online {stats.onlinePlayers}/{stats.maxPlayers}
                 </span>
               </div>
 
-              {players.length === 0 ? (
-                <div className="server-v2-empty-players">No players found</div>
-              ) : (
-                <ul className="server-v2-player-list">
-                  {players.map((player, idx) => (
-                    <li key={`${player.id || player.name}-${idx}`}>
-                      <PlayerAvatar player={player} />
-                      <div>
-                        <strong>{player.name}</strong>
-                        <small>{player.id || 'No UUID available'}</small>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+              <div className="server-v2-players-controls">
+                <label className="server-v2-players-search">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    value={playersSearch}
+                    onChange={(e) => setPlayersSearch(e.target.value)}
+                    placeholder="Search players..."
+                  />
+                </label>
+
+                <div className="server-v2-players-filters">
+                  <button
+                    type="button"
+                    className={playerFilter === 'all' ? 'active' : ''}
+                    onClick={() => setPlayerFilter('all')}
+                  >
+                    All ({onlineItems.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={playerFilter === 'admins' ? 'active' : ''}
+                    onClick={() => setPlayerFilter('admins')}
+                  >
+                    Admins ({operatorItems.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={playerFilter === 'banned' ? 'active' : ''}
+                    onClick={() => setPlayerFilter('banned')}
+                  >
+                    Banned ({bannedItems.length})
+                  </button>
+                </div>
+              </div>
+
+              {playerFilter === 'all' &&
+                (filteredOnlineItems.length === 0 ? (
+                  <div className="server-v2-empty-players">
+                    No players found
+                  </div>
+                ) : (
+                  <ul className="server-v2-player-list">
+                    {filteredOnlineItems.map((player) => (
+                      <li
+                        key={player.key}
+                        className={canModeratePlayers ? 'clickable' : ''}
+                        onClick={() => {
+                          if (!canModeratePlayers) return;
+                          const normalizedName = player.name.toLowerCase();
+                          const normalizedUuid = player.uuid?.toLowerCase();
+                          const isOperator = Boolean(
+                            operatorNameSet.has(normalizedName) ||
+                            (normalizedUuid &&
+                              operatorUuidSet.has(normalizedUuid)),
+                          );
+                          setSelectedPlayer({
+                            name: player.name,
+                            id: player.uuid || '',
+                            isOnline: true,
+                            isOperator,
+                          });
+                          setIsPlayerActionsOpen(true);
+                        }}
+                      >
+                        <PlayerAvatar
+                          player={{ name: player.name, id: player.uuid || '' }}
+                        />
+                        <div>
+                          <strong>{player.name}</strong>
+                          <small>{player.uuid || 'No UUID available'}</small>
+                        </div>
+                        <span className="server-v2-player-badge online">
+                          Online
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+
+              {playerFilter === 'admins' &&
+                (filteredOperatorItems.length === 0 ? (
+                  <div className="server-v2-empty-players">
+                    No operators found
+                  </div>
+                ) : (
+                  <ul className="server-v2-player-list">
+                    {filteredOperatorItems.map((operator) => (
+                      <li
+                        key={operator.key}
+                        className={canModeratePlayers ? 'clickable' : ''}
+                        onClick={() => {
+                          if (!canModeratePlayers) return;
+                          setSelectedPlayer({
+                            name: operator.name,
+                            id: operator.uuid || '',
+                            isOnline: operator.isOnline,
+                            isOperator: true,
+                          });
+                          setIsPlayerActionsOpen(true);
+                        }}
+                      >
+                        <PlayerAvatar
+                          player={{
+                            name: operator.name,
+                            id: operator.uuid || '',
+                          }}
+                        />
+                        <div>
+                          <strong>{operator.name}</strong>
+                          <small>{operator.uuid || 'No UUID available'}</small>
+                        </div>
+                        <span
+                          className={`server-v2-player-badge ${operator.isOnline ? 'online' : 'offline'}`}
+                        >
+                          {operator.isOnline ? 'Online' : 'Offline'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+
+              {playerFilter === 'banned' &&
+                (filteredBannedItems.length === 0 ? (
+                  <div className="server-v2-empty-players">
+                    No banned entries
+                  </div>
+                ) : (
+                  <ul className="server-v2-player-list">
+                    {filteredBannedItems.map((item) => (
+                      <li key={item.key}>
+                        <div className="server-v2-player-icon">
+                          {item.type === 'player' ? (
+                            <Ban size={16} />
+                          ) : (
+                            <Globe size={16} />
+                          )}
+                        </div>
+                        <div>
+                          <strong>{item.label}</strong>
+                          <small>
+                            {item.type === 'player'
+                              ? item.uuid || item.detail || 'Banned player'
+                              : item.detail || 'Banned IP'}
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          className="server-v2-pardon-btn"
+                          onClick={() => handlePardon(item)}
+                          disabled={
+                            !canModeratePlayers || isPlayerActionLoading
+                          }
+                        >
+                          Pardon
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+
+              {!canModeratePlayers && (
+                <p className="server-v2-players-note">
+                  You can view players, but moderation actions require console
+                  permission.
+                </p>
               )}
             </div>
           )}
@@ -785,7 +1242,10 @@ const ServerDetail: React.FC = () => {
                   <label className="server-v2-settings-field">
                     <span>Server Icon</span>
                     <div className="server-v2-file-upload">
-                      <label className="server-v2-file-btn" htmlFor="server-icon">
+                      <label
+                        className="server-v2-file-btn"
+                        htmlFor="server-icon"
+                      >
                         Choose file
                       </label>
                       <input
@@ -877,6 +1337,101 @@ const ServerDetail: React.FC = () => {
           </button>
         </aside>
       </div>
+
+      <Modal
+        isOpen={isPlayerActionsOpen}
+        onClose={() => setIsPlayerActionsOpen(false)}
+        title="Player Actions"
+      >
+        <div className="server-v2-player-actions-modal">
+          <p>
+            Select an action for{' '}
+            <strong>{selectedPlayer?.name || 'player'}</strong>.
+          </p>
+
+          <div className="server-v2-player-actions-list">
+            <button
+              type="button"
+              disabled={
+                isPlayerActionLoading ||
+                !selectedPlayer ||
+                !selectedPlayer.isOnline
+              }
+              title={
+                selectedPlayer && !selectedPlayer.isOnline
+                  ? 'Player is offline, cannot be kicked.'
+                  : undefined
+              }
+              onClick={async () => {
+                if (!selectedPlayer) return;
+                await runConsoleAction(`kick ${selectedPlayer.name}`);
+                setIsPlayerActionsOpen(false);
+              }}
+            >
+              <UserX size={16} />
+              Kick Player
+            </button>
+            <button
+              type="button"
+              disabled={isPlayerActionLoading || !selectedPlayer}
+              onClick={async () => {
+                if (!selectedPlayer) return;
+                await runConsoleAction(
+                  `${selectedPlayer.isOperator ? 'deop' : 'op'} ${selectedPlayer.name}`,
+                );
+                setIsPlayerActionsOpen(false);
+              }}
+            >
+              <Shield size={16} />
+              {selectedPlayer?.isOperator ? 'Remove Operator' : 'Make Operator'}
+            </button>
+            <button
+              type="button"
+              className="danger"
+              disabled={isPlayerActionLoading || !selectedPlayer}
+              onClick={async () => {
+                if (!selectedPlayer) return;
+                await runConsoleAction(`ban ${selectedPlayer.name}`);
+                setIsPlayerActionsOpen(false);
+              }}
+            >
+              <Ban size={16} />
+              Ban Player
+            </button>
+            <button
+              type="button"
+              className="danger"
+              disabled={isPlayerActionLoading || !selectedPlayer}
+              onClick={async () => {
+                if (!selectedPlayer) return;
+                await runConsoleAction(`ban-ip ${selectedPlayer.name}`);
+                setIsPlayerActionsOpen(false);
+              }}
+            >
+              <Globe size={16} />
+              Ban IP Address
+            </button>
+            <button
+              type="button"
+              className="danger-subtle"
+              disabled={
+                isPlayerActionLoading ||
+                !selectedPlayer ||
+                !selectedPlayerCanDeleteData
+              }
+              onClick={handleDeletePlayerData}
+              title={
+                selectedPlayerCanDeleteData
+                  ? undefined
+                  : 'Player UUID is required to delete playerdata.'
+              }
+            >
+              <Trash2 size={16} />
+              Delete Player Data
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <ShareModal
         isOpen={isShareModalOpen}

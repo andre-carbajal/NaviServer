@@ -33,7 +33,11 @@ interface CreateModalProps {
   }) => void;
 }
 
-const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) => {
+const CreateModal: React.FC<CreateModalProps> = ({
+  isOpen,
+  onClose,
+  onCreate,
+}) => {
   const [name, setName] = useState('');
   const [loader, setLoader] = useState('vanilla');
   const [ram, setRam] = useState(2048);
@@ -70,7 +74,11 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
   useEffect(() => {
     if (!loader || !isOpen) return;
     api
-      .getLoaderMetadata(loader, { mcVersion, includeSnapshots, includeUnstable })
+      .getLoaderMetadata(loader, {
+        mcVersion,
+        includeSnapshots,
+        includeUnstable,
+      })
       .then((response) => {
         const md = response.data;
         setMetadata(md);
@@ -127,21 +135,46 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Server Name</label>
-          <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
         </div>
         <div className="form-group">
           <label>Loader</label>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <select className="form-select" value={loader} onChange={(e) => setLoader(e.target.value)}>
-              {loaders.map((l) => <option key={l} value={l}>{l}</option>)}
+            <select
+              className="form-select"
+              value={loader}
+              onChange={(e) => setLoader(e.target.value)}
+            >
+              {loaders.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
             </select>
-            <img src={loaderLogoMap[loader]} alt={`${loader} logo`} style={{ width: 32, height: 32 }} />
+            <img
+              src={loaderLogoMap[loader]}
+              alt={`${loader} logo`}
+              style={{ width: 32, height: 32 }}
+            />
           </div>
         </div>
         <div className="form-group">
           <label>Minecraft Version</label>
-          <select className="form-select" value={mcVersion} onChange={(e) => setMcVersion(e.target.value)}>
-            {(metadata.minecraftVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+          <select
+            className="form-select"
+            value={mcVersion}
+            onChange={(e) => setMcVersion(e.target.value)}
+          >
+            {(metadata.minecraftVersions || []).map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
           </select>
         </div>
         {loader === 'vanilla' && (
@@ -167,25 +200,50 @@ const CreateModal: React.FC<CreateModalProps> = ({ isOpen, onClose, onCreate }) 
         {loader === 'paper' && (
           <div className="form-group">
             <label>Build version</label>
-            <select className="form-select" value={buildVersion} onChange={(e) => setBuildVersion(e.target.value)}>
-              {(metadata.buildVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+            <select
+              className="form-select"
+              value={buildVersion}
+              onChange={(e) => setBuildVersion(e.target.value)}
+            >
+              {(metadata.buildVersions || []).map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
             </select>
           </div>
         )}
         {['fabric', 'forge', 'neoforge'].includes(loader) && (
           <div className="form-group">
             <label>Loader version</label>
-            <select className="form-select" value={loaderVersion} onChange={(e) => setLoaderVersion(e.target.value)}>
-              {(metadata.loaderVersions || []).map((v) => <option key={v} value={v}>{v}</option>)}
+            <select
+              className="form-select"
+              value={loaderVersion}
+              onChange={(e) => setLoaderVersion(e.target.value)}
+            >
+              {(metadata.loaderVersions || []).map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
             </select>
           </div>
         )}
         <div className="form-group">
           <label>RAM (MB)</label>
-          <input type="number" className="form-input" value={ram} onChange={(e) => setRam(Number(e.target.value))} min="1024" step="512" />
+          <input
+            type="number"
+            className="form-input"
+            value={ram}
+            onChange={(e) => setRam(Number(e.target.value))}
+            min="1024"
+            step="512"
+          />
         </div>
         <div className="modal-actions">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button type="submit">Create Server</Button>
         </div>
       </form>

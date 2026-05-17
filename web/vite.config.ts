@@ -5,7 +5,8 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const envApiPort = Number(env.VITE_API_PORT);
-  const apiPort = Number.isFinite(envApiPort) && envApiPort > 0 ? envApiPort : 23008;
+  const apiPort =
+    Number.isFinite(envApiPort) && envApiPort > 0 ? envApiPort : 23008;
 
   return {
     plugins: [react()],

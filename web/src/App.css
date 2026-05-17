@@ -539,6 +539,7 @@ nav {
 .console-view {
   height: 100%;
   width: 100%;
+  min-width: 0;
   min-height: 300px;
   background-color: #1e1e1e;
   padding: 10px;
@@ -549,6 +550,19 @@ nav {
 .console-view-terminal {
   height: 100%;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.console-view-terminal .xterm,
+.console-view-terminal .xterm-screen,
+.console-view-terminal .xterm-viewport {
+  max-width: 100%;
+}
+
+.console-view-terminal .xterm-viewport {
+  overflow-x: hidden !important;
 }
 
 .notification {
@@ -2540,6 +2554,8 @@ nav {
   flex-direction: column;
   gap: 10px;
   height: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .server-v2-console-header {
@@ -2563,6 +2579,12 @@ nav {
 .server-v2-console-input {
   display: flex;
   gap: 8px;
+  min-width: 0;
+}
+
+.server-v2-console-input .form-input {
+  min-width: 0;
+  flex: 1;
 }
 
 .server-v2-players-head {
@@ -2575,6 +2597,55 @@ nav {
 
 .server-v2-players-head h2 {
   margin: 0;
+}
+
+.server-v2-players-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.server-v2-players-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 0 10px;
+  color: var(--text-muted);
+}
+
+.server-v2-players-search input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  outline: none;
+  padding: 10px 0;
+}
+
+.server-v2-players-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.server-v2-players-filters button {
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.server-v2-players-filters button.active {
+  color: #fff;
+  background: rgba(167, 139, 250, 0.2);
+  border-color: rgba(167, 139, 250, 0.45);
 }
 
 .server-v2-empty-players {
@@ -2602,6 +2673,15 @@ nav {
   border-radius: 10px;
 }
 
+.server-v2-player-list li.clickable {
+  cursor: pointer;
+}
+
+.server-v2-player-list li.clickable:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: rgba(167, 139, 250, 0.1);
+}
+
 .server-v2-player-list li div {
   display: flex;
   flex-direction: column;
@@ -2620,6 +2700,104 @@ nav {
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.server-v2-player-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.server-v2-player-badge {
+  margin-left: auto;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.server-v2-player-badge.online {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.server-v2-player-badge.offline {
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.server-v2-pardon-btn {
+  margin-left: auto;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.server-v2-pardon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.server-v2-players-note {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.server-v2-player-actions-modal {
+  padding: 0 20px 20px;
+}
+
+.server-v2-player-actions-modal p {
+  margin-top: 0;
+  color: var(--text-muted);
+}
+
+.server-v2-player-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.server-v2-player-actions-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.server-v2-player-actions-list button.danger {
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.35);
+  background: rgba(244, 114, 182, 0.1);
+}
+
+.server-v2-player-actions-list button.danger-subtle {
+  color: #fca5a5;
+  border-color: rgba(252, 165, 165, 0.35);
+  background: rgba(252, 165, 165, 0.1);
+}
+
+.server-v2-player-actions-list button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .server-v2-settings-card h2 {
