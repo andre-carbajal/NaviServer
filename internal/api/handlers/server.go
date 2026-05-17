@@ -8,7 +8,9 @@ import (
 	_ "image/png"
 	"naviserver/internal/domain"
 	"naviserver/internal/loader"
+	"naviserver/internal/server"
 	"net/http"
+	"strings"
 )
 
 type ServerHandler struct {
@@ -186,6 +188,125 @@ func (h *ServerHandler) HandleUpdateServer(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.Store.UpdateServer(id, req.Name, req.RAM, req.CustomArgs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *ServerHandler) HandleGetServerSettings(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	settings, err := h.Manager.GetServerSettings(id)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
+}
+
+func (h *ServerHandler) HandleUpdateServerSettings(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	var req server.ServerSettings
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Manager.UpdateServerSettings(id, req); err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if strings.Contains(msg, "must be stopped") {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		if strings.Contains(msg, "invalid") ||
+			strings.Contains(msg, "must be") ||
+			strings.Contains(msg, "required") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *ServerHandler) HandleGetVersionOptions(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	versions, err := h.Manager.GetVersionOptions(id)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]string{
+		"versions": versions,
+	})
+}
+
+func (h *ServerHandler) HandleUpdateServerVersion(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Version string `json:"version"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Manager.UpdateServerVersion(id, req.Version); err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if strings.Contains(msg, "must be stopped") {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		if strings.Contains(msg, "version") && (strings.Contains(msg, "required") ||
+			strings.Contains(msg, "not available") ||
+			strings.Contains(msg, "must be greater") ||
+			strings.Contains(msg, "unable to compare")) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

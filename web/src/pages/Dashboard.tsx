@@ -8,7 +8,6 @@ import {
 
 import React, { useEffect, useMemo, useState } from 'react';
 
-import ConfirmationModal from '../components/ConfirmationModal';
 import CreateModal from '../components/CreateModal';
 import ServerListItem from '../components/ServerListItem';
 import { Button } from '../components/ui/Button';
@@ -18,16 +17,9 @@ import type { ServerStats } from '../types';
 import { formatBytes } from '../utils/format';
 
 const Dashboard: React.FC = () => {
-  const {
-    servers,
-    loading,
-    createServer,
-    startServer,
-    stopServer,
-    deleteServer,
-  } = useServers();
+  const { servers, loading, createServer, startServer, stopServer } =
+    useServers();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [serverToDelete, setServerToDelete] = useState<string | null>(null);
   const [allStats, setAllStats] = useState<Record<string, ServerStats>>({});
 
   useEffect(() => {
@@ -61,17 +53,6 @@ const Dashboard: React.FC = () => {
 
     return { cpu: totalCpu, ram: totalRam, disk: totalDisk };
   }, [servers, allStats]);
-
-  const handleDelete = (id: string) => {
-    setServerToDelete(id);
-  };
-
-  const confirmDelete = async () => {
-    if (serverToDelete) {
-      await deleteServer(serverToDelete);
-      setServerToDelete(null);
-    }
-  };
 
   if (loading && servers.length === 0) {
     return <div>Loading servers...</div>;
@@ -198,7 +179,6 @@ const Dashboard: React.FC = () => {
               stats={allStats[server.id]}
               onStart={startServer}
               onStop={stopServer}
-              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -208,16 +188,6 @@ const Dashboard: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={createServer}
-      />
-
-      <ConfirmationModal
-        isOpen={!!serverToDelete}
-        onClose={() => setServerToDelete(null)}
-        onConfirm={confirmDelete}
-        title="Delete Server"
-        message="Are you sure you want to delete this server? This action cannot be undone and all server files will be permanently lost."
-        confirmText="Delete Server"
-        isDangerous={true}
       />
     </div>
   );

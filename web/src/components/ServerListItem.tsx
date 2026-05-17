@@ -1,9 +1,8 @@
-import { Play, Square, Terminal, Trash2 } from 'lucide-react';
+import { BarChart3, Play, Square } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import React, { useEffect, useState } from 'react';
 
-import { useAuth } from '../context/AuthContext';
 import { useCopy } from '../hooks/useCopy';
 import { api } from '../services/api';
 import type { Server, ServerStats } from '../types';
@@ -16,7 +15,6 @@ interface ServerListItemProps {
   stats?: ServerStats;
   onStart: (id: string) => void;
   onStop: (id: string) => void;
-  onDelete: (id: string) => void;
 }
 
 const ServerListItem: React.FC<ServerListItemProps> = ({
@@ -24,9 +22,7 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
   stats,
   onStart,
   onStop,
-  onDelete,
 }) => {
-  const { user } = useAuth();
   const [iconError, setIconError] = useState(false);
   const [publicIP, setPublicIP] = useState<string>(
     typeof window !== 'undefined' ? window.location.hostname : 'localhost',
@@ -203,20 +199,10 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
             <Link
               to={`/servers/${server.id}`}
               className="icon-action console-btn"
-              title="Console"
+              title="Open server dashboard"
             >
-              <Terminal size={18} />
+              <BarChart3 size={18} />
             </Link>
-          )}
-
-          {user?.role === 'admin' && (
-            <button
-              className="icon-action danger"
-              onClick={() => onDelete(server.id)}
-              title="Delete"
-            >
-              <Trash2 size={18} />
-            </button>
           )}
         </div>
       </div>

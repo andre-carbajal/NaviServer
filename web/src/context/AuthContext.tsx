@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { api } from '../services/api';
 
@@ -27,40 +34,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const isCheckingAuthRef = useRef(false);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await api.getMe();
-        setUser(response.data);
-        setToken('authenticated');
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          if (error.response?.status !== 401) {
-            console.error('Auth check failed', error);
-          }
-        } else {
+  const checkAuth = useCallback(async () => {
+    if (isCheckingAuthRef.current) return;
+    isCheckingAuthRef.current = true;
+    try {
+      const response = await api.getMe();
+      setUser(response.data);
+      setToken('authenticated');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const isUnauthorized = error.response?.status === 401;
+        const isNetworkError = error.code === 'ERR_NETWORK';
+        if (!isUnauthorized && !isNetworkError) {
           console.error('Auth check failed', error);
         }
-        setUser(null);
-        setToken(null);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Auth check failed', error);
       }
-    };
+      setUser(null);
+      setToken(null);
+    } finally {
+      setLoading(false);
+      isCheckingAuthRef.current = false;
+    }
+  }, []);
 
-    checkAuth();
+  useEffect(() => {
+    void checkAuth();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkAuth();
+        void checkAuth();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () =>
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+  }, [checkAuth]);
 
   const login = (_newToken: string, newUser: User) => {
     setToken('authenticated');

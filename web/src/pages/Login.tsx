@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import '../App.css';
 import { useAuth } from '../context/AuthContext';
@@ -16,30 +16,47 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const isCheckingSetupRef = useRef(false);
 
   const usernameError = username.includes(' ')
     ? 'Username cannot contain spaces'
     : '';
 
-  useEffect(() => {
-    const checkSetupStatus = async () => {
-      try {
-        const response = await api.checkSetup();
-        if (response.data.setup_needed) {
-          setIsSetup(true);
-          setCanToggle(false);
-        } else {
-          setIsSetup(false);
-          setCanToggle(false);
-        }
-        setSetupChecked(true);
-      } catch (err) {
-        console.error('Failed to check setup status:', err);
-        setSetupChecked(true);
+  const checkSetupStatus = useCallback(async () => {
+    if (isCheckingSetupRef.current) return;
+    isCheckingSetupRef.current = true;
+    try {
+      const response = await api.checkSetup();
+      if (response.data.setup_needed) {
+        setIsSetup(true);
+        setCanToggle(false);
+      } else {
+        setIsSetup(false);
+        setCanToggle(false);
       }
-    };
-    checkSetupStatus();
+      setError('');
+      setSetupChecked(true);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.code === 'ERR_NETWORK') {
+        setError('Backend unavailable. Start NaviServer daemon and try again.');
+      } else {
+        setError('Failed to check setup status.');
+      }
+      setSetupChecked(true);
+    } finally {
+      isCheckingSetupRef.current = false;
+    }
   }, []);
+
+  useEffect(() => {
+    checkSetupStatus();
+    const retryOnRecovery = () => {
+      void checkSetupStatus();
+    };
+    window.addEventListener('network-recovered', retryOnRecovery);
+    return () =>
+      window.removeEventListener('network-recovered', retryOnRecovery);
+  }, [checkSetupStatus]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,10 +79,13 @@ const Login: React.FC = () => {
       login('', data.user);
       navigate('/');
     } catch (err) {
-      console.error(err);
       let msg = 'Authentication failed';
       if (axios.isAxiosError(err)) {
-        msg = err.response?.data?.trim() || err.message || msg;
+        if (err.code === 'ERR_NETWORK') {
+          msg = 'Backend unavailable. Start NaviServer daemon and try again.';
+        } else {
+          msg = err.response?.data?.trim() || err.message || msg;
+        }
       } else if (err instanceof Error) {
         msg = err.message;
       }

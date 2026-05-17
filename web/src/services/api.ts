@@ -6,6 +6,7 @@ import type {
   FileEntry,
   Permission,
   Server,
+  ServerSettings,
   ServerStats,
 } from '../types';
 
@@ -59,6 +60,10 @@ const resolveWsBaseUrl = (apiBaseUrl: string) => {
 
 const API_BASE_URL = resolveApiBaseUrl();
 export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL);
+const NETWORK_ERROR_COOLDOWN_MS = 8000;
+
+let lastNetworkErrorAt = 0;
+let isBackendOffline = false;
 
 const apiInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -70,16 +75,26 @@ const apiInstance = axios.create({
 });
 
 apiInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isBackendOffline) {
+      isBackendOffline = false;
+      window.dispatchEvent(new CustomEvent('network-recovered'));
+    }
+    return response;
+  },
   (error) => {
     if (error.code === 'ERR_NETWORK') {
-      const event = new CustomEvent('network-error', {
-        detail: {
-          message:
-            'Failed to connect to the server. Please check your connection and try again.',
-        },
-      });
-      window.dispatchEvent(event);
+      const now = Date.now();
+      if (now - lastNetworkErrorAt >= NETWORK_ERROR_COOLDOWN_MS) {
+        lastNetworkErrorAt = now;
+        const event = new CustomEvent('network-error', {
+          detail: {
+            message: 'Backend unavailable. Make sure NaviServer is running.',
+          },
+        });
+        window.dispatchEvent(event);
+      }
+      isBackendOffline = true;
     }
     return Promise.reject(error);
   },
@@ -146,6 +161,14 @@ export const api = {
       customArgs?: string;
     },
   ) => apiInstance.put<Server>(`/servers/${id}`, data),
+  getServerSettings: (id: string) =>
+    apiInstance.get<ServerSettings>(`/servers/${id}/settings`),
+  updateServerSettings: (id: string, data: ServerSettings) =>
+    apiInstance.put(`/servers/${id}/settings`, data),
+  getServerVersionOptions: (id: string) =>
+    apiInstance.get<{ versions: string[] }>(`/servers/${id}/version-options`),
+  updateServerVersion: (id: string, data: { version: string }) =>
+    apiInstance.post(`/servers/${id}/version-update`, data),
   deleteServer: (id: string) => apiInstance.delete(`/servers/${id}`),
   startServer: (id: string) => apiInstance.post(`/servers/${id}/start`),
   stopServer: (id: string) => apiInstance.post(`/servers/${id}/stop`),

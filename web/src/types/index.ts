@@ -65,3 +65,22 @@ export interface FileEntry {
   size: number;
   lastModified: string;
 }
+
+export interface ServerSettings {
+  name: string;
+  ram: number;
+  customArgs: string;
+  loader: string;
+  version: string;
+  gamemode: 'survival' | 'creative' | 'adventure' | 'spectator';
+  difficulty: 'peaceful' | 'easy' | 'normal' | 'hard';
+  motd: string;
+  onlineMode: boolean;
+  pvp: boolean;
+  allowFlight: boolean;
+  enableCommandBlock: boolean;
+  hardcore: boolean;
+  maxPlayers: number;
+  viewDistance: number;
+  simulationDistance: number;
+}

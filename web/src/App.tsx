@@ -34,22 +34,31 @@ const App = () => {
         type: 'error',
       });
     };
+    const handleNetworkRecovered = () => {
+      setNotification({
+        message: 'Connection restored.',
+        visible: true,
+        type: 'info',
+      });
+    };
 
     window.addEventListener('network-error', handleNetworkError);
+    window.addEventListener('network-recovered', handleNetworkRecovered);
 
     return () => {
       window.removeEventListener('network-error', handleNetworkError);
+      window.removeEventListener('network-recovered', handleNetworkRecovered);
     };
   }, []);
 
   useEffect(() => {
-    if (notification.visible) {
+    if (notification.visible && notification.type === 'info') {
       const timer = setTimeout(() => {
         setNotification((prev) => ({ ...prev, visible: false }));
-      }, 5000);
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [notification.visible]);
+  }, [notification.type, notification.visible]);
 
   return (
     <AuthProvider>

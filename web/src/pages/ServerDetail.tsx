@@ -3,8 +3,12 @@ import {
   ArrowLeft,
   Ban,
   BarChart3,
+  CircleHelp,
   Clock3,
   Cpu,
+  Download,
+  Gamepad2,
+  Gauge,
   Globe,
   HardDrive,
   LoaderCircle,
@@ -54,7 +58,7 @@ import { useConsole } from '../hooks/useConsole';
 import { useCopy } from '../hooks/useCopy';
 import { useServerStats } from '../hooks/useServerStats';
 import { api } from '../services/api';
-import type { PlayerInfo, Server } from '../types';
+import type { PlayerInfo, Server, ServerSettings } from '../types';
 
 type DetailTab = 'performance' | 'console' | 'players' | 'files' | 'settings';
 type ChartRange = '1m' | '5m' | '30m' | '1h' | '4h';
@@ -122,9 +126,47 @@ const RANGE_TO_MS: Record<ChartRange, number> = {
 const MAX_HISTORY_WINDOW_MS = RANGE_TO_MS['4h'];
 const MINEATAR_BASE_URL = 'https://api.mineatar.io/head';
 const STEVE_UUID = '8667ba71-b85a-4004-af54-457a9734eed7';
+const SERVER_POLL_MS = 2000;
+const SERVER_POLL_MAX_BACKOFF_MS = 30000;
 
 const getAvatarUrl = (uuid?: string) =>
   `${MINEATAR_BASE_URL}/${encodeURIComponent(uuid || STEVE_UUID)}?scale=8&overlay=true`;
+
+const parseMinecraftVersionParts = (value: string): number[] | null => {
+  const normalized = value.trim().toLowerCase().replace(/^v/, '');
+  if (normalized === '') return null;
+
+  const parts = normalized.split('.');
+  const parsed: number[] = [];
+
+  for (const part of parts) {
+    const digits = part.match(/^\d+/)?.[0];
+    if (!digits) return null;
+    parsed.push(Number(digits));
+  }
+
+  return parsed;
+};
+
+const compareMinecraftVersions = (a: string, b: string): number | null => {
+  const left = parseMinecraftVersionParts(a);
+  const right = parseMinecraftVersionParts(b);
+  if (!left || !right) return null;
+
+  const maxLen = Math.max(left.length, right.length);
+  for (let i = 0; i < maxLen; i += 1) {
+    const lv = left[i] ?? 0;
+    const rv = right[i] ?? 0;
+    if (lv > rv) return 1;
+    if (lv < rv) return -1;
+  }
+  return 0;
+};
+
+const isFutureMinecraftVersion = (candidate: string, current: string) => {
+  const comparison = compareMinecraftVersions(candidate, current);
+  return comparison !== null && comparison > 0;
+};
 
 const PlayerAvatar: React.FC<{ player: PlayerInfo }> = ({ player }) => {
   const [src, setSrc] = useState(getAvatarUrl(player.id));
@@ -159,7 +201,6 @@ const ServerDetail: React.FC = () => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [iconError, setIconError] = useState(false);
-  const [iconRefreshKey, setIconRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<DetailTab>('performance');
   const [powerAction, setPowerAction] = useState<
     null | 'start' | 'stop' | 'restart' | 'kill'
@@ -167,11 +208,27 @@ const ServerDetail: React.FC = () => {
   const [isPowerMenuOpen, setIsPowerMenuOpen] = useState(false);
   const [chartRange, setChartRange] = useState<ChartRange>('1m');
   const [statsHistory, setStatsHistory] = useState<StatSnapshot[]>([]);
-  const [settingsName, setSettingsName] = useState('');
-  const [settingsRam, setSettingsRam] = useState(2048);
-  const [settingsCustomArgs, setSettingsCustomArgs] = useState('');
-  const [settingsIcon, setSettingsIcon] = useState<File | undefined>(undefined);
+  const [settingsDraft, setSettingsDraft] = useState<ServerSettings | null>(
+    null,
+  );
+  const [settingsSnapshot, setSettingsSnapshot] =
+    useState<ServerSettings | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsModalTitle, setSettingsModalTitle] = useState('');
+  const [settingsModalMessage, setSettingsModalMessage] = useState('');
+  const [versionOptions, setVersionOptions] = useState<string[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState('');
+  const [isUpdatingVersion, setIsUpdatingVersion] = useState(false);
+  const [isVersionUpdateModalOpen, setIsVersionUpdateModalOpen] =
+    useState(false);
+  const [versionUpdateModalTitle, setVersionUpdateModalTitle] = useState('');
+  const [versionUpdateModalMessage, setVersionUpdateModalMessage] =
+    useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [isDeletingServer, setIsDeletingServer] = useState(false);
   const [playerFilter, setPlayerFilter] = useState<PlayerFilter>('all');
   const [playersSearch, setPlayersSearch] = useState('');
   const [operators, setOperators] = useState<OperatorEntry[]>([]);
@@ -185,9 +242,16 @@ const ServerDetail: React.FC = () => {
     typeof window !== 'undefined' ? window.location.hostname : 'localhost',
   );
   const powerMenuRef = useRef<HTMLDivElement>(null);
+  const chartShellRef = useRef<HTMLDivElement>(null);
+  const serverPollDelayRef = useRef(SERVER_POLL_MS);
+  const hasLoggedServerOfflineRef = useRef(false);
+  const [chartSize, setChartSize] = useState({ width: 0, height: 0 });
 
   const { logs, sendCommand, isConnected } = useConsole(id || '');
-  const { stats } = useServerStats(id || '', server?.status === 'RUNNING');
+  const { stats, isOffline: isStatsOffline } = useServerStats(
+    id || '',
+    server?.status === 'RUNNING',
+  );
   const { copy } = useCopy(1500);
 
   useEffect(() => {
@@ -205,25 +269,56 @@ const ServerDetail: React.FC = () => {
     fetchPublicIP();
   }, []);
 
-  const fetchServer = useCallback(async () => {
-    if (!id) return;
+  const fetchServer = useCallback(async (): Promise<boolean> => {
+    if (!id) return false;
     try {
       const res = await api.getServer(id);
       setServer(res.data);
+      hasLoggedServerOfflineRef.current = false;
+      serverPollDelayRef.current = SERVER_POLL_MS;
+      return true;
     } catch (err) {
-      console.error('Failed to fetch server:', err);
+      if (!hasLoggedServerOfflineRef.current) {
+        hasLoggedServerOfflineRef.current = true;
+        console.warn('Server unavailable, retrying with backoff.');
+      }
+      serverPollDelayRef.current = Math.min(
+        SERVER_POLL_MAX_BACKOFF_MS,
+        serverPollDelayRef.current * 2,
+      );
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         setServer(null);
       }
+      return false;
     } finally {
       setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
-    fetchServer();
-    const interval = setInterval(fetchServer, 2000);
-    return () => clearInterval(interval);
+    if (!id) return;
+
+    let cancelled = false;
+    let timer: number | null = null;
+
+    const scheduleNext = (delay: number) => {
+      if (cancelled) return;
+      timer = window.setTimeout(async () => {
+        const ok = await fetchServer();
+        if (!cancelled) {
+          scheduleNext(ok ? SERVER_POLL_MS : serverPollDelayRef.current);
+        }
+      }, delay);
+    };
+
+    scheduleNext(0);
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
   }, [fetchServer]);
 
   useEffect(() => {
@@ -232,14 +327,6 @@ const ServerDetail: React.FC = () => {
       setHistoryIndex(-1);
     }
   }, [server?.status]);
-
-  useEffect(() => {
-    if (!server) return;
-    setSettingsName(server.name);
-    setSettingsRam(server.ram);
-    setSettingsCustomArgs(server.customArgs || '');
-    setSettingsIcon(undefined);
-  }, [server]);
 
   const readJsonList = useCallback(
     async <T,>(path: string): Promise<T[]> => {
@@ -307,6 +394,27 @@ const ServerDetail: React.FC = () => {
     return () => document.removeEventListener('mousedown', closePowerMenu);
   }, []);
 
+  useEffect(() => {
+    const node = chartShellRef.current;
+    if (!node) return;
+
+    const updateSize = () => {
+      const width = node.clientWidth;
+      const height = node.clientHeight;
+      setChartSize((prev) =>
+        prev.width === width && prev.height === height
+          ? prev
+          : { width, height },
+      );
+    };
+
+    updateSize();
+
+    const observer = new ResizeObserver(() => updateSize());
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeTab, loading]);
+
   const handleStart = async () => {
     if (!server) return;
     try {
@@ -362,32 +470,111 @@ const ServerDetail: React.FC = () => {
     }
   };
 
-  const handleSaveSettings = async (data: {
-    name: string;
-    ram: number;
-    customArgs?: string;
-    icon?: File;
-  }) => {
-    if (!server) return;
+  const fetchSettingsData = useCallback(async () => {
+    if (!id || user?.role !== 'admin') return;
+    try {
+      setIsLoadingSettings(true);
+      const [settingsRes, versionsRes] = await Promise.all([
+        api.getServerSettings(id),
+        api.getServerVersionOptions(id),
+      ]);
+      const currentVersion = settingsRes.data.version || '';
+      const futureVersions = (versionsRes.data.versions || []).filter(
+        (version) => isFutureMinecraftVersion(version, currentVersion),
+      );
+      setSettingsSnapshot(settingsRes.data);
+      setSettingsDraft(settingsRes.data);
+      setVersionOptions(futureVersions);
+      setSelectedVersion(futureVersions[0] || '');
+    } catch (err) {
+      console.error('Failed to load server settings:', err);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  }, [id, user?.role]);
+
+  useEffect(() => {
+    if (activeTab === 'settings' && user?.role === 'admin') {
+      fetchSettingsData();
+    }
+  }, [activeTab, fetchSettingsData, user?.role]);
+
+  const handleSaveSettings = async () => {
+    if (!server || !settingsDraft) return;
     try {
       setIsSavingSettings(true);
-      await api.updateServer(server.id, {
-        name: data.name,
-        ram: data.ram,
-        customArgs: data.customArgs,
-      });
-
-      if (data.icon) {
-        await api.uploadServerIcon(server.id, data.icon);
-        setIconRefreshKey((prev) => prev + 1);
-        setIconError(false);
-      }
-
-      await fetchServer();
+      await api.updateServerSettings(server.id, settingsDraft);
+      await Promise.all([fetchServer(), fetchSettingsData()]);
+      setSettingsModalTitle('Settings Saved');
+      setSettingsModalMessage('Settings saved successfully.');
+      setIsSettingsModalOpen(true);
     } catch (err) {
       console.error('Failed to save settings:', err);
+      let errorMessage = 'Failed to save settings.';
+      if (axios.isAxiosError(err)) {
+        const responseMessage =
+          typeof err.response?.data === 'string'
+            ? err.response.data
+            : (err.response?.data as { error?: string; message?: string })
+                ?.error ||
+              (err.response?.data as { error?: string; message?: string })
+                ?.message;
+        if (responseMessage) {
+          errorMessage = responseMessage;
+        }
+      }
+      setSettingsModalTitle('Save Failed');
+      setSettingsModalMessage(errorMessage);
+      setIsSettingsModalOpen(true);
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleVersionUpdate = async () => {
+    if (!server || !selectedVersion) return;
+    try {
+      setIsUpdatingVersion(true);
+      await api.updateServerVersion(server.id, { version: selectedVersion });
+      await Promise.all([fetchServer(), fetchSettingsData()]);
+      setVersionUpdateModalTitle('Version Updated');
+      setVersionUpdateModalMessage('Server version updated successfully.');
+      setIsVersionUpdateModalOpen(true);
+    } catch (err) {
+      console.error('Failed to update server version:', err);
+      let errorMessage = 'Failed to update server version.';
+      if (axios.isAxiosError(err)) {
+        const responseMessage =
+          typeof err.response?.data === 'string'
+            ? err.response.data
+            : (err.response?.data as { error?: string; message?: string })
+                ?.error ||
+              (err.response?.data as { error?: string; message?: string })
+                ?.message;
+        if (responseMessage) {
+          errorMessage = responseMessage;
+        }
+      }
+      setVersionUpdateModalTitle('Version Update Failed');
+      setVersionUpdateModalMessage(errorMessage);
+      setIsVersionUpdateModalOpen(true);
+    } finally {
+      setIsUpdatingVersion(false);
+    }
+  };
+
+  const handleDeleteServer = async () => {
+    if (!server) return;
+    try {
+      setIsDeletingServer(true);
+      await api.deleteServer(server.id);
+      setIsDeleteModalOpen(false);
+      navigate('/');
+    } catch (err) {
+      console.error('Failed to delete server:', err);
+      alert('Failed to delete server.');
+    } finally {
+      setIsDeletingServer(false);
     }
   };
 
@@ -481,6 +668,29 @@ const ServerDetail: React.FC = () => {
     },
     [selectedRangeMs],
   );
+
+  const canEditSettings = user?.role === 'admin';
+  const isServerStopped = server?.status === 'STOPPED';
+  const canApplySettings = canEditSettings && isServerStopped;
+  const isDeleteNameMatch =
+    deleteConfirmName.trim() !== '' &&
+    deleteConfirmName.trim() === (server?.name || '');
+  const isServerOnlineForChart =
+    server?.status === 'RUNNING' && !isStatsOffline;
+  const chartOverlayMessage = !isServerOnlineForChart
+    ? null
+    : chartSize.width <= 0 || chartSize.height <= 0
+      ? 'Preparing chart layout...'
+      : visibleHistory.length === 0
+        ? 'Waiting for performance data...'
+        : null;
+
+  const updateSettingsField = <K extends keyof ServerSettings>(
+    field: K,
+    value: ServerSettings[K],
+  ) => {
+    setSettingsDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
 
   const players = stats.players || [];
   const canModeratePlayers = Boolean(server?.permissions?.canViewConsole);
@@ -703,7 +913,7 @@ const ServerDetail: React.FC = () => {
           <div className="server-v2-icon-shell">
             {!iconError ? (
               <img
-                src={`${api.getServerIconUrl(server.id)}?t=${iconRefreshKey}`}
+                src={api.getServerIconUrl(server.id)}
                 alt="Server Icon"
                 onError={() => setIconError(true)}
                 className="server-v2-icon"
@@ -865,87 +1075,89 @@ const ServerDetail: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="server-v2-chart-shell">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={visibleHistory}
-                      margin={{ top: 12, right: 24, left: 8, bottom: 4 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="rgba(255,255,255,0.08)"
-                      />
-                      <XAxis
-                        dataKey="ts"
-                        type="number"
-                        scale="time"
-                        domain={[rangeStart, now]}
-                        stroke="var(--text-muted)"
-                        tickFormatter={formatTimeTick}
-                        minTickGap={24}
-                      />
-                      <YAxis
-                        yAxisId="cpu"
-                        domain={[0, 100]}
-                        tickFormatter={(value) => `${value}%`}
-                        stroke="var(--text-muted)"
-                        width={44}
-                      />
-                      <YAxis
-                        yAxisId="ram"
-                        orientation="right"
-                        domain={[0, ramDomainMax]}
-                        tickFormatter={(value) =>
-                          `${Math.round(Number(value))}MB`
-                        }
-                        stroke="var(--text-muted)"
-                        width={60}
-                      />
-                      <Tooltip
-                        labelFormatter={(value) =>
-                          formatTimeTick(Number(value))
-                        }
-                        formatter={(value, name) => {
-                          const numericValue = Number(value ?? 0);
-                          if (name === 'CPU %') {
-                            return [`${numericValue.toFixed(1)}%`, name];
+                <div className="server-v2-chart-shell" ref={chartShellRef}>
+                  {chartSize.width > 0 && chartSize.height > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={visibleHistory}
+                        margin={{ top: 12, right: 24, left: 8, bottom: 4 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="rgba(255,255,255,0.08)"
+                        />
+                        <XAxis
+                          dataKey="ts"
+                          type="number"
+                          scale="time"
+                          domain={[rangeStart, now]}
+                          stroke="var(--text-muted)"
+                          tickFormatter={formatTimeTick}
+                          minTickGap={24}
+                        />
+                        <YAxis
+                          yAxisId="cpu"
+                          domain={[0, 100]}
+                          tickFormatter={(value) => `${value}%`}
+                          stroke="var(--text-muted)"
+                          width={44}
+                        />
+                        <YAxis
+                          yAxisId="ram"
+                          orientation="right"
+                          domain={[0, ramDomainMax]}
+                          tickFormatter={(value) =>
+                            `${Math.round(Number(value))}MB`
                           }
-                          return [`${Math.round(numericValue)} MB`, name];
-                        }}
-                        contentStyle={{
-                          background: '#1e1e1e',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                        }}
-                        labelStyle={{ color: 'var(--text-main)' }}
-                      />
-                      <Legend />
-                      <Line
-                        yAxisId="cpu"
-                        type="monotone"
-                        dataKey="cpu"
-                        name="CPU %"
-                        stroke="#60a5fa"
-                        strokeWidth={2}
-                        dot={false}
-                        isAnimationActive={false}
-                      />
-                      <Line
-                        yAxisId="ram"
-                        type="monotone"
-                        dataKey="ramMb"
-                        name="RAM MB"
-                        stroke="#a855f7"
-                        strokeWidth={2}
-                        dot={false}
-                        isAnimationActive={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                          stroke="var(--text-muted)"
+                          width={60}
+                        />
+                        <Tooltip
+                          labelFormatter={(value) =>
+                            formatTimeTick(Number(value))
+                          }
+                          formatter={(value, name) => {
+                            const numericValue = Number(value ?? 0);
+                            if (name === 'CPU %') {
+                              return [`${numericValue.toFixed(1)}%`, name];
+                            }
+                            return [`${Math.round(numericValue)} MB`, name];
+                          }}
+                          contentStyle={{
+                            background: '#1e1e1e',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                          }}
+                          labelStyle={{ color: 'var(--text-main)' }}
+                        />
+                        <Legend />
+                        <Line
+                          yAxisId="cpu"
+                          type="monotone"
+                          dataKey="cpu"
+                          name="CPU %"
+                          stroke="#60a5fa"
+                          strokeWidth={2}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                        <Line
+                          yAxisId="ram"
+                          type="monotone"
+                          dataKey="ramMb"
+                          name="RAM MB"
+                          stroke="#a855f7"
+                          strokeWidth={2}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : null}
 
-                  {visibleHistory.length === 0 && (
+                  {chartOverlayMessage && (
                     <div className="server-v2-empty-chart">
-                      Waiting for performance data...
+                      {chartOverlayMessage}
                     </div>
                   )}
                 </div>
@@ -1169,126 +1381,402 @@ const ServerDetail: React.FC = () => {
           {activeTab === 'files' && <FileExplorer serverId={server.id} />}
 
           {activeTab === 'settings' && (
-            <div className="server-v2-settings-card">
-              <h2>Server Settings</h2>
-              <p>Manage name, RAM, custom Java args, and server icon.</p>
-
-              {user?.role === 'admin' ? (
-                <form
-                  className="server-v2-settings-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!settingsName.trim()) return;
-                    handleSaveSettings({
-                      name: settingsName.trim(),
-                      ram: settingsRam,
-                      customArgs: settingsCustomArgs.trim() || undefined,
-                      icon: settingsIcon,
-                    });
-                  }}
-                >
-                  <div className="server-v2-settings-grid">
-                    <label>
-                      <span>Name</span>
-                      <input
-                        className="form-input"
-                        value={settingsName}
-                        onChange={(e) => setSettingsName(e.target.value)}
-                        required
-                      />
-                    </label>
-                    <label>
-                      <span>Loader</span>
-                      <input
-                        className="form-input"
-                        value={server.loader}
-                        disabled
-                      />
-                    </label>
-                    <label>
-                      <span>Version</span>
-                      <input
-                        className="form-input"
-                        value={server.version}
-                        disabled
-                      />
-                    </label>
-                    <label>
-                      <span>RAM (MB)</span>
-                      <input
-                        className="form-input"
-                        type="number"
-                        min={512}
-                        step={128}
-                        value={settingsRam}
-                        onChange={(e) =>
-                          setSettingsRam(Math.max(512, Number(e.target.value)))
-                        }
-                        required
-                      />
-                    </label>
-                  </div>
-
-                  <label className="server-v2-settings-field">
-                    <span>Custom Java Args</span>
-                    <input
-                      className="form-input"
-                      value={settingsCustomArgs}
-                      onChange={(e) => setSettingsCustomArgs(e.target.value)}
-                      placeholder="-XX:+UseG1GC"
-                    />
-                  </label>
-
-                  <label className="server-v2-settings-field">
-                    <span>Server Icon</span>
-                    <div className="server-v2-file-upload">
-                      <label
-                        className="server-v2-file-btn"
-                        htmlFor="server-icon"
-                      >
-                        Choose file
-                      </label>
-                      <input
-                        id="server-icon"
-                        type="file"
-                        accept="image/png,image/jpeg"
-                        onChange={(e) =>
-                          setSettingsIcon(e.target.files?.[0] || undefined)
-                        }
-                      />
-                      <span className="server-v2-file-name">
-                        {settingsIcon ? settingsIcon.name : 'No file selected'}
-                      </span>
-                    </div>
-                  </label>
-
-                  <Button
-                    type="submit"
-                    disabled={isSavingSettings || !settingsName.trim()}
-                  >
-                    <Settings2 size={16} />
-                    {isSavingSettings ? 'Saving...' : 'Save Settings'}
-                  </Button>
-                </form>
-              ) : (
-                <div className="server-v2-settings-grid">
-                  <div>
-                    <span>Name</span>
-                    <strong>{server.name}</strong>
-                  </div>
-                  <div>
-                    <span>Loader</span>
-                    <strong>{server.loader}</strong>
-                  </div>
-                  <div>
-                    <span>Version</span>
-                    <strong>{server.version}</strong>
-                  </div>
-                  <div>
-                    <span>RAM</span>
-                    <strong>{server.ram} MB</strong>
-                  </div>
+            <div className="server-v2-settings-layout">
+              {!canEditSettings ? (
+                <div className="server-v2-settings-card">
+                  <h2>Server Settings</h2>
+                  <p>Only admins can edit server settings.</p>
                 </div>
+              ) : isLoadingSettings || !settingsDraft ? (
+                <div className="server-v2-settings-card">
+                  <p>Loading settings...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="server-v2-settings-dual-grid">
+                    <div className="server-v2-settings-panel">
+                      <div className="server-v2-settings-panel-head">
+                        <div className="server-v2-settings-panel-icon">
+                          <Gamepad2 size={18} />
+                        </div>
+                        <div>
+                          <h3>Gameplay</h3>
+                          <p>General gameplay settings</p>
+                        </div>
+                      </div>
+
+                      <div className="server-v2-settings-form-grid">
+                        <label>
+                          <span>
+                            Game Mode
+                            <span title="Default game mode for new players.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <select
+                            className="form-input"
+                            value={settingsDraft.gamemode}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'gamemode',
+                                e.target.value as ServerSettings['gamemode'],
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          >
+                            <option value="survival">Survival</option>
+                            <option value="creative">Creative</option>
+                            <option value="adventure">Adventure</option>
+                            <option value="spectator">Spectator</option>
+                          </select>
+                        </label>
+
+                        <label>
+                          <span>
+                            Difficulty
+                            <span title="World difficulty level.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <select
+                            className="form-input"
+                            value={settingsDraft.difficulty}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'difficulty',
+                                e.target.value as ServerSettings['difficulty'],
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          >
+                            <option value="peaceful">Peaceful</option>
+                            <option value="easy">Easy</option>
+                            <option value="normal">Normal</option>
+                            <option value="hard">Hard</option>
+                          </select>
+                        </label>
+
+                        <label className="server-v2-settings-full">
+                          <span>
+                            Server Message (MOTD)
+                            <span title="Server list message players see.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <input
+                            className="form-input"
+                            value={settingsDraft.motd}
+                            onChange={(e) =>
+                              updateSettingsField('motd', e.target.value)
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+
+                        <label className="server-v2-settings-toggle">
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.onlineMode}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'onlineMode',
+                                e.target.checked,
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                          <span title="Verify player accounts with Mojang/Microsoft authentication.">
+                            Online Mode
+                          </span>
+                        </label>
+
+                        <label className="server-v2-settings-toggle">
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.pvp}
+                            onChange={(e) =>
+                              updateSettingsField('pvp', e.target.checked)
+                            }
+                            disabled={!canApplySettings}
+                          />
+                          <span>Enable PvP</span>
+                        </label>
+
+                        <label className="server-v2-settings-toggle">
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.allowFlight}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'allowFlight',
+                                e.target.checked,
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                          <span>Allow Flying</span>
+                        </label>
+
+                        <label className="server-v2-settings-toggle">
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.enableCommandBlock}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'enableCommandBlock',
+                                e.target.checked,
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                          <span>Enable Command Blocks</span>
+                        </label>
+
+                        <label className="server-v2-settings-toggle">
+                          <input
+                            type="checkbox"
+                            checked={settingsDraft.hardcore}
+                            onChange={(e) =>
+                              updateSettingsField('hardcore', e.target.checked)
+                            }
+                            disabled={!canApplySettings}
+                          />
+                          <span>Hardcore Mode</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="server-v2-settings-panel">
+                      <div className="server-v2-settings-panel-head">
+                        <div className="server-v2-settings-panel-icon">
+                          <Gauge size={18} />
+                        </div>
+                        <div>
+                          <h3>Performance</h3>
+                          <p>Optimize server performance settings</p>
+                        </div>
+                      </div>
+
+                      <div className="server-v2-settings-form-grid">
+                        <label>
+                          <span>
+                            Max Players
+                            <span title="Maximum connected players.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={1}
+                            max={1000}
+                            value={settingsDraft.maxPlayers}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'maxPlayers',
+                                Math.max(1, Number(e.target.value)),
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+
+                        <label>
+                          <span>
+                            View Distance
+                            <span title="Chunks sent to players.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={2}
+                            max={32}
+                            value={settingsDraft.viewDistance}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'viewDistance',
+                                Math.max(2, Number(e.target.value)),
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+
+                        <label>
+                          <span>
+                            Simulation Distance
+                            <span title="Chunks actively simulated.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={2}
+                            max={32}
+                            value={settingsDraft.simulationDistance}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'simulationDistance',
+                                Math.max(2, Number(e.target.value)),
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+
+                        <label>
+                          <span>RAM Allocation (MB)</span>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={512}
+                            max={262144}
+                            step={256}
+                            value={settingsDraft.ram}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'ram',
+                                Math.max(512, Number(e.target.value)),
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+
+                        <label>
+                          <span>
+                            Memory Slider{' '}
+                            <strong>{settingsDraft.ram} MB</strong>
+                          </span>
+                          <input
+                            type="range"
+                            min={512}
+                            max={Math.max(16384, settingsDraft.ram + 1024)}
+                            step={256}
+                            value={settingsDraft.ram}
+                            onChange={(e) =>
+                              updateSettingsField('ram', Number(e.target.value))
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="server-v2-settings-toolbar">
+                    <Button
+                      type="button"
+                      onClick={handleSaveSettings}
+                      disabled={
+                        isSavingSettings ||
+                        !canApplySettings ||
+                        !settingsSnapshot ||
+                        JSON.stringify(settingsSnapshot) ===
+                          JSON.stringify(settingsDraft)
+                      }
+                    >
+                      <Settings2 size={16} />
+                      {isSavingSettings ? 'Saving...' : 'Save Settings'}
+                    </Button>
+                    {!isServerStopped && (
+                      <p>
+                        Stop the server first to modify gameplay or performance
+                        settings.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="server-v2-settings-card">
+                    <div className="server-v2-settings-panel-head">
+                      <div className="server-v2-settings-panel-icon">
+                        <Download size={18} />
+                      </div>
+                      <div>
+                        <h3>Server Version</h3>
+                        <p>Update the Minecraft version for this server</p>
+                      </div>
+                    </div>
+                    <div className="server-v2-settings-form-grid">
+                      <label>
+                        <span>
+                          Select New Version
+                          <span title="Only versions available for the current loader are shown.">
+                            <CircleHelp size={14} />
+                          </span>
+                        </span>
+                        <select
+                          className="form-input"
+                          value={selectedVersion}
+                          onChange={(e) => setSelectedVersion(e.target.value)}
+                          disabled={!canApplySettings || isUpdatingVersion}
+                        >
+                          {versionOptions.length > 0 ? (
+                            versionOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">
+                              No future versions available
+                            </option>
+                          )}
+                        </select>
+                      </label>
+                      <div className="server-v2-settings-actions-inline">
+                        <Button
+                          type="button"
+                          onClick={handleVersionUpdate}
+                          disabled={
+                            !canApplySettings ||
+                            isUpdatingVersion ||
+                            !selectedVersion ||
+                            selectedVersion === server.version
+                          }
+                        >
+                          {isUpdatingVersion ? 'Updating...' : 'Update Version'}
+                        </Button>
+                      </div>
+                      {versionOptions.length === 0 && (
+                        <p className="server-v2-settings-hint">
+                          Current version ({server.version}) is already the
+                          latest available.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="server-v2-settings-card danger-card">
+                    <div className="server-v2-settings-panel-head">
+                      <div className="server-v2-settings-panel-icon danger">
+                        <Trash2 size={18} />
+                      </div>
+                      <div>
+                        <h3>Delete Server</h3>
+                        <p>Permanently delete this server and all its files</p>
+                      </div>
+                    </div>
+                    <p className="server-v2-delete-warning">
+                      Warning: this action cannot be undone. All worlds,
+                      configurations, and related files will be deleted.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      onClick={() => {
+                        setDeleteConfirmName('');
+                        setIsDeleteModalOpen(true);
+                      }}
+                      disabled={isDeletingServer}
+                    >
+                      Delete Server
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -1429,6 +1917,81 @@ const ServerDetail: React.FC = () => {
               <Trash2 size={16} />
               Delete Player Data
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        title={settingsModalTitle}
+      >
+        <div className="server-v2-delete-modal">
+          <p>{settingsModalMessage}</p>
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsSettingsModalOpen(false)}
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isVersionUpdateModalOpen}
+        onClose={() => setIsVersionUpdateModalOpen(false)}
+        title={versionUpdateModalTitle}
+      >
+        <div className="server-v2-delete-modal">
+          <p>{versionUpdateModalMessage}</p>
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsVersionUpdateModalOpen(false)}
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Server"
+      >
+        <div className="server-v2-delete-modal">
+          <p>
+            Do you want to delete server <strong>{server?.name}</strong>?
+          </p>
+          <p>Type the server name to confirm deletion.</p>
+          <input
+            className="form-input"
+            value={deleteConfirmName}
+            onChange={(e) => setDeleteConfirmName(e.target.value)}
+            placeholder="Type the server name"
+          />
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeletingServer}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDeleteServer}
+              disabled={!isDeleteNameMatch || isDeletingServer}
+            >
+              {isDeletingServer ? 'Deleting...' : 'Delete Server'}
+            </Button>
           </div>
         </div>
       </Modal>
