@@ -3,6 +3,7 @@ package backup
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,20 +29,169 @@ type Manager struct {
 
 	activeBackups   map[string]context.CancelFunc
 	activeBackupsMu sync.Mutex
+
+	activeAutoBackups   map[string]struct{}
+	activeAutoBackupsMu sync.Mutex
 }
 
 func NewManager(serversPath, backupsPath string, store *storage.GormStore) *Manager {
 	return &Manager{
-		ServersPath:   serversPath,
-		BackupsPath:   backupsPath,
-		Store:         store,
-		activeBackups: make(map[string]context.CancelFunc),
+		ServersPath:       serversPath,
+		BackupsPath:       backupsPath,
+		Store:             store,
+		activeBackups:     make(map[string]context.CancelFunc),
+		activeAutoBackups: make(map[string]struct{}),
 	}
 }
+
+const (
+	MinAutoBackupIntervalMinutes = 5
+	MaxAutoBackupIntervalMinutes = 30 * 24 * 60
+)
 
 type Info struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+}
+
+func ParseAutoBackupInterval(intervalValue int, intervalUnit string) (time.Duration, error) {
+	if intervalValue <= 0 {
+		return 0, fmt.Errorf("interval value must be greater than 0")
+	}
+
+	var multiplier time.Duration
+	switch intervalUnit {
+	case "minute":
+		multiplier = time.Minute
+	case "hour":
+		multiplier = time.Hour
+	case "day":
+		multiplier = 24 * time.Hour
+	default:
+		return 0, fmt.Errorf("invalid interval unit: %s", intervalUnit)
+	}
+
+	duration := time.Duration(intervalValue) * multiplier
+	minDuration := time.Duration(MinAutoBackupIntervalMinutes) * time.Minute
+	maxDuration := time.Duration(MaxAutoBackupIntervalMinutes) * time.Minute
+
+	if duration < minDuration {
+		return 0, fmt.Errorf("interval must be at least %d minutes", MinAutoBackupIntervalMinutes)
+	}
+	if duration > maxDuration {
+		return 0, fmt.Errorf("interval cannot exceed 30 days")
+	}
+
+	return duration, nil
+}
+
+func (m *Manager) UpdateAutoBackupConfig(serverID string, enabled bool, intervalValue int, intervalUnit string, maxBackups int) error {
+	if maxBackups <= 0 {
+		return fmt.Errorf("max backups must be greater than 0")
+	}
+
+	if _, err := ParseAutoBackupInterval(intervalValue, intervalUnit); err != nil {
+		return err
+	}
+
+	srv, err := m.Store.GetServerByID(serverID)
+	if err != nil {
+		return err
+	}
+	if srv == nil {
+		return fmt.Errorf("server not found")
+	}
+
+	lastRunAt := srv.AutoBackupLastRunAt
+	if enabled {
+		now := time.Now().UTC()
+		lastRunAt = &now
+	}
+
+	return m.Store.UpdateServerAutoBackupConfig(serverID, enabled, intervalValue, intervalUnit, maxBackups, lastRunAt)
+}
+
+func (m *Manager) StartAutoBackupScheduler(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+
+	go func() {
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				m.runAutoBackupCycle(ctx)
+			}
+		}
+	}()
+}
+
+func (m *Manager) runAutoBackupCycle(ctx context.Context) {
+	servers, err := m.Store.ListServers()
+	if err != nil {
+		log.Printf("Auto backup cycle: list servers failed: %v", err)
+		return
+	}
+
+	now := time.Now().UTC()
+	for _, srv := range servers {
+		if !srv.AutoBackupEnabled {
+			continue
+		}
+
+		interval, err := ParseAutoBackupInterval(
+			srv.AutoBackupIntervalValue,
+			srv.AutoBackupIntervalUnit,
+		)
+		if err != nil {
+			log.Printf("Auto backup cycle: invalid config for server %s: %v", srv.ID, err)
+			continue
+		}
+
+		if srv.AutoBackupLastRunAt != nil && now.Before(srv.AutoBackupLastRunAt.Add(interval)) {
+			continue
+		}
+
+		if !m.acquireAutoBackupLock(srv.ID) {
+			continue
+		}
+
+		go func(serverID string) {
+			defer m.releaseAutoBackupLock(serverID)
+
+			_, err := m.CreateBackup(ctx, serverID, "", "auto", nil)
+			if err != nil {
+				if errors.Is(err, context.Canceled) {
+					return
+				}
+				log.Printf("Auto backup failed for server %s: %v", serverID, err)
+				return
+			}
+
+			if err := m.Store.UpdateServerAutoBackupLastRun(serverID, time.Now().UTC()); err != nil {
+				log.Printf("Auto backup last_run update failed for server %s: %v", serverID, err)
+			}
+		}(srv.ID)
+	}
+}
+
+func (m *Manager) acquireAutoBackupLock(serverID string) bool {
+	m.activeAutoBackupsMu.Lock()
+	defer m.activeAutoBackupsMu.Unlock()
+
+	if _, exists := m.activeAutoBackups[serverID]; exists {
+		return false
+	}
+	m.activeAutoBackups[serverID] = struct{}{}
+	return true
+}
+
+func (m *Manager) releaseAutoBackupLock(serverID string) {
+	m.activeAutoBackupsMu.Lock()
+	defer m.activeAutoBackupsMu.Unlock()
+	delete(m.activeAutoBackups, serverID)
 }
 
 func (m *Manager) UploadBackup(file multipart.File, filename string, serverID string, userID string) error {
@@ -108,7 +258,17 @@ func (m *Manager) UploadBackup(file multipart.File, filename string, serverID st
 		CreatedBy: userID,
 	}
 
-	return m.Store.SaveBackup(backup)
+	if err := m.Store.SaveBackup(backup); err != nil {
+		return err
+	}
+
+	if serverID != "" {
+		if err := m.applyBackupLimit(serverID); err != nil {
+			log.Printf("Backup limit enforcement failed for server %s: %v", serverID, err)
+		}
+	}
+
+	return nil
 }
 
 func (m *Manager) processZipUpload(tempFilePath, targetPath string) error {
@@ -633,7 +793,12 @@ func (m *Manager) CreateBackup(ctx context.Context, serverID string, backupName 
 		CreatedAt: time.Now(),
 		CreatedBy: userID,
 	}
-	m.Store.SaveBackup(backup)
+	if err := m.Store.SaveBackup(backup); err != nil {
+		return "", err
+	}
+	if err := m.applyBackupLimit(serverID); err != nil {
+		log.Printf("Backup limit enforcement failed for server %s: %v", serverID, err)
+	}
 
 	return backupFilePath, nil
 }
@@ -778,7 +943,58 @@ func unarchive(src, dest string) error {
 }
 
 func (m *Manager) UpdateBackup(name string, serverID string) error {
-	return m.Store.UpdateBackup(name, serverID)
+	if err := m.Store.UpdateBackup(name, serverID); err != nil {
+		return err
+	}
+
+	if serverID != "" {
+		if err := m.applyBackupLimit(serverID); err != nil {
+			log.Printf("Backup limit enforcement failed for server %s: %v", serverID, err)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) applyBackupLimit(serverID string) error {
+	srv, err := m.Store.GetServerByID(serverID)
+	if err != nil {
+		return err
+	}
+	if srv == nil || srv.AutoBackupMaxBackups <= 0 {
+		return nil
+	}
+
+	backups, err := m.Store.ListBackupsByServerID(serverID)
+	if err != nil {
+		return err
+	}
+
+	excess := len(backups) - srv.AutoBackupMaxBackups
+	if excess <= 0 {
+		return nil
+	}
+
+	for i := 0; i < excess; i++ {
+		if err := m.deleteBackupFileAndRecord(backups[i].Name); err != nil {
+			log.Printf("Failed deleting old backup %s while enforcing limit: %v", backups[i].Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) deleteBackupFileAndRecord(name string) error {
+	if name == "" {
+		return fmt.Errorf("invalid backup name")
+	}
+
+	backupPath := filepath.Join(m.BackupsPath, name)
+	if err := os.Remove(backupPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return m.Store.DeleteBackup(name)
 }
 
 func sanitizeFileName(name string) string {

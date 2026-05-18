@@ -195,6 +195,61 @@ func (h *ServerHandler) HandleUpdateServer(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *ServerHandler) HandleUpdateServerAutoBackup(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Enabled       bool   `json:"enabled"`
+		IntervalValue int    `json:"intervalValue"`
+		IntervalUnit  string `json:"intervalUnit"`
+		MaxBackups    int    `json:"maxBackups"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.BackupManager.UpdateAutoBackupConfig(
+		id,
+		req.Enabled,
+		req.IntervalValue,
+		req.IntervalUnit,
+		req.MaxBackups,
+	); err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if strings.Contains(msg, "invalid") ||
+			strings.Contains(msg, "must be") ||
+			strings.Contains(msg, "at least") ||
+			strings.Contains(msg, "cannot exceed") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	updatedServer, err := h.Manager.GetServer(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if updatedServer == nil {
+		http.Error(w, "Server not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedServer)
+}
+
 func (h *ServerHandler) HandleGetServerSettings(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {

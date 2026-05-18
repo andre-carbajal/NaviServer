@@ -1,9 +1,13 @@
 package domain
 
+import "time"
+
 type ServerRepository interface {
 	SaveServer(srv *Server) error
 	UpdateServer(id string, name *string, ram *int, customArgs *string) error
 	UpdateServerPort(id string, port int) error
+	UpdateServerAutoBackupConfig(id string, enabled bool, intervalValue int, intervalUnit string, maxBackups int, lastRunAt *time.Time) error
+	UpdateServerAutoBackupLastRun(id string, lastRunAt time.Time) error
 	ListServers() ([]Server, error)
 	GetServerByID(id string) (*Server, error)
 	DeleteServer(id string) error
@@ -39,6 +43,7 @@ type BackupRepository interface {
 	SaveBackup(backup *Backup) error
 	UpdateBackup(name string, serverID string) error
 	ListBackups(serverID string, userID string, role string) ([]Backup, error)
+	ListBackupsByServerID(serverID string) ([]Backup, error)
 	GetBackupByName(name string) (*Backup, error)
 	DeleteBackup(name string) error
 	ListAllBackups() ([]Backup, error)

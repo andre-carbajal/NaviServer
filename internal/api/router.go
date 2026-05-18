@@ -118,6 +118,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("GET /servers/{id}/stats", protect(serverHandler.HandleGetServerStats, ""))
 	mux.Handle("GET /servers/{id}/settings", protect(serverHandler.HandleGetServerSettings, "admin"))
 	mux.Handle("PUT /servers/{id}/settings", protect(serverHandler.HandleUpdateServerSettings, "admin"))
+	mux.Handle("PUT /servers/{id}/auto-backup", protect(serverHandler.HandleUpdateServerAutoBackup, "admin"))
 	mux.Handle("GET /servers/{id}/version-options", protect(serverHandler.HandleGetVersionOptions, "admin"))
 	mux.Handle("POST /servers/{id}/version-update", protect(serverHandler.HandleUpdateServerVersion, "admin"))
 	mux.HandleFunc("GET /servers/{id}/icon", serverHandler.HandleGetServerIcon)

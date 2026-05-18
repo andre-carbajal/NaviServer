@@ -3,9 +3,9 @@ import { Upload, X } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 
 import type { Server } from '../types';
+import ServerIconSelect from './ServerIconSelect';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
-import { Select } from './ui/Select';
 
 interface UploadBackupModalProps {
   isOpen: boolean;
@@ -104,18 +104,14 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
           </div>
         </div>
 
-        <Select
+        <ServerIconSelect
           label="Associate with Server (Optional)"
           value={selectedServerId}
-          onChange={(e) => setSelectedServerId(e.target.value)}
-        >
-          <option value="">None (Orphaned - Admin only)</option>
-          {servers.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
+          onChange={setSelectedServerId}
+          servers={servers}
+          allowNone={true}
+          noneLabel="None (Orphaned - Admin only)"
+        />
 
         <div className="modal-actions">
           <Button variant="secondary" type="button" onClick={onClose}>

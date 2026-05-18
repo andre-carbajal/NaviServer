@@ -26,6 +26,12 @@ type Server struct {
 	Status     string
 	CustomArgs string
 	CreatedAt  time.Time
+
+	AutoBackupEnabled       bool   `gorm:"not null;default:false"`
+	AutoBackupIntervalValue int    `gorm:"not null;default:24"`
+	AutoBackupIntervalUnit  string `gorm:"not null;default:hour"`
+	AutoBackupMaxBackups    int    `gorm:"not null;default:10"`
+	AutoBackupLastRunAt     *time.Time
 }
 
 type Setting struct {
@@ -66,6 +72,31 @@ type Backup struct {
 
 type GormStore struct {
 	db *gorm.DB
+}
+
+const (
+	defaultAutoBackupIntervalValue = 24
+	defaultAutoBackupIntervalUnit  = "hour"
+	defaultAutoBackupMaxBackups    = 10
+)
+
+func normalizeAutoBackupConfig(enabled bool, intervalValue int, intervalUnit string, maxBackups int) (bool, int, string, int) {
+	normalizedUnit := intervalUnit
+	switch normalizedUnit {
+	case "minute", "hour", "day":
+	default:
+		normalizedUnit = defaultAutoBackupIntervalUnit
+	}
+
+	if intervalValue <= 0 {
+		intervalValue = defaultAutoBackupIntervalValue
+	}
+
+	if maxBackups <= 0 {
+		maxBackups = defaultAutoBackupMaxBackups
+	}
+
+	return enabled, intervalValue, normalizedUnit, maxBackups
 }
 
 func NewGormStore(path string) (*GormStore, error) {
@@ -121,17 +152,29 @@ func (s *GormStore) initDefaultSettings() error {
 }
 
 func (s *GormStore) SaveServer(srv *domain.Server) error {
+	enabled, intervalValue, intervalUnit, maxBackups := normalizeAutoBackupConfig(
+		srv.AutoBackupEnabled,
+		srv.AutoBackupIntervalValue,
+		srv.AutoBackupIntervalUnit,
+		srv.AutoBackupMaxBackups,
+	)
+
 	gormServer := &Server{
-		ID:         srv.ID,
-		Name:       srv.Name,
-		FolderName: srv.FolderName,
-		Version:    srv.Version,
-		Loader:     srv.Loader,
-		Port:       srv.Port,
-		RAM:        srv.RAM,
-		Status:     srv.Status,
-		CustomArgs: srv.CustomArgs,
-		CreatedAt:  srv.CreatedAt,
+		ID:                      srv.ID,
+		Name:                    srv.Name,
+		FolderName:              srv.FolderName,
+		Version:                 srv.Version,
+		Loader:                  srv.Loader,
+		Port:                    srv.Port,
+		RAM:                     srv.RAM,
+		Status:                  srv.Status,
+		CustomArgs:              srv.CustomArgs,
+		CreatedAt:               srv.CreatedAt,
+		AutoBackupEnabled:       enabled,
+		AutoBackupIntervalValue: intervalValue,
+		AutoBackupIntervalUnit:  intervalUnit,
+		AutoBackupMaxBackups:    maxBackups,
+		AutoBackupLastRunAt:     srv.AutoBackupLastRunAt,
 	}
 
 	return s.db.Create(gormServer).Error
@@ -160,6 +203,29 @@ func (s *GormStore) UpdateServerPort(id string, port int) error {
 	return s.db.Model(&Server{}).Where("id = ?", id).Update("port", port).Error
 }
 
+func (s *GormStore) UpdateServerAutoBackupConfig(id string, enabled bool, intervalValue int, intervalUnit string, maxBackups int, lastRunAt *time.Time) error {
+	_, normalizedIntervalValue, normalizedIntervalUnit, normalizedMaxBackups := normalizeAutoBackupConfig(
+		enabled,
+		intervalValue,
+		intervalUnit,
+		maxBackups,
+	)
+
+	updates := map[string]interface{}{
+		"auto_backup_enabled":        enabled,
+		"auto_backup_interval_value": normalizedIntervalValue,
+		"auto_backup_interval_unit":  normalizedIntervalUnit,
+		"auto_backup_max_backups":    normalizedMaxBackups,
+		"auto_backup_last_run_at":    lastRunAt,
+	}
+
+	return s.db.Model(&Server{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (s *GormStore) UpdateServerAutoBackupLastRun(id string, lastRunAt time.Time) error {
+	return s.db.Model(&Server{}).Where("id = ?", id).Update("auto_backup_last_run_at", &lastRunAt).Error
+}
+
 func (s *GormStore) UpdateServerVersion(id string, version string) error {
 	return s.db.Model(&Server{}).Where("id = ?", id).Update("version", version).Error
 }
@@ -172,17 +238,29 @@ func (s *GormStore) ListServers() ([]domain.Server, error) {
 
 	var servers []domain.Server
 	for _, gs := range gormServers {
+		enabled, intervalValue, intervalUnit, maxBackups := normalizeAutoBackupConfig(
+			gs.AutoBackupEnabled,
+			gs.AutoBackupIntervalValue,
+			gs.AutoBackupIntervalUnit,
+			gs.AutoBackupMaxBackups,
+		)
+
 		servers = append(servers, domain.Server{
-			ID:         gs.ID,
-			Name:       gs.Name,
-			FolderName: gs.FolderName,
-			Version:    gs.Version,
-			Loader:     gs.Loader,
-			Port:       gs.Port,
-			RAM:        gs.RAM,
-			Status:     gs.Status,
-			CustomArgs: gs.CustomArgs,
-			CreatedAt:  gs.CreatedAt,
+			ID:                      gs.ID,
+			Name:                    gs.Name,
+			FolderName:              gs.FolderName,
+			Version:                 gs.Version,
+			Loader:                  gs.Loader,
+			Port:                    gs.Port,
+			RAM:                     gs.RAM,
+			Status:                  gs.Status,
+			CustomArgs:              gs.CustomArgs,
+			CreatedAt:               gs.CreatedAt,
+			AutoBackupEnabled:       enabled,
+			AutoBackupIntervalValue: intervalValue,
+			AutoBackupIntervalUnit:  intervalUnit,
+			AutoBackupMaxBackups:    maxBackups,
+			AutoBackupLastRunAt:     gs.AutoBackupLastRunAt,
 		})
 	}
 	return servers, nil
@@ -198,17 +276,29 @@ func (s *GormStore) GetServerByID(id string) (*domain.Server, error) {
 		return nil, fmt.Errorf("error querying server: %w", result.Error)
 	}
 
+	enabled, intervalValue, intervalUnit, maxBackups := normalizeAutoBackupConfig(
+		gormServer.AutoBackupEnabled,
+		gormServer.AutoBackupIntervalValue,
+		gormServer.AutoBackupIntervalUnit,
+		gormServer.AutoBackupMaxBackups,
+	)
+
 	return &domain.Server{
-		ID:         gormServer.ID,
-		Name:       gormServer.Name,
-		FolderName: gormServer.FolderName,
-		Version:    gormServer.Version,
-		Loader:     gormServer.Loader,
-		Port:       gormServer.Port,
-		RAM:        gormServer.RAM,
-		Status:     gormServer.Status,
-		CustomArgs: gormServer.CustomArgs,
-		CreatedAt:  gormServer.CreatedAt,
+		ID:                      gormServer.ID,
+		Name:                    gormServer.Name,
+		FolderName:              gormServer.FolderName,
+		Version:                 gormServer.Version,
+		Loader:                  gormServer.Loader,
+		Port:                    gormServer.Port,
+		RAM:                     gormServer.RAM,
+		Status:                  gormServer.Status,
+		CustomArgs:              gormServer.CustomArgs,
+		CreatedAt:               gormServer.CreatedAt,
+		AutoBackupEnabled:       enabled,
+		AutoBackupIntervalValue: intervalValue,
+		AutoBackupIntervalUnit:  intervalUnit,
+		AutoBackupMaxBackups:    maxBackups,
+		AutoBackupLastRunAt:     gormServer.AutoBackupLastRunAt,
 	}, nil
 }
 
@@ -500,6 +590,8 @@ func (s *GormStore) ListBackups(serverID string, userID string, role string) ([]
 		}
 	}
 
+	query = query.Order("backups.created_at desc")
+
 	if err := query.Scan(&gormBackups).Error; err != nil {
 		return nil, err
 	}
@@ -548,6 +640,7 @@ func (s *GormStore) ListAllBackups() ([]domain.Backup, error) {
 	err := s.db.Model(&Backup{}).
 		Select("backups.*, servers.name as server_name").
 		Joins("left join servers on backups.server_id = servers.id").
+		Order("backups.created_at desc").
 		Scan(&gormBackups).Error
 
 	if err != nil {
@@ -566,5 +659,31 @@ func (s *GormStore) ListAllBackups() ([]domain.Backup, error) {
 			CreatedBy:  b.CreatedBy,
 		})
 	}
+	return backups, nil
+}
+
+func (s *GormStore) ListBackupsByServerID(serverID string) ([]domain.Backup, error) {
+	var gormBackups []Backup
+	if err := s.db.
+		Where("server_id = ?", serverID).
+		Order("created_at asc").
+		Find(&gormBackups).Error; err != nil {
+		return nil, err
+	}
+
+	backups := make([]domain.Backup, 0, len(gormBackups))
+	for _, b := range gormBackups {
+		backups = append(backups, domain.Backup{
+			ID:         b.ID,
+			Name:       b.Name,
+			FileName:   b.FileName,
+			ServerID:   b.ServerID,
+			ServerName: b.ServerName,
+			Size:       b.Size,
+			CreatedAt:  b.CreatedAt,
+			CreatedBy:  b.CreatedBy,
+		})
+	}
+
 	return backups, nil
 }

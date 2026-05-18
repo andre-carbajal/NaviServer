@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { Server } from '../types';
+import ServerIconSelect from './ServerIconSelect';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
-import { Select } from './ui/Select';
 
 interface EditBackupModalProps {
   isOpen: boolean;
@@ -26,6 +26,12 @@ const EditBackupModal: React.FC<EditBackupModalProps> = ({
     currentServerId || '',
   );
 
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedServerId(currentServerId || '');
+    }
+  }, [currentServerId, isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdate(selectedServerId);
@@ -38,18 +44,14 @@ const EditBackupModal: React.FC<EditBackupModalProps> = ({
         <p style={{ marginBottom: '15px', color: 'var(--text-muted)' }}>
           Changing the associated server for: <strong>{backupName}</strong>
         </p>
-        <Select
+        <ServerIconSelect
           label="Associate with Server"
           value={selectedServerId}
-          onChange={(e) => setSelectedServerId(e.target.value)}
-        >
-          <option value="">None (Orphaned)</option>
-          {servers.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
+          onChange={setSelectedServerId}
+          servers={servers}
+          allowNone={true}
+          noneLabel="None (Orphaned)"
+        />
 
         <div className="modal-actions">
           <Button variant="secondary" type="button" onClick={onClose}>

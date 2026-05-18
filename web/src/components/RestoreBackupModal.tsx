@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { api } from '../services/api.ts';
 import type { Server } from '../types';
+import ServerIconSelect from './ServerIconSelect';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
 
@@ -144,22 +145,12 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
 
         {mode === 'existing' ? (
           <div className="form-group">
-            <label>Select Server (Must be STOPPED)</label>
-            <select
-              className="form-select"
+            <ServerIconSelect
+              label="Select Server (Must be STOPPED)"
               value={selectedServer}
-              onChange={(e) => setSelectedServer(e.target.value)}
-              required
-            >
-              <option value="" disabled>
-                Select a server
-              </option>
-              {stoppedServers.map((server) => (
-                <option key={server.id} value={server.id}>
-                  {server.name} ({server.id})
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedServer}
+              servers={stoppedServers}
+            />
             {stoppedServers.length === 0 && (
               <p
                 style={{

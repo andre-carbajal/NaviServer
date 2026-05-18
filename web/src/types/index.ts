@@ -7,6 +7,11 @@ export interface Server {
   ram: number;
   status: 'STOPPED' | 'RUNNING' | 'STARTING' | 'STOPPING' | 'CREATING';
   customArgs?: string;
+  autoBackupEnabled?: boolean;
+  autoBackupIntervalValue?: number;
+  autoBackupIntervalUnit?: 'minute' | 'hour' | 'day';
+  autoBackupMaxBackups?: number;
+  autoBackupLastRunAt?: string;
   progress?: number;
   progressMessage?: string;
   steps?: ProgressStep[];
@@ -22,6 +27,7 @@ export interface ProgressStep {
 export interface Backup {
   name: string;
   size: number;
+  createdAt?: string;
   serverId?: string;
   serverName?: string;
   status?: 'CREATING' | 'READY' | 'ERROR';

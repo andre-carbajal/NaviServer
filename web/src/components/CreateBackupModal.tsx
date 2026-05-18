@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import type { Server } from '../types';
+import ServerIconSelect from './ServerIconSelect';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
 
@@ -54,24 +55,12 @@ const CreateBackupModal: React.FC<CreateBackupModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Create Backup">
       <form onSubmit={handleSubmit}>
         {showServerSelect && (
-          <div className="form-group">
-            <label>Server</label>
-            <select
-              className="form-select"
-              value={selectedServer}
-              onChange={(e) => setSelectedServer(e.target.value)}
-              required
-            >
-              <option value="" disabled>
-                Select a server
-              </option>
-              {servers.map((server) => (
-                <option key={server.id} value={server.id}>
-                  {server.name} ({server.id})
-                </option>
-              ))}
-            </select>
-          </div>
+          <ServerIconSelect
+            label="Server"
+            value={selectedServer}
+            onChange={setSelectedServer}
+            servers={servers}
+          />
         )}
 
         <div className="form-group">

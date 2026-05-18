@@ -165,6 +165,15 @@ export const api = {
     apiInstance.get<ServerSettings>(`/servers/${id}/settings`),
   updateServerSettings: (id: string, data: ServerSettings) =>
     apiInstance.put(`/servers/${id}/settings`, data),
+  updateServerAutoBackup: (
+    id: string,
+    data: {
+      enabled: boolean;
+      intervalValue: number;
+      intervalUnit: 'minute' | 'hour' | 'day';
+      maxBackups: number;
+    },
+  ) => apiInstance.put<Server>(`/servers/${id}/auto-backup`, data),
   getServerVersionOptions: (id: string) =>
     apiInstance.get<{ versions: string[] }>(`/servers/${id}/version-options`),
   updateServerVersion: (id: string, data: { version: string }) =>

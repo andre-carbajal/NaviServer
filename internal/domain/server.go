@@ -3,17 +3,22 @@ package domain
 import "time"
 
 type Server struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	FolderName  string      `json:"folderName"`
-	Version     string      `json:"version"`
-	Loader      string      `json:"loader"`
-	Port        int         `json:"port"`
-	RAM         int         `json:"ram"`
-	Status      string      `json:"status"`
-	CustomArgs  string      `json:"customArgs"`
-	CreatedAt   time.Time   `json:"created_at"`
-	Permissions *Permission `json:"permissions,omitempty"`
+	ID                      string      `json:"id"`
+	Name                    string      `json:"name"`
+	FolderName              string      `json:"folderName"`
+	Version                 string      `json:"version"`
+	Loader                  string      `json:"loader"`
+	Port                    int         `json:"port"`
+	RAM                     int         `json:"ram"`
+	Status                  string      `json:"status"`
+	CustomArgs              string      `json:"customArgs"`
+	CreatedAt               time.Time   `json:"created_at"`
+	AutoBackupEnabled       bool        `json:"autoBackupEnabled"`
+	AutoBackupIntervalValue int         `json:"autoBackupIntervalValue"`
+	AutoBackupIntervalUnit  string      `json:"autoBackupIntervalUnit"`
+	AutoBackupMaxBackups    int         `json:"autoBackupMaxBackups"`
+	AutoBackupLastRunAt     *time.Time  `json:"autoBackupLastRunAt,omitempty"`
+	Permissions             *Permission `json:"permissions,omitempty"`
 }
 
 type BackupInfo struct {

@@ -228,6 +228,7 @@ func startDaemonService(ctx context.Context) {
 	if err := backupManager.SyncBackups(); err != nil {
 		log.Printf("Warning syncing backups: %v", err)
 	}
+	backupManager.StartAutoBackupScheduler(ctx)
 
 	if err := supervisor.ResetRunningStates(); err != nil {
 		log.Printf("Warning resetting states: %v", err)

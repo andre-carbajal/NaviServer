@@ -35,6 +35,18 @@ interface UploadingBackup {
   progress: number;
 }
 
+type AutoBackupUnit = 'minute' | 'hour' | 'day';
+
+interface AutoBackupDraft {
+  enabled: boolean;
+  intervalValue: number;
+  intervalUnit: AutoBackupUnit;
+  maxBackups: number;
+  saving: boolean;
+  dirty: boolean;
+  saved: boolean;
+}
+
 const Backups: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { token, user } = useAuth();
@@ -52,6 +64,9 @@ const Backups: React.FC = () => {
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
   const [backupToEdit, setBackupToEdit] = useState<Backup | null>(null);
   const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
+  const [autoBackupDrafts, setAutoBackupDrafts] = useState<
+    Record<string, AutoBackupDraft>
+  >({});
   const activeSockets = useRef<Set<string>>(new Set());
   const wsMap = useRef<Map<string, WebSocket>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -333,6 +348,129 @@ const Backups: React.FC = () => {
     (b) => isGlobalView || b.serverId === id,
   );
 
+  useEffect(() => {
+    setAutoBackupDrafts((prev) => {
+      const next: Record<string, AutoBackupDraft> = {};
+
+      servers.forEach((server) => {
+        const serverConfig: Omit<AutoBackupDraft, 'saving' | 'dirty' | 'saved'> = {
+          enabled: server.autoBackupEnabled ?? false,
+          intervalValue: server.autoBackupIntervalValue ?? 24,
+          intervalUnit: server.autoBackupIntervalUnit ?? 'hour',
+          maxBackups: server.autoBackupMaxBackups ?? 10,
+        };
+
+        const existing = prev[server.id];
+        if (!existing) {
+          next[server.id] = {
+            ...serverConfig,
+            saving: false,
+            dirty: false,
+            saved: false,
+          };
+          return;
+        }
+
+        if (existing.dirty || existing.saving) {
+          next[server.id] = existing;
+          return;
+        }
+
+        next[server.id] = {
+          ...serverConfig,
+          saving: false,
+          dirty: false,
+          saved: false,
+        };
+      });
+
+      return next;
+    });
+  }, [servers]);
+
+  const updateAutoBackupDraft = (
+    serverId: string,
+    patch: Partial<AutoBackupDraft>,
+    markDirty = false,
+  ) => {
+    setAutoBackupDrafts((prev) => ({
+      ...prev,
+      [serverId]: {
+        ...(prev[serverId] ?? {
+          enabled: false,
+          intervalValue: 24,
+          intervalUnit: 'hour' as AutoBackupUnit,
+          maxBackups: 10,
+          saving: false,
+          dirty: false,
+          saved: false,
+        }),
+        ...patch,
+        dirty: markDirty ? true : (patch.dirty ?? prev[serverId]?.dirty ?? false),
+      },
+    }));
+  };
+
+  const handleSaveAutoBackup = async (serverId: string) => {
+    const draft = autoBackupDrafts[serverId];
+    if (!draft) return;
+
+    const value = Number(draft.intervalValue);
+    const limit = Number(draft.maxBackups);
+
+    const minutes =
+      draft.intervalUnit === 'minute'
+        ? value
+        : draft.intervalUnit === 'hour'
+          ? value * 60
+          : value * 24 * 60;
+
+    if (minutes < 5) {
+      alert('Automatic backup interval must be at least 5 minutes.');
+      return;
+    }
+    if (minutes > 30 * 24 * 60) {
+      alert('Automatic backup interval cannot exceed 30 days.');
+      return;
+    }
+    if (!Number.isFinite(limit) || limit <= 0) {
+      alert('Max backups must be greater than 0.');
+      return;
+    }
+
+    updateAutoBackupDraft(serverId, { saving: true, saved: false });
+    try {
+      await api.updateServerAutoBackup(serverId, {
+        enabled: draft.enabled,
+        intervalValue: value,
+        intervalUnit: draft.intervalUnit,
+        maxBackups: limit,
+      });
+      updateAutoBackupDraft(serverId, {
+        dirty: false,
+        saved: true,
+      });
+      setTimeout(() => {
+        updateAutoBackupDraft(serverId, { saved: false });
+      }, 2500);
+    } catch (error) {
+      console.error('Failed to save auto backup config:', error);
+      alert('Failed to save automatic backup configuration.');
+    } finally {
+      updateAutoBackupDraft(serverId, { saving: false });
+    }
+  };
+
+  const serverForBackup = (serverId?: string) =>
+    serverId ? servers.find((server) => server.id === serverId) : undefined;
+
+  const formatBackupDateTime = (value?: string) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString();
+  };
+
   return (
     <div
       className={`backups-page ${isDragging ? 'dragging' : ''}`}
@@ -391,6 +529,128 @@ const Backups: React.FC = () => {
         </div>
       )}
       <div className="card">
+        <h2 className="backup-section-title">Automatic Backups</h2>
+        {user?.role !== 'admin' ? (
+          <p className="text-muted">
+            Only administrators can configure automatic backups.
+          </p>
+        ) : (
+          <div className="auto-backup-grid">
+            <div className="auto-backup-header">
+              <span>Server</span>
+              <span>Enabled</span>
+              <span>Every</span>
+              <span>Max backups</span>
+              <span>Action</span>
+            </div>
+            {servers.map((server) => {
+              const draft = autoBackupDrafts[server.id];
+              if (!draft) return null;
+
+              return (
+                <div key={server.id} className="auto-backup-row">
+                  <div className="auto-backup-row-main">
+                    <img
+                      src={api.getServerIconUrl(server.id)}
+                      alt="Server icon"
+                      className="auto-backup-server-icon"
+                      onError={(event) => {
+                        const target = event.currentTarget;
+                        target.style.display = 'none';
+                        const fallback = target.nextElementSibling;
+                        if (fallback instanceof HTMLElement) {
+                          fallback.style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div
+                      className="auto-backup-server-fallback"
+                      style={{ display: 'none' }}
+                    >
+                      {server.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong>{server.name}</strong>
+                      <div className="text-muted">{server.id}</div>
+                    </div>
+                  </div>
+                  <label className="auto-backup-toggle">
+                    <input
+                      type="checkbox"
+                      checked={draft.enabled}
+                      onChange={(event) =>
+                        updateAutoBackupDraft(server.id, {
+                          enabled: event.target.checked,
+                        }, true)
+                      }
+                    />
+                    <span>Enabled</span>
+                  </label>
+                  <div className="auto-backup-interval">
+                    <input
+                      type="number"
+                      min={1}
+                      className="form-input"
+                      value={draft.intervalValue}
+                      onChange={(event) =>
+                        updateAutoBackupDraft(server.id, {
+                          intervalValue: Number(event.target.value),
+                        }, true)
+                      }
+                    />
+                    <select
+                      className="form-select"
+                      value={draft.intervalUnit}
+                      onChange={(event) =>
+                        updateAutoBackupDraft(server.id, {
+                          intervalUnit: event.target.value as AutoBackupUnit,
+                        }, true)
+                      }
+                    >
+                      <option value="minute">Minutes</option>
+                      <option value="hour">Hours</option>
+                      <option value="day">Days</option>
+                    </select>
+                  </div>
+                  <div className="auto-backup-limit">
+                    <input
+                      type="number"
+                      min={1}
+                      className="form-input"
+                      value={draft.maxBackups}
+                      onChange={(event) =>
+                        updateAutoBackupDraft(server.id, {
+                          maxBackups: Number(event.target.value),
+                        }, true)
+                      }
+                    />
+                  </div>
+                  <Button
+                    onClick={() => handleSaveAutoBackup(server.id)}
+                    disabled={draft.saving}
+                  >
+                    {draft.saving ? 'Saving...' : 'Save'}
+                  </Button>
+                  {draft.saved && (
+                    <span
+                      style={{
+                        color: '#22c55e',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Saved successfully
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h2 className="backup-section-title">Backups</h2>
         <input
           type="file"
           ref={fileInputRef}
@@ -399,11 +659,12 @@ const Backups: React.FC = () => {
           accept=".zip,.rar"
           multiple
         />
-        <table className="data-table">
+        <table className="data-table backups-table">
           <thead>
             <tr>
               <th>Name</th>
               <th>Server</th>
+              <th>Date & Time</th>
               <th>Size</th>
               <th>Actions</th>
             </tr>
@@ -411,7 +672,7 @@ const Backups: React.FC = () => {
           <tbody>
             {uploadingBackups.map((upload) => (
               <tr key={upload.id}>
-                <td>
+                <td data-label="Name">
                   <div
                     style={{
                       display: 'flex',
@@ -442,14 +703,15 @@ const Backups: React.FC = () => {
                     />
                   </div>
                 </td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
+                <td data-label="Server">-</td>
+                <td data-label="Date & Time">-</td>
+                <td data-label="Size">-</td>
+                <td data-label="Actions">-</td>
               </tr>
             ))}
             {visibleCreatingBackups.map((backup) => (
               <tr key={backup.requestId}>
-                <td>
+                <td data-label="Name">
                   <div
                     style={{
                       display: 'flex',
@@ -482,9 +744,10 @@ const Backups: React.FC = () => {
                     </div>
                   )}
                 </td>
-                <td>{backup.serverName || '-'}</td>
-                <td>-</td>
-                <td>
+                <td data-label="Server">{backup.serverName || '-'}</td>
+                <td data-label="Date & Time">-</td>
+                <td data-label="Size">-</td>
+                <td data-label="Actions">
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <Button
                       variant="secondary"
@@ -499,14 +762,31 @@ const Backups: React.FC = () => {
             ))}
             {backups.map((backup) => (
               <tr key={backup.name}>
-                <td>{backup.name}</td>
-                <td>
-                  {backup.serverName || (
+                <td data-label="Name">{backup.name}</td>
+                <td data-label="Server">
+                  {backup.serverName ? (
+                    <div className="backup-server-cell">
+                      {serverForBackup(backup.serverId) ? (
+                        <img
+                          src={api.getServerIconUrl(backup.serverId!)}
+                          alt="Server icon"
+                          className="backup-server-icon"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      <span>{backup.serverName}</span>
+                    </div>
+                  ) : (
                     <span className="text-muted">None</span>
                   )}
                 </td>
-                <td>{(backup.size / 1024 / 1024).toFixed(2)} MB</td>
-                <td>
+                <td data-label="Date & Time">
+                  {formatBackupDateTime(backup.createdAt)}
+                </td>
+                <td data-label="Size">{(backup.size / 1024 / 1024).toFixed(2)} MB</td>
+                <td data-label="Actions">
                   <div
                     className="actions-group"
                     style={{ border: 'none', padding: 0, margin: 0 }}
@@ -552,7 +832,7 @@ const Backups: React.FC = () => {
               uploadingBackups.length === 0 && (
                 <tr>
                   <td
-                    colSpan={3}
+                    colSpan={5}
                     style={{
                       textAlign: 'center',
                       padding: '20px',
