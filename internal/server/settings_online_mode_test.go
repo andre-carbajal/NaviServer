@@ -66,6 +66,9 @@ func TestGetServerSettingsOnlineModeDefaultsTrueWhenMissing(t *testing.T) {
 	if !settings.OnlineMode {
 		t.Fatalf("expected onlineMode default true when key is missing")
 	}
+	if settings.SpawnProtection != 16 {
+		t.Fatalf("expected spawnProtection default 16 when key is missing, got %d", settings.SpawnProtection)
+	}
 }
 
 func TestUpdateServerSettingsWritesOnlineMode(t *testing.T) {
@@ -88,6 +91,7 @@ func TestUpdateServerSettingsWritesOnlineMode(t *testing.T) {
 		Difficulty:         "normal",
 		MOTD:               "Test",
 		OnlineMode:         false,
+		SpawnProtection:    8,
 		PvP:                true,
 		AllowFlight:        false,
 		EnableCommandBlock: false,
@@ -107,5 +111,8 @@ func TestUpdateServerSettingsWritesOnlineMode(t *testing.T) {
 
 	if !strings.Contains(string(updated), "online-mode=false") {
 		t.Fatalf("expected online-mode=false in properties file, got:\n%s", string(updated))
+	}
+	if !strings.Contains(string(updated), "spawn-protection=8") {
+		t.Fatalf("expected spawn-protection=8 in properties file, got:\n%s", string(updated))
 	}
 }

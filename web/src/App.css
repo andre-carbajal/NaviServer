@@ -3254,6 +3254,8 @@ nav {
 .server-v2-settings-actions-inline {
   display: flex;
   justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .server-v2-settings-hint {
@@ -3261,6 +3263,54 @@ nav {
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.server-v2-icon-upload-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.server-v2-icon-upload-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.server-v2-icon-upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  image-rendering: pixelated;
+}
+
+.server-v2-icon-upload-preview span {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.server-v2-icon-upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.server-v2-icon-upload-actions .server-v2-settings-actions-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .danger-card {
@@ -3439,5 +3489,18 @@ nav {
 
   .server-v2-settings-panel-head {
     align-items: flex-start;
+  }
+
+  .server-v2-icon-upload-row {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .server-v2-icon-upload-actions {
+    width: auto;
+    flex: 1;
+    min-width: 0;
   }
 }

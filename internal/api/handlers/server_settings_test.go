@@ -72,6 +72,7 @@ func TestHandleUpdateServerSettingsConflictWhenRunning(t *testing.T) {
 		"difficulty":         "normal",
 		"motd":               "Test",
 		"onlineMode":         true,
+		"spawnProtection":    16,
 		"pvp":                true,
 		"allowFlight":        false,
 		"enableCommandBlock": false,
@@ -107,6 +108,43 @@ func TestHandleUpdateServerSettingsValidationError(t *testing.T) {
 		"difficulty":         "normal",
 		"motd":               "Test",
 		"onlineMode":         true,
+		"spawnProtection":    16,
+		"pvp":                true,
+		"allowFlight":        false,
+		"enableCommandBlock": false,
+		"hardcore":           false,
+		"maxPlayers":         20,
+		"viewDistance":       10,
+		"simulationDistance": 10,
+	}
+	raw, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPut, "/servers/srv-1/settings", bytes.NewReader(raw))
+	req.SetPathValue("id", srv.ID)
+	rec := httptest.NewRecorder()
+
+	handler.HandleUpdateServerSettings(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d (%s)", http.StatusBadRequest, rec.Code, rec.Body.String())
+	}
+}
+
+func TestHandleUpdateServerSettingsValidationErrorSpawnProtection(t *testing.T) {
+	handler, store, _ := newTestServerHandler(t)
+	srv := saveTestServer(t, store, "STOPPED")
+
+	reqBody := map[string]any{
+		"name":               srv.Name,
+		"ram":                4096,
+		"customArgs":         "",
+		"loader":             "vanilla",
+		"version":            srv.Version,
+		"gamemode":           "survival",
+		"difficulty":         "normal",
+		"motd":               "Test",
+		"onlineMode":         true,
+		"spawnProtection":    -1,
 		"pvp":                true,
 		"allowFlight":        false,
 		"enableCommandBlock": false,

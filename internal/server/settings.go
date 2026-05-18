@@ -32,6 +32,7 @@ type ServerSettings struct {
 	Difficulty         string `json:"difficulty"`
 	MOTD               string `json:"motd"`
 	OnlineMode         bool   `json:"onlineMode"`
+	SpawnProtection    int    `json:"spawnProtection"`
 	PvP                bool   `json:"pvp"`
 	AllowFlight        bool   `json:"allowFlight"`
 	EnableCommandBlock bool   `json:"enableCommandBlock"`
@@ -86,6 +87,7 @@ func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
 		Difficulty:         "easy",
 		MOTD:               "A Minecraft Server",
 		OnlineMode:         true,
+		SpawnProtection:    16,
 		PvP:                true,
 		AllowFlight:        false,
 		EnableCommandBlock: false,
@@ -106,6 +108,9 @@ func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
 	}
 	if val, ok := props.Get("online-mode"); ok {
 		settings.OnlineMode = parseBoolOrDefault(val, settings.OnlineMode)
+	}
+	if val, ok := props.Get("spawn-protection"); ok {
+		settings.SpawnProtection = parseIntOrDefault(val, settings.SpawnProtection)
 	}
 	if val, ok := props.Get("pvp"); ok {
 		settings.PvP = parseBoolOrDefault(val, settings.PvP)
@@ -170,6 +175,7 @@ func (m *Manager) UpdateServerSettings(id string, next ServerSettings) error {
 		"difficulty":           strings.ToLower(next.Difficulty),
 		"motd":                 next.MOTD,
 		"online-mode":          formatBool(next.OnlineMode),
+		"spawn-protection":     strconv.Itoa(next.SpawnProtection),
 		"pvp":                  formatBool(next.PvP),
 		"allow-flight":         formatBool(next.AllowFlight),
 		"enable-command-block": formatBool(next.EnableCommandBlock),
@@ -291,6 +297,9 @@ func validateSettings(next ServerSettings) error {
 	difficulty := strings.ToLower(strings.TrimSpace(next.Difficulty))
 	if !validDifficulties[difficulty] {
 		return fmt.Errorf("invalid difficulty")
+	}
+	if next.SpawnProtection < 0 {
+		return fmt.Errorf("spawn-protection must be greater than or equal to 0")
 	}
 
 	if next.MaxPlayers < 1 || next.MaxPlayers > 1000 {

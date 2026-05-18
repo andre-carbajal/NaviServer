@@ -24,6 +24,7 @@ import {
   Square,
   Terminal,
   Trash2,
+  Upload,
   UserX,
   Users,
 } from 'lucide-react';
@@ -168,6 +169,68 @@ const isFutureMinecraftVersion = (candidate: string, current: string) => {
   return comparison !== null && comparison > 0;
 };
 
+const normalizeServerSettings = (settings: ServerSettings): ServerSettings => ({
+  ...settings,
+  onlineMode: settings.onlineMode ?? true,
+  spawnProtection:
+    Number.isFinite(settings.spawnProtection) && settings.spawnProtection >= 0
+      ? settings.spawnProtection
+      : 16,
+});
+
+const upsertPropertyLine = (content: string, key: string, value: string) => {
+  const normalized = content.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  let updated = false;
+  const nextLines = lines.map((line) => {
+    const trimmed = line.trim();
+    if (trimmed === '' || trimmed.startsWith('#') || !line.includes('=')) {
+      return line;
+    }
+
+    const [rawKey] = line.split('=', 1);
+    if (rawKey.trim() !== key) {
+      return line;
+    }
+
+    updated = true;
+    return `${key}=${value}`;
+  });
+
+  if (!updated) {
+    if (nextLines.length > 0 && nextLines[nextLines.length - 1] !== '') {
+      nextLines.push('');
+    }
+    nextLines.push(`${key}=${value}`);
+  }
+
+  return nextLines.join('\n');
+};
+
+const readIntPropertyFromContent = (
+  content: string,
+  key: string,
+): number | null => {
+  const normalized = content.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === '' || trimmed.startsWith('#') || !line.includes('=')) {
+      continue;
+    }
+    const [rawKey, rawValue = ''] = line.split('=', 2);
+    if (rawKey.trim() !== key) {
+      continue;
+    }
+    const parsed = Number.parseInt(rawValue.trim(), 10);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+    return null;
+  }
+  return null;
+};
+
 const PlayerAvatar: React.FC<{ player: PlayerInfo }> = ({ player }) => {
   const [src, setSrc] = useState(getAvatarUrl(player.id));
 
@@ -201,6 +264,7 @@ const ServerDetail: React.FC = () => {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [iconError, setIconError] = useState(false);
+  const [serverIconVersion, setServerIconVersion] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<DetailTab>('performance');
   const [powerAction, setPowerAction] = useState<
     null | 'start' | 'stop' | 'restart' | 'kill'
@@ -218,6 +282,17 @@ const ServerDetail: React.FC = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsModalTitle, setSettingsModalTitle] = useState('');
   const [settingsModalMessage, setSettingsModalMessage] = useState('');
+  const [selectedSettingsIcon, setSelectedSettingsIcon] = useState<File | null>(
+    null,
+  );
+  const [settingsIconPreview, setSettingsIconPreview] = useState<string | null>(
+    null,
+  );
+  const [settingsIconError, setSettingsIconError] = useState(false);
+  const [isUploadingSettingsIcon, setIsUploadingSettingsIcon] = useState(false);
+  const [isIconUploadModalOpen, setIsIconUploadModalOpen] = useState(false);
+  const [iconUploadModalTitle, setIconUploadModalTitle] = useState('');
+  const [iconUploadModalMessage, setIconUploadModalMessage] = useState('');
   const [versionOptions, setVersionOptions] = useState<string[]>([]);
   const [selectedVersion, setSelectedVersion] = useState('');
   const [isUpdatingVersion, setIsUpdatingVersion] = useState(false);
@@ -242,6 +317,7 @@ const ServerDetail: React.FC = () => {
     typeof window !== 'undefined' ? window.location.hostname : 'localhost',
   );
   const powerMenuRef = useRef<HTMLDivElement>(null);
+  const settingsIconInputRef = useRef<HTMLInputElement>(null);
   const chartShellRef = useRef<HTMLDivElement>(null);
   const serverPollDelayRef = useRef(SERVER_POLL_MS);
   const hasLoggedServerOfflineRef = useRef(false);
@@ -327,6 +403,12 @@ const ServerDetail: React.FC = () => {
       setHistoryIndex(-1);
     }
   }, [server?.status]);
+
+  useEffect(() => {
+    setSelectedSettingsIcon(null);
+    setSettingsIconPreview(null);
+    setSettingsIconError(false);
+  }, [server?.id]);
 
   const readJsonList = useCallback(
     async <T,>(path: string): Promise<T[]> => {
@@ -478,12 +560,37 @@ const ServerDetail: React.FC = () => {
         api.getServerSettings(id),
         api.getServerVersionOptions(id),
       ]);
+      let normalizedSettings = normalizeServerSettings(settingsRes.data);
+      if (
+        !Number.isFinite(settingsRes.data.spawnProtection) ||
+        (settingsRes.data.spawnProtection ?? -1) < 0
+      ) {
+        try {
+          const fileRes = await api.getFileContent(id, '/server.properties');
+          const rawContent = String(fileRes.data ?? '');
+          const fromFile = readIntPropertyFromContent(
+            rawContent,
+            'spawn-protection',
+          );
+          if (fromFile !== null && fromFile >= 0) {
+            normalizedSettings = {
+              ...normalizedSettings,
+              spawnProtection: fromFile,
+            };
+          }
+        } catch (err) {
+          console.debug(
+            'Unable to read spawn-protection from server.properties fallback:',
+            err,
+          );
+        }
+      }
       const currentVersion = settingsRes.data.version || '';
       const futureVersions = (versionsRes.data.versions || []).filter(
         (version) => isFutureMinecraftVersion(version, currentVersion),
       );
-      setSettingsSnapshot(settingsRes.data);
-      setSettingsDraft(settingsRes.data);
+      setSettingsSnapshot(normalizedSettings);
+      setSettingsDraft(normalizedSettings);
       setVersionOptions(futureVersions);
       setSelectedVersion(futureVersions[0] || '');
     } catch (err) {
@@ -503,7 +610,34 @@ const ServerDetail: React.FC = () => {
     if (!server || !settingsDraft) return;
     try {
       setIsSavingSettings(true);
+      const expectedSpawnProtection = settingsDraft.spawnProtection;
       await api.updateServerSettings(server.id, settingsDraft);
+
+      try {
+        const refreshed = await api.getServerSettings(server.id);
+        const normalized = normalizeServerSettings(refreshed.data);
+        if (normalized.spawnProtection !== expectedSpawnProtection) {
+          const fileRes = await api.getFileContent(
+            server.id,
+            '/server.properties',
+          );
+          const rawContent = String(fileRes.data ?? '');
+          const patched = upsertPropertyLine(
+            rawContent,
+            'spawn-protection',
+            String(expectedSpawnProtection),
+          );
+          if (patched !== rawContent) {
+            await api.saveFileContent(server.id, '/server.properties', patched);
+          }
+        }
+      } catch (err) {
+        console.warn(
+          'Unable to verify spawn-protection via settings API, skipping fallback patch:',
+          err,
+        );
+      }
+
       await Promise.all([fetchServer(), fetchSettingsData()]);
       setSettingsModalTitle('Settings Saved');
       setSettingsModalMessage('Settings saved successfully.');
@@ -528,6 +662,60 @@ const ServerDetail: React.FC = () => {
       setIsSettingsModalOpen(true);
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleSettingsIconSelected = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedSettingsIcon(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSettingsIconPreview(reader.result as string);
+      setSettingsIconError(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadSettingsIcon = async () => {
+    if (!server || !selectedSettingsIcon) return;
+    try {
+      setIsUploadingSettingsIcon(true);
+      await api.uploadServerIcon(server.id, selectedSettingsIcon);
+      setServerIconVersion(Date.now());
+      setIconError(false);
+      setSettingsIconError(false);
+      setSelectedSettingsIcon(null);
+      setSettingsIconPreview(null);
+      if (settingsIconInputRef.current) {
+        settingsIconInputRef.current.value = '';
+      }
+      setIconUploadModalTitle('Icon Updated');
+      setIconUploadModalMessage('Server icon uploaded successfully.');
+      setIsIconUploadModalOpen(true);
+    } catch (err) {
+      console.error('Failed to upload server icon:', err);
+      let errorMessage = 'Failed to upload server icon.';
+      if (axios.isAxiosError(err)) {
+        const responseMessage =
+          typeof err.response?.data === 'string'
+            ? err.response.data
+            : (err.response?.data as { error?: string; message?: string })
+                ?.error ||
+              (err.response?.data as { error?: string; message?: string })
+                ?.message;
+        if (responseMessage) {
+          errorMessage = responseMessage;
+        }
+      }
+      setIconUploadModalTitle('Icon Upload Failed');
+      setIconUploadModalMessage(errorMessage);
+      setIsIconUploadModalOpen(true);
+    } finally {
+      setIsUploadingSettingsIcon(false);
     }
   };
 
@@ -913,7 +1101,7 @@ const ServerDetail: React.FC = () => {
           <div className="server-v2-icon-shell">
             {!iconError ? (
               <img
-                src={api.getServerIconUrl(server.id)}
+                src={`${api.getServerIconUrl(server.id)}?v=${serverIconVersion}`}
                 alt="Server Icon"
                 onError={() => setIconError(true)}
                 className="server-v2-icon"
@@ -1473,6 +1661,28 @@ const ServerDetail: React.FC = () => {
                           />
                         </label>
 
+                        <label>
+                          <span>
+                            Spawn Protection
+                            <span title="Spawn protection radius in blocks. Set 0 to disable.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={0}
+                            value={settingsDraft.spawnProtection ?? 16}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'spawnProtection',
+                                Math.max(0, Number(e.target.value)),
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          />
+                        </label>
+
                         <label className="server-v2-settings-toggle">
                           <input
                             type="checkbox"
@@ -1688,6 +1898,74 @@ const ServerDetail: React.FC = () => {
                         settings.
                       </p>
                     )}
+                  </div>
+
+                  <div className="server-v2-settings-card">
+                    <div className="server-v2-settings-panel-head">
+                      <div className="server-v2-settings-panel-icon">
+                        <Upload size={18} />
+                      </div>
+                      <div>
+                        <h3>Server Icon</h3>
+                        <p>Upload a new icon for this server</p>
+                      </div>
+                    </div>
+                    <div className="server-v2-icon-upload-row">
+                      <div className="server-v2-icon-upload-preview">
+                        {settingsIconPreview ? (
+                          <img
+                            src={settingsIconPreview}
+                            alt="Selected server icon"
+                          />
+                        ) : !settingsIconError ? (
+                          <img
+                            src={`${api.getServerIconUrl(server.id)}?v=${serverIconVersion}`}
+                            alt="Current server icon"
+                            onError={() => setSettingsIconError(true)}
+                          />
+                        ) : (
+                          <span>{server.name.charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div className="server-v2-icon-upload-actions">
+                        <input
+                          ref={settingsIconInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg"
+                          onChange={handleSettingsIconSelected}
+                          hidden
+                        />
+                        <div className="server-v2-settings-actions-inline">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                              if (settingsIconInputRef.current) {
+                                settingsIconInputRef.current.value = '';
+                                settingsIconInputRef.current.click();
+                              }
+                            }}
+                            disabled={isUploadingSettingsIcon}
+                          >
+                            Choose Image
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleUploadSettingsIcon}
+                            disabled={
+                              isUploadingSettingsIcon || !selectedSettingsIcon
+                            }
+                          >
+                            {isUploadingSettingsIcon
+                              ? 'Uploading...'
+                              : 'Upload Icon'}
+                          </Button>
+                        </div>
+                        <p className="server-v2-settings-hint">
+                          Recommended size: 64x64. Supported formats: PNG, JPG.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="server-v2-settings-card">
@@ -1952,6 +2230,25 @@ const ServerDetail: React.FC = () => {
               type="button"
               variant="secondary"
               onClick={() => setIsVersionUpdateModalOpen(false)}
+            >
+              OK
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isIconUploadModalOpen}
+        onClose={() => setIsIconUploadModalOpen(false)}
+        title={iconUploadModalTitle}
+      >
+        <div className="server-v2-delete-modal">
+          <p>{iconUploadModalMessage}</p>
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsIconUploadModalOpen(false)}
             >
               OK
             </Button>

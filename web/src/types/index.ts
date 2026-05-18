@@ -82,6 +82,7 @@ export interface ServerSettings {
   difficulty: 'peaceful' | 'easy' | 'normal' | 'hard';
   motd: string;
   onlineMode: boolean;
+  spawnProtection: number;
   pvp: boolean;
   allowFlight: boolean;
   enableCommandBlock: boolean;

@@ -353,7 +353,10 @@ const Backups: React.FC = () => {
       const next: Record<string, AutoBackupDraft> = {};
 
       servers.forEach((server) => {
-        const serverConfig: Omit<AutoBackupDraft, 'saving' | 'dirty' | 'saved'> = {
+        const serverConfig: Omit<
+          AutoBackupDraft,
+          'saving' | 'dirty' | 'saved'
+        > = {
           enabled: server.autoBackupEnabled ?? false,
           intervalValue: server.autoBackupIntervalValue ?? 24,
           intervalUnit: server.autoBackupIntervalUnit ?? 'hour',
@@ -406,7 +409,9 @@ const Backups: React.FC = () => {
           saved: false,
         }),
         ...patch,
-        dirty: markDirty ? true : (patch.dirty ?? prev[serverId]?.dirty ?? false),
+        dirty: markDirty
+          ? true
+          : (patch.dirty ?? prev[serverId]?.dirty ?? false),
       },
     }));
   };
@@ -579,9 +584,13 @@ const Backups: React.FC = () => {
                       type="checkbox"
                       checked={draft.enabled}
                       onChange={(event) =>
-                        updateAutoBackupDraft(server.id, {
-                          enabled: event.target.checked,
-                        }, true)
+                        updateAutoBackupDraft(
+                          server.id,
+                          {
+                            enabled: event.target.checked,
+                          },
+                          true,
+                        )
                       }
                     />
                     <span>Enabled</span>
@@ -593,18 +602,26 @@ const Backups: React.FC = () => {
                       className="form-input"
                       value={draft.intervalValue}
                       onChange={(event) =>
-                        updateAutoBackupDraft(server.id, {
-                          intervalValue: Number(event.target.value),
-                        }, true)
+                        updateAutoBackupDraft(
+                          server.id,
+                          {
+                            intervalValue: Number(event.target.value),
+                          },
+                          true,
+                        )
                       }
                     />
                     <select
                       className="form-select"
                       value={draft.intervalUnit}
                       onChange={(event) =>
-                        updateAutoBackupDraft(server.id, {
-                          intervalUnit: event.target.value as AutoBackupUnit,
-                        }, true)
+                        updateAutoBackupDraft(
+                          server.id,
+                          {
+                            intervalUnit: event.target.value as AutoBackupUnit,
+                          },
+                          true,
+                        )
                       }
                     >
                       <option value="minute">Minutes</option>
@@ -619,9 +636,13 @@ const Backups: React.FC = () => {
                       className="form-input"
                       value={draft.maxBackups}
                       onChange={(event) =>
-                        updateAutoBackupDraft(server.id, {
-                          maxBackups: Number(event.target.value),
-                        }, true)
+                        updateAutoBackupDraft(
+                          server.id,
+                          {
+                            maxBackups: Number(event.target.value),
+                          },
+                          true,
+                        )
                       }
                     />
                   </div>
@@ -785,7 +806,9 @@ const Backups: React.FC = () => {
                 <td data-label="Date & Time">
                   {formatBackupDateTime(backup.createdAt)}
                 </td>
-                <td data-label="Size">{(backup.size / 1024 / 1024).toFixed(2)} MB</td>
+                <td data-label="Size">
+                  {(backup.size / 1024 / 1024).toFixed(2)} MB
+                </td>
                 <td data-label="Actions">
                   <div
                     className="actions-group"
