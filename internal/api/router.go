@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"naviserver/internal/addons"
 	"naviserver/internal/api/handlers"
 	"naviserver/internal/backup"
 	"naviserver/internal/config"
@@ -23,6 +24,7 @@ type Server struct {
 	Store         *storage.GormStore
 	HubManager    *ws.HubManager
 	BackupManager *backup.Manager
+	AddonsManager *addons.Manager
 	Config        *config.Config
 }
 
@@ -32,6 +34,7 @@ func NewAPIServer(
 	store *storage.GormStore,
 	hubManager *ws.HubManager,
 	backupManager *backup.Manager,
+	addonsManager *addons.Manager,
 	cfg *config.Config,
 ) *Server {
 	return &Server{
@@ -40,6 +43,7 @@ func NewAPIServer(
 		Store:         store,
 		HubManager:    hubManager,
 		BackupManager: backupManager,
+		AddonsManager: addonsManager,
 		Config:        cfg,
 	}
 }
@@ -78,7 +82,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 		fileServer.ServeHTTP(w, r)
 	})
 
-	baseHandler := handlers.NewBaseHandler(api.Manager, api.Supervisor, api.Store, api.HubManager, api.BackupManager, api.Config)
+	baseHandler := handlers.NewBaseHandler(api.Manager, api.Supervisor, api.Store, api.HubManager, api.BackupManager, api.AddonsManager, api.Config)
 
 	authHandler := &handlers.AuthHandler{BaseHandler: baseHandler}
 	serverHandler := &handlers.ServerHandler{BaseHandler: baseHandler}
@@ -90,6 +94,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	linksHandler := &handlers.LinksHandler{BaseHandler: baseHandler}
 	wsHandler := &handlers.WSHandler{BaseHandler: baseHandler}
 	loadersHandler := &handlers.LoadersHandler{BaseHandler: baseHandler}
+	addonsHandler := &handlers.AddonsHandler{BaseHandler: baseHandler}
 
 	mux.HandleFunc("POST /auth/login", authHandler.HandleLogin)
 	mux.HandleFunc("POST /auth/logout", authHandler.HandleLogout)
@@ -133,6 +138,14 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("DELETE /servers/{id}/files", protect(filesHandler.HandleDeleteFile, ""))
 	mux.Handle("GET /servers/{id}/files/download", protect(filesHandler.HandleDownloadFile, ""))
 	mux.Handle("POST /servers/{id}/files/upload", protect(filesHandler.HandleUploadFile, ""))
+	mux.Handle("GET /servers/{id}/addons", protect(addonsHandler.HandleListAddons, ""))
+	mux.Handle("POST /servers/{id}/addons/sync", protect(addonsHandler.HandleSyncAddons, ""))
+	mux.Handle("POST /servers/{id}/addons/search", protect(addonsHandler.HandleSearchAddons, ""))
+	mux.Handle("POST /servers/{id}/addons/versions", protect(addonsHandler.HandleAddonVersions, ""))
+	mux.Handle("POST /servers/{id}/addons/install", protect(addonsHandler.HandleInstallAddon, ""))
+	mux.Handle("POST /servers/{id}/addons/update-all", protect(addonsHandler.HandleUpdateAllAddons, ""))
+	mux.Handle("POST /servers/{id}/addons/{addonId}/update", protect(addonsHandler.HandleUpdateAddon, ""))
+	mux.Handle("DELETE /servers/{id}/addons/{addonId}", protect(addonsHandler.HandleDeleteAddon, ""))
 
 	mux.Handle("POST /servers/{id}/start", protect(serverHandler.HandleStartServer, ""))
 	mux.Handle("POST /servers/{id}/stop", protect(serverHandler.HandleStopServer, ""))
@@ -155,6 +168,9 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("PUT /settings/log-buffer-size", protect(settingsHandler.HandleSetLogBufferSize, "admin"))
 	mux.Handle("GET /settings/public-ip", protect(settingsHandler.HandleGetPublicIP, ""))
 	mux.Handle("PUT /settings/public-ip", protect(settingsHandler.HandleSetPublicIP, "admin"))
+	mux.Handle("GET /settings/curseforge-key", protect(settingsHandler.HandleGetCurseForgeKeyStatus, "admin"))
+	mux.Handle("PUT /settings/curseforge-key", protect(settingsHandler.HandleSetCurseForgeKey, "admin"))
+	mux.Handle("DELETE /settings/curseforge-key", protect(settingsHandler.HandleDeleteCurseForgeKey, "admin"))
 
 	mux.Handle("GET /system/interfaces", protect(systemHandler.HandleGetNetworkInterfaces, "admin"))
 	mux.Handle("POST /system/restart", protect(systemHandler.HandleRestartDaemon, "admin"))

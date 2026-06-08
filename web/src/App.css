@@ -273,8 +273,20 @@ nav {
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content-install {
+  max-width: 840px;
+  max-height: 78vh;
+}
+
+.modal-content-install-summary {
+  max-width: 760px;
+  max-height: 78vh;
 }
 
 .modal-header {
@@ -3265,6 +3277,222 @@ nav {
   color: var(--text-muted);
 }
 
+.server-v2-addons-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.server-v2-addons-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.server-v2-addons-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.server-v2-addons-search {
+  display: grid;
+  grid-template-columns: 1fr 180px auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.server-v2-addons-search label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-v2-addons-error {
+  color: #f87171;
+  margin-top: 8px;
+}
+
+.server-v2-addons-results {
+  margin-top: 14px;
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.server-v2-addons-results ul,
+.server-v2-addon-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.server-v2-addons-results li,
+.server-v2-addon-list li {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.server-v2-addons-results li {
+  cursor: pointer;
+}
+
+.server-v2-addons-results li.selected {
+  border-color: #6a7cff;
+  background: rgba(106, 124, 255, 0.14);
+}
+
+.server-v2-addons-results li.installed {
+  opacity: 0.65;
+}
+
+.server-v2-addons-results li.installed .server-v2-install-row {
+  cursor: not-allowed;
+}
+
+.server-v2-install-row {
+  display: grid;
+  grid-template-columns: auto 28px 1fr;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.server-v2-install-text {
+  min-width: 0;
+}
+
+.server-v2-install-text strong,
+.server-v2-install-text small {
+  display: block;
+}
+
+.server-v2-install-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.server-v2-install-icon-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.server-v2-addons-results li small,
+.server-v2-addon-list li small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.server-v2-addon-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.server-v2-addon-link {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.server-v2-addon-link:hover {
+  color: var(--text-primary);
+  border-color: #6a7cff;
+}
+
+.server-v2-installed-addon-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.server-v2-addons-pagination {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.server-v2-addons-pagination span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.server-v2-addons-install-footer {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.server-v2-install-selected-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.server-v2-install-selected-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.server-v2-install-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.server-v2-install-summary-list li {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.server-v2-install-summary-addon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.server-v2-install-summary-list small {
+  display: block;
+  color: var(--text-muted);
+}
+
 .server-v2-icon-upload-row {
   display: flex;
   align-items: flex-start;
@@ -3334,7 +3562,7 @@ nav {
 
 @media (max-width: 1024px) {
   .server-v2-header {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     padding: 12px;
     gap: 10px;
   }
@@ -3347,13 +3575,15 @@ nav {
 
   .server-v2-sidebar {
     flex-direction: row;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow: visible;
     order: -1;
     height: auto;
   }
 
   .server-v2-sidebar button {
-    min-width: 140px;
+    min-width: 0;
+    flex: 1 1 calc(33.333% - 8px);
   }
 
   .server-v2-grid {
@@ -3374,7 +3604,7 @@ nav {
 
   .server-v2-identity {
     min-width: 0;
-    flex: 1;
+    flex: 1 1 auto;
     gap: 10px;
   }
 
@@ -3389,7 +3619,8 @@ nav {
   }
 
   .server-v2-actions {
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
     justify-content: flex-end;
   }
 

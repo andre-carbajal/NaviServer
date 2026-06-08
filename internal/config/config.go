@@ -29,6 +29,7 @@ const (
 	envServerPort      = "NAVISERVER_PORT"
 	envAllowedOrigins  = "NAVISERVER_ALLOWED_ORIGINS"
 	envAllowedOrigins2 = "NAVISERVER_CORS_ALLOWED_ORIGINS"
+	envCurseForgeKey   = "CURSEFORGE_API_KEY"
 )
 
 type APIConfig struct {
@@ -38,12 +39,13 @@ type APIConfig struct {
 }
 
 type Config struct {
-	ServersPath  string    `json:"servers_path"`
-	BackupsPath  string    `json:"backups_path"`
-	RuntimesPath string    `json:"runtimes_path"`
-	DatabasePath string    `json:"database_path"`
-	API          APIConfig `json:"api"`
-	JWTSecret    string    `json:"-"`
+	ServersPath      string    `json:"servers_path"`
+	BackupsPath      string    `json:"backups_path"`
+	RuntimesPath     string    `json:"runtimes_path"`
+	DatabasePath     string    `json:"database_path"`
+	API              APIConfig `json:"api"`
+	CurseForgeAPIKey string    `json:"-"`
+	JWTSecret        string    `json:"-"`
 }
 
 func LoadConfig(configDir string) (*Config, error) {
@@ -291,6 +293,10 @@ func (cfg *Config) applyEnvOverrides() {
 
 	if originsRaw := strings.TrimSpace(os.Getenv(envAllowedOrigins2)); originsRaw != "" {
 		cfg.API.AllowedOrigins = splitOrigins(originsRaw)
+	}
+
+	if key := strings.TrimSpace(os.Getenv(envCurseForgeKey)); key != "" {
+		cfg.CurseForgeAPIKey = key
 	}
 }
 

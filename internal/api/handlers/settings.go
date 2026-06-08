@@ -120,3 +120,50 @@ func (h *SettingsHandler) HandleSetPublicIP(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"updated"}`))
 }
+
+func (h *SettingsHandler) HandleGetCurseForgeKeyStatus(w http.ResponseWriter, r *http.Request) {
+	if h.AddonsManager == nil {
+		http.Error(w, "Addon manager is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	status := h.AddonsManager.GetCurseForgeKeyStatus()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(status)
+}
+
+func (h *SettingsHandler) HandleSetCurseForgeKey(w http.ResponseWriter, r *http.Request) {
+	if h.AddonsManager == nil {
+		http.Error(w, "Addon manager is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	var req struct {
+		APIKey string `json:"apiKey"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.APIKey == "" {
+		http.Error(w, "apiKey cannot be empty", http.StatusBadRequest)
+		return
+	}
+	if err := h.AddonsManager.SetCustomCurseForgeAPIKey(req.APIKey); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"updated"}`))
+}
+
+func (h *SettingsHandler) HandleDeleteCurseForgeKey(w http.ResponseWriter, r *http.Request) {
+	if h.AddonsManager == nil {
+		http.Error(w, "Addon manager is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	if err := h.AddonsManager.ClearCustomCurseForgeAPIKey(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"updated"}`))
+}

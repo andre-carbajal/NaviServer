@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"naviserver/internal/addons"
 	"naviserver/internal/backup"
 	"naviserver/internal/config"
 	"naviserver/internal/domain"
@@ -18,6 +19,7 @@ type BaseHandler struct {
 	Store         *storage.GormStore
 	HubManager    *ws.HubManager
 	BackupManager *backup.Manager
+	AddonsManager *addons.Manager
 	Config        *config.Config
 }
 
@@ -27,6 +29,7 @@ func NewBaseHandler(
 	store *storage.GormStore,
 	hubManager *ws.HubManager,
 	backupManager *backup.Manager,
+	addonsManager *addons.Manager,
 	cfg *config.Config,
 ) *BaseHandler {
 	return &BaseHandler{
@@ -35,6 +38,7 @@ func NewBaseHandler(
 		Store:         store,
 		HubManager:    hubManager,
 		BackupManager: backupManager,
+		AddonsManager: addonsManager,
 		Config:        cfg,
 	}
 }

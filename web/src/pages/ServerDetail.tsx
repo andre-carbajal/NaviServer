@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   MemoryStick,
   MoreVertical,
+  Package,
   Play,
   RotateCcw,
   Search,
@@ -48,6 +49,7 @@ import React, {
   useState,
 } from 'react';
 
+import AddonsPanel from '../components/AddonsPanel';
 import ConsoleView from '../components/ConsoleView';
 import FileExplorer from '../components/FileExplorer';
 import ShareModal from '../components/ShareModal';
@@ -61,7 +63,13 @@ import { useServerStats } from '../hooks/useServerStats';
 import { api } from '../services/api';
 import type { PlayerInfo, Server, ServerSettings } from '../types';
 
-type DetailTab = 'performance' | 'console' | 'players' | 'files' | 'settings';
+type DetailTab =
+  | 'performance'
+  | 'console'
+  | 'players'
+  | 'files'
+  | 'addons'
+  | 'settings';
 type ChartRange = '1m' | '5m' | '30m' | '1h' | '4h';
 type PlayerFilter = 'all' | 'admins' | 'banned';
 
@@ -860,6 +868,10 @@ const ServerDetail: React.FC = () => {
   const canEditSettings = user?.role === 'admin';
   const isServerStopped = server?.status === 'STOPPED';
   const canApplySettings = canEditSettings && isServerStopped;
+  const supportsAddons = ['paper', 'fabric', 'forge', 'neoforge'].includes(
+    server?.loader || '',
+  );
+  const addonsLabel = server?.loader === 'paper' ? 'Plugins' : 'Mods';
   const isDeleteNameMatch =
     deleteConfirmName.trim() !== '' &&
     deleteConfirmName.trim() === (server?.name || '');
@@ -1568,6 +1580,10 @@ const ServerDetail: React.FC = () => {
 
           {activeTab === 'files' && <FileExplorer serverId={server.id} />}
 
+          {activeTab === 'addons' && supportsAddons && (
+            <AddonsPanel server={server} canManage={canModeratePlayers} />
+          )}
+
           {activeTab === 'settings' && (
             <div className="server-v2-settings-layout">
               {!canEditSettings ? (
@@ -2093,6 +2109,16 @@ const ServerDetail: React.FC = () => {
             <HardDrive size={16} />
             Files
           </button>
+          {supportsAddons && (
+            <button
+              type="button"
+              className={activeTab === 'addons' ? 'active' : ''}
+              onClick={() => setActiveTab('addons')}
+            >
+              <Package size={16} />
+              {addonsLabel}
+            </button>
+          )}
           <button
             type="button"
             className={activeTab === 'settings' ? 'active' : ''}

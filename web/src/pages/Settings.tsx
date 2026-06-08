@@ -34,6 +34,18 @@ const Settings: React.FC = () => {
   const [networkInterfaces, setNetworkInterfaces] = useState<string[]>([]);
   const [isSavingPublicIP, setIsSavingPublicIP] = useState(false);
   const [publicIPWarning, setPublicIPWarning] = useState<string | null>(null);
+  const [curseForgeKey, setCurseForgeKey] = useState('');
+  const [isSavingCurseForgeKey, setIsSavingCurseForgeKey] = useState(false);
+  const [isClearingCurseForgeKey, setIsClearingCurseForgeKey] = useState(false);
+  const [curseForgeKeyStatus, setCurseForgeKeyStatus] = useState<{
+    hasCustomKey: boolean;
+    hasEmbeddedKey: boolean;
+    effectiveSource: 'custom' | 'embedded' | 'none';
+  }>({
+    hasCustomKey: false,
+    hasEmbeddedKey: false,
+    effectiveSource: 'none',
+  });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -46,9 +58,10 @@ const Settings: React.FC = () => {
         setLogBufferSize(size);
         setInitialLogBufferSize(size);
 
-        const [publicIPRes, interfacesRes] = await Promise.all([
+        const [publicIPRes, interfacesRes, curseForgeRes] = await Promise.all([
           api.getPublicIP(),
           api.getNetworkInterfaces(),
+          api.getCurseForgeKeyStatus(),
         ]);
         const savedIP = publicIPRes.data?.public_ip ?? 'localhost';
         setPublicIP(savedIP);
@@ -56,6 +69,7 @@ const Settings: React.FC = () => {
 
         const ifaces = interfacesRes.data?.interfaces ?? [];
         setNetworkInterfaces(ifaces);
+        setCurseForgeKeyStatus(curseForgeRes.data);
 
         if (savedIP !== 'localhost' && !ifaces.includes(savedIP)) {
           setPublicIPWarning(
@@ -176,6 +190,37 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleSaveCurseForgeKey = async () => {
+    const value = curseForgeKey.trim();
+    if (!value) return;
+    setIsSavingCurseForgeKey(true);
+    try {
+      await api.setCurseForgeKey(value);
+      const status = await api.getCurseForgeKeyStatus();
+      setCurseForgeKeyStatus(status.data);
+      setCurseForgeKey('');
+    } catch (err) {
+      console.error('Failed to save CurseForge API key:', err);
+      alert('Failed to save CurseForge API key.');
+    } finally {
+      setIsSavingCurseForgeKey(false);
+    }
+  };
+
+  const handleClearCurseForgeKey = async () => {
+    setIsClearingCurseForgeKey(true);
+    try {
+      await api.clearCurseForgeKey();
+      const status = await api.getCurseForgeKeyStatus();
+      setCurseForgeKeyStatus(status.data);
+    } catch (err) {
+      console.error('Failed to clear CurseForge API key:', err);
+      alert('Failed to clear CurseForge API key.');
+    } finally {
+      setIsClearingCurseForgeKey(false);
+    }
+  };
+
   if (loading) return <div>Loading settings...</div>;
 
   return (
@@ -267,6 +312,54 @@ const Settings: React.FC = () => {
             disabled={isSavingPublicIP || publicIP === initialPublicIP}
           >
             {isSavingPublicIP ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '20px' }}>
+        <h2>CurseForge API</h2>
+        <p>
+          Configure an optional custom CurseForge API key. If set, it overrides
+          the embedded build key. Modrinth remains the default source.
+        </p>
+        <div className="form-group">
+          <label>Custom CurseForge API Key</label>
+          <input
+            type="password"
+            className="form-input"
+            value={curseForgeKey}
+            onChange={(e) => setCurseForgeKey(e.target.value)}
+            placeholder={
+              curseForgeKeyStatus.hasCustomKey
+                ? '••••••••••••••••'
+                : 'Enter your CurseForge API key'
+            }
+          />
+        </div>
+        <div
+          style={{ marginBottom: '12px', color: '#9ca3af', fontSize: '0.9rem' }}
+        >
+          <div>
+            Embedded key available:{' '}
+            {curseForgeKeyStatus.hasEmbeddedKey ? 'Yes' : 'No'}
+          </div>
+          <div>Effective source: {curseForgeKeyStatus.effectiveSource}</div>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Button
+            onClick={handleSaveCurseForgeKey}
+            disabled={isSavingCurseForgeKey || !curseForgeKey.trim()}
+          >
+            {isSavingCurseForgeKey ? 'Saving...' : 'Save Custom Key'}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleClearCurseForgeKey}
+            disabled={
+              isClearingCurseForgeKey || !curseForgeKeyStatus.hasCustomKey
+            }
+          >
+            {isClearingCurseForgeKey ? 'Clearing...' : 'Clear Custom Key'}
           </Button>
         </div>
       </div>

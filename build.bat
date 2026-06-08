@@ -21,7 +21,8 @@ if "%VERSION%"=="" (
     set VERSION=dev
 )
 echo "Building version: v%VERSION%"
-set LDFLAGS=-X "naviserver/internal/updater.CurrentVersion=v%VERSION%"
+set CURSEFORGE_KEY=%NAVISERVER_CURSEFORGE_API_KEY%
+set LDFLAGS=-X "naviserver/internal/updater.CurrentVersion=v%VERSION%" -X "naviserver/internal/addons.BuildCurseForgeAPIKey=%CURSEFORGE_KEY%"
 
 echo "Building server..."
 call go build -ldflags "-H=windowsgui %LDFLAGS%" -v -o dist\naviserver-server.exe .\cmd\server

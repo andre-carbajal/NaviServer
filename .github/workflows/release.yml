@@ -51,6 +51,7 @@ jobs:
         if: runner.os != 'Windows'
         env:
           CGO_ENABLED: 1
+          NAVISERVER_CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
@@ -67,6 +68,7 @@ jobs:
           .\build.bat
         env:
           CGO_ENABLED: 1
+          NAVISERVER_CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         shell: cmd
 
       - name: Set MYAPP_VERSION (Windows, strip v)

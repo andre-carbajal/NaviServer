@@ -91,3 +91,87 @@ export interface ServerSettings {
   viewDistance: number;
   simulationDistance: number;
 }
+
+export type AddonSource = 'modrinth' | 'curseforge' | 'manual';
+
+export type AddonStatus = 'installed' | 'update_available' | 'unknown_source';
+
+export type AddonType = 'mod' | 'plugin';
+
+export type AddonReleaseType = 'release' | 'beta' | 'alpha';
+
+export interface AddonVersion {
+  versionId: string;
+  versionName: string;
+  versionLabel: string;
+  releaseType: AddonReleaseType;
+  publishedAt?: string;
+  downloadUrl: string;
+  filename: string;
+  source: AddonSource;
+  fileId?: number;
+}
+
+export interface AddonDependency {
+  projectId: string;
+  fileId?: number;
+  name?: string;
+  required: boolean;
+  source: string;
+  description?: string;
+}
+
+export interface Addon {
+  id: string;
+  name: string;
+  fileName: string;
+  path: string;
+  iconUrl?: string;
+  source: AddonSource;
+  type: AddonType;
+  status: AddonStatus;
+  projectId?: string;
+  projectSlug?: string;
+  projectName?: string;
+  projectUrl?: string;
+  versionId?: string;
+  versionName?: string;
+  versionLabel?: string;
+  releaseType?: AddonReleaseType;
+  hashSha1?: string;
+  hashSha512?: string;
+  curseFingerprint?: number;
+  size: number;
+  modifiedAt: string;
+  latest?: AddonVersion;
+  missingDependencies?: AddonDependency[];
+}
+
+export interface AddonListResponse {
+  addonType: AddonType;
+  items: Addon[];
+}
+
+export interface AddonSearchResult {
+  source: AddonSource;
+  projectId: string;
+  projectSlug?: string;
+  projectName: string;
+  authorName?: string;
+  description?: string;
+  projectUrl?: string;
+  iconUrl?: string;
+  downloads?: number;
+  latest?: AddonVersion;
+  versions?: AddonVersion[];
+}
+
+export interface AddonSearchResponse {
+  items: AddonSearchResult[];
+  hasMore: boolean;
+  nextOffset: number;
+}
+
+export interface AddonVersionsResponse {
+  versions: AddonVersion[];
+}

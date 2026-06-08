@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"naviserver/internal/addons"
 	"naviserver/internal/api"
 	"naviserver/internal/backup"
 	"naviserver/internal/config"
@@ -224,6 +225,7 @@ func startDaemonService(ctx context.Context) {
 	hubManager := ws.NewHubManager(bufferSize)
 	supervisor := runner.NewSupervisor(store, jvmMgr, hubManager, cfg.ServersPath)
 	backupManager := backup.NewManager(cfg.ServersPath, cfg.BackupsPath, store)
+	addonsManager := addons.NewManager(srvMgr, store)
 
 	if err := backupManager.SyncBackups(); err != nil {
 		log.Printf("Warning syncing backups: %v", err)
@@ -234,7 +236,7 @@ func startDaemonService(ctx context.Context) {
 		log.Printf("Warning resetting states: %v", err)
 	}
 
-	apiServer := api.NewAPIServer(srvMgr, supervisor, store, hubManager, backupManager, cfg)
+	apiServer := api.NewAPIServer(srvMgr, supervisor, store, hubManager, backupManager, addonsManager, cfg)
 	listenAddr := net.JoinHostPort(cfg.API.Host, strconv.Itoa(cfg.API.Port))
 
 	httpServer := apiServer.CreateHTTPServer(listenAddr)

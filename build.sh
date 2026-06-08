@@ -25,7 +25,8 @@ if [ -z "${VERSION}" ]; then
 fi
 
 echo "Building Go backend with version: v${VERSION}"
-LDFLAGS="-X 'naviserver/internal/updater.CurrentVersion=v${VERSION}'"
+CURSEFORGE_API_KEY="${NAVISERVER_CURSEFORGE_API_KEY:-}"
+LDFLAGS="-X 'naviserver/internal/updater.CurrentVersion=v${VERSION}' -X 'naviserver/internal/addons.BuildCurseForgeAPIKey=${CURSEFORGE_API_KEY}'"
 
 echo "Building server..."
 if [[ "$OSTYPE" == "darwin"* ]]; then

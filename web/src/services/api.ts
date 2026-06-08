@@ -2,6 +2,9 @@ import type { AxiosProgressEvent } from 'axios';
 import axios from 'axios';
 
 import type {
+  AddonListResponse,
+  AddonSearchResponse,
+  AddonVersionsResponse,
   Backup,
   FileEntry,
   Permission,
@@ -193,6 +196,15 @@ export const api = {
     apiInstance.get<{ public_ip: string }>('/settings/public-ip'),
   updatePublicIP: (data: { public_ip: string }) =>
     apiInstance.put('/settings/public-ip', data),
+  getCurseForgeKeyStatus: () =>
+    apiInstance.get<{
+      hasCustomKey: boolean;
+      hasEmbeddedKey: boolean;
+      effectiveSource: 'custom' | 'embedded' | 'none';
+    }>('/settings/curseforge-key'),
+  setCurseForgeKey: (apiKey: string) =>
+    apiInstance.put('/settings/curseforge-key', { apiKey }),
+  clearCurseForgeKey: () => apiInstance.delete('/settings/curseforge-key'),
   getNetworkInterfaces: () =>
     apiInstance.get<{ interfaces: string[] }>('/system/interfaces'),
   listBackups: (serverId: string) =>
@@ -285,6 +297,65 @@ export const api = {
       },
     });
   },
+  listAddons: (serverId: string) =>
+    apiInstance.get<AddonListResponse>(`/servers/${serverId}/addons`),
+  syncAddons: (serverId: string) =>
+    apiInstance.post<AddonListResponse>(`/servers/${serverId}/addons/sync`),
+  searchAddons: (
+    serverId: string,
+    data: {
+      query: string;
+      source?: 'modrinth' | 'curseforge';
+      offset?: number;
+      limit?: number;
+    },
+  ) =>
+    apiInstance.post<AddonSearchResponse>(
+      `/servers/${serverId}/addons/search`,
+      data,
+      {
+        timeout: 30000,
+      },
+    ),
+  getAddonVersions: (
+    serverId: string,
+    data: {
+      source: 'modrinth' | 'curseforge';
+      projectId: string;
+    },
+  ) =>
+    apiInstance.post<AddonVersionsResponse>(
+      `/servers/${serverId}/addons/versions`,
+      data,
+      {
+        timeout: 30000,
+      },
+    ),
+  installAddon: (
+    serverId: string,
+    data: {
+      source: 'modrinth' | 'curseforge';
+      projectId: string;
+      versionId?: string;
+      fileId?: number;
+      includeDependencies?: boolean;
+    },
+  ) => apiInstance.post(`/servers/${serverId}/addons/install`, data),
+  updateAddon: (
+    serverId: string,
+    addonId: string,
+    data?: {
+      includeDependencies?: boolean;
+    },
+  ) => apiInstance.post(`/servers/${serverId}/addons/${addonId}/update`, data),
+  updateAllAddons: (
+    serverId: string,
+    data?: {
+      includeDependencies?: boolean;
+    },
+  ) => apiInstance.post(`/servers/${serverId}/addons/update-all`, data),
+  deleteAddon: (serverId: string, addonId: string) =>
+    apiInstance.delete(`/servers/${serverId}/addons/${addonId}`),
   login: (username: string, password: string) =>
     apiInstance.post('/auth/login', { username, password }),
   logout: () => apiInstance.post('/auth/logout'),
