@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"strings"
@@ -14,8 +15,7 @@ import (
 func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secretKey string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-NaviServer-Client") == "CLI" {
-			remoteAddr := r.RemoteAddr
-			if strings.HasPrefix(remoteAddr, "127.0.0.1") || strings.HasPrefix(remoteAddr, "[::1]") {
+			if api.isValidCLIToken(r.Header.Get("X-NaviServer-CLI-Token")) {
 				ctx := context.WithValue(r.Context(), domain.UserContextKey, map[string]string{
 					"id":   "cli",
 					"role": "admin",
@@ -23,6 +23,9 @@ func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secret
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
+
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
 
 		var tokenString string
@@ -94,4 +97,22 @@ func (api *Server) AuthMiddleware(next http.Handler, requiredRole string, secret
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (api *Server) isValidCLIToken(token string) bool {
+	if api.Config == nil {
+		return false
+	}
+
+	expected := strings.TrimSpace(api.Config.CLIToken)
+	provided := strings.TrimSpace(token)
+	if expected == "" || provided == "" {
+		return false
+	}
+
+	if len(expected) != len(provided) {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) == 1
 }

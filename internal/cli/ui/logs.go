@@ -550,7 +550,7 @@ func streamServerLogs(client *sdk.Client, id string, out chan<- logStreamEvent, 
 	}
 
 	header := http.Header{}
-	header.Set("X-NaviServer-Client", "CLI")
+	client.AddCLIHeaders(header)
 
 	var conn *websocket.Conn
 	attempt := 0

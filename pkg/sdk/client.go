@@ -13,6 +13,7 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+	cliToken   string
 }
 
 type APIError struct {
@@ -27,15 +28,26 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("api error (%d)", e.StatusCode)
 }
 
-func NewClient(baseURL string) *Client {
-	return &Client{
+func NewClient(baseURL string, cliToken ...string) *Client {
+	client := &Client{
 		baseURL:    baseURL,
 		httpClient: &http.Client{},
 	}
+	if len(cliToken) > 0 {
+		client.cliToken = strings.TrimSpace(cliToken[0])
+	}
+	return client
 }
 
 func (c *Client) BaseURL() string {
 	return c.baseURL
+}
+
+func (c *Client) AddCLIHeaders(header http.Header) {
+	header.Set("X-NaviServer-Client", "CLI")
+	if c.cliToken != "" {
+		header.Set("X-NaviServer-CLI-Token", c.cliToken)
+	}
 }
 
 func (c *Client) doRequest(method, path string, body interface{}) (*http.Response, error) {
@@ -53,7 +65,7 @@ func (c *Client) doRequest(method, path string, body interface{}) (*http.Respons
 		return nil, err
 	}
 
-	req.Header.Set("X-NaviServer-Client", "CLI")
+	c.AddCLIHeaders(req.Header)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

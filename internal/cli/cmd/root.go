@@ -12,6 +12,7 @@ import (
 var (
 	Client       *sdk.Client
 	BaseURL      string
+	CLIToken     string
 	outputFormat string
 )
 
@@ -29,7 +30,7 @@ var RootCmd = &cobra.Command{
 			return newValidationError("invalid --output value; use 'table' or 'json'")
 		}
 
-		Client = sdk.NewClient(BaseURL)
+		Client = sdk.NewClient(BaseURL, CLIToken)
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -37,7 +38,8 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-func Execute(port int) {
+func Execute(port int, cliToken string) {
+	CLIToken = cliToken
 	RootCmd.PersistentFlags().StringVar(&BaseURL, "url", fmt.Sprintf("http://localhost:%d", port), "URL of the NaviServer Daemon")
 	RootCmd.PersistentFlags().StringVar(&outputFormat, "output", "table", "Output format: table|json")
 

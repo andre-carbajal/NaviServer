@@ -777,7 +777,7 @@ func connectToProgress(client *sdk.Client, id string) tea.Cmd {
 		}
 
 		header := http.Header{}
-		header.Set("X-NaviServer-Client", "CLI")
+		client.AddCLIHeaders(header)
 
 		conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
 		if err != nil {

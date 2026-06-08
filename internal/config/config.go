@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -18,6 +18,8 @@ const (
 	defaultBackupsDir    = "backups"
 	defaultRuntimesDir   = "runtimes"
 	defaultDatabaseFile  = "manager.db"
+	secretFileName       = ".naviserver_secret"
+	cliTokenFileName     = ".naviserver_cli_token"
 	defaultPort          = 23008
 	devPort              = 23009
 	DefaultLogBufferSize = 1000
@@ -30,6 +32,7 @@ const (
 	envAllowedOrigins  = "NAVISERVER_ALLOWED_ORIGINS"
 	envAllowedOrigins2 = "NAVISERVER_CORS_ALLOWED_ORIGINS"
 	envCurseForgeKey   = "CURSEFORGE_API_KEY"
+	envCLIToken        = "NAVISERVER_CLI_TOKEN"
 )
 
 type APIConfig struct {
@@ -46,6 +49,7 @@ type Config struct {
 	API              APIConfig `json:"api"`
 	CurseForgeAPIKey string    `json:"-"`
 	JWTSecret        string    `json:"-"`
+	CLIToken         string    `json:"-"`
 }
 
 func LoadConfig(configDir string) (*Config, error) {
@@ -75,7 +79,9 @@ func LoadConfig(configDir string) (*Config, error) {
 	}
 	cfg.applyEnvOverrides()
 
-	cfg.JWTSecret = LoadOrGenerateSecret(configDir)
+	if err := cfg.loadRuntimeSecrets(configDir); err != nil {
+		return nil, err
+	}
 
 	return &cfg, nil
 }
@@ -197,32 +203,87 @@ func createDefaultConfig(configPath, configDir string) (*Config, error) {
 		return nil, err
 	}
 
-	cfg.JWTSecret = LoadOrGenerateSecret(configDir)
+	if err := cfg.loadRuntimeSecrets(configDir); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
-func LoadOrGenerateSecret(configDir string) string {
-	if envSecret := os.Getenv("NAVISERVER_SECRET_KEY"); envSecret != "" {
-		return envSecret
+func (cfg *Config) loadRuntimeSecrets(configDir string) error {
+	jwtSecret, err := LoadOrGenerateSecret(configDir)
+	if err != nil {
+		return err
 	}
 
-	secretPath := filepath.Join(configDir, ".naviserver_secret")
+	cliToken, err := LoadOrGenerateCLIToken(configDir)
+	if err != nil {
+		return err
+	}
+
+	cfg.JWTSecret = jwtSecret
+	cfg.CLIToken = cliToken
+	return nil
+}
+
+func LoadOrGenerateSecret(configDir string) (string, error) {
+	return loadOrGenerateSecretFile(configDir, secretFileName, "NAVISERVER_SECRET_KEY")
+}
+
+func LoadOrGenerateCLIToken(configDir string) (string, error) {
+	return loadOrGenerateSecretFile(configDir, cliTokenFileName, envCLIToken)
+}
+
+func loadOrGenerateSecretFile(configDir, fileName, envName string) (string, error) {
+	if envSecret := strings.TrimSpace(os.Getenv(envName)); envSecret != "" {
+		return envSecret, nil
+	}
+
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	secretPath := filepath.Join(configDir, fileName)
 
 	data, err := os.ReadFile(secretPath)
 	if err == nil {
-		return string(data)
+		return strings.TrimSpace(string(data)), nil
+	}
+	if !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to read %s: %w", fileName, err)
 	}
 
-	newSecret := make([]byte, 32)
-	if _, err := rand.Read(newSecret); err != nil {
-		return fmt.Sprintf("naviserver-secret-%d", time.Now().UnixNano())
+	secretStr, err := generateRandomHex(rand.Reader, 32)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate secure %s: %w", fileName, err)
 	}
 
-	secretStr := hex.EncodeToString(newSecret)
+	if err := os.WriteFile(secretPath, []byte(secretStr), 0600); err != nil {
+		return "", fmt.Errorf("failed to write %s: %w", fileName, err)
+	}
 
-	_ = os.WriteFile(secretPath, []byte(secretStr), 0600)
+	return secretStr, nil
+}
 
-	return secretStr
+func generateRandomHex(reader io.Reader, byteCount int) (string, error) {
+	secret := make([]byte, byteCount)
+	if _, err := io.ReadFull(reader, secret); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(secret), nil
+}
+
+func ResolveConfigDir() (string, error) {
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	appName := "naviserver"
+	if IsDev() {
+		appName = "naviserver-dev"
+	}
+
+	return filepath.Join(userConfigDir, appName), nil
 }
 
 func IsDev() bool {

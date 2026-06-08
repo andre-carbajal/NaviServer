@@ -226,7 +226,12 @@ func (api *Server) corsMiddleware(next http.Handler) http.Handler {
 }
 
 func (api *Server) isAllowedOrigin(origin string, r *http.Request) bool {
-	if strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1") {
+	originURL, err := url.Parse(origin)
+	if err != nil || originURL.Scheme == "" || originURL.Hostname() == "" {
+		return false
+	}
+
+	if isLocalhostOrigin(originURL.Hostname()) {
 		return true
 	}
 
@@ -239,15 +244,19 @@ func (api *Server) isAllowedOrigin(origin string, r *http.Request) bool {
 		}
 	}
 
-	originURL, err := url.Parse(origin)
-	if err != nil || originURL.Hostname() == "" {
-		return false
-	}
-
 	requestHost := r.Host
 	if host, _, err := net.SplitHostPort(r.Host); err == nil {
 		requestHost = host
 	}
 
 	return strings.EqualFold(originURL.Hostname(), requestHost)
+}
+
+func isLocalhostOrigin(hostname string) bool {
+	switch strings.ToLower(hostname) {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
 }

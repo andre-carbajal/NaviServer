@@ -7,5 +7,11 @@ import (
 
 func main() {
 	port := config.GetPort()
-	cmd.Execute(port)
+	cliToken := ""
+	if configDir, err := config.ResolveConfigDir(); err == nil {
+		if token, err := config.LoadOrGenerateCLIToken(configDir); err == nil {
+			cliToken = token
+		}
+	}
+	cmd.Execute(port, cliToken)
 }

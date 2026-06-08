@@ -232,7 +232,7 @@ func connectProgressWS(requestID string) (*websocket.Conn, error) {
 	}
 
 	header := http.Header{}
-	header.Set("X-NaviServer-Client", "CLI")
+	Client.AddCLIHeaders(header)
 
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
 	if err == nil {
