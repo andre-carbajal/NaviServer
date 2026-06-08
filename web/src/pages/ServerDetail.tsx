@@ -61,7 +61,12 @@ import { useConsole } from '../hooks/useConsole';
 import { useCopy } from '../hooks/useCopy';
 import { useServerStats } from '../hooks/useServerStats';
 import { api } from '../services/api';
-import type { PlayerInfo, Server, ServerSettings } from '../types';
+import type {
+  PlayerInfo,
+  Server,
+  ServerSettings,
+  ServerVersionUpdateResult,
+} from '../types';
 
 type DetailTab =
   | 'performance'
@@ -307,8 +312,9 @@ const ServerDetail: React.FC = () => {
   const [isVersionUpdateModalOpen, setIsVersionUpdateModalOpen] =
     useState(false);
   const [versionUpdateModalTitle, setVersionUpdateModalTitle] = useState('');
-  const [versionUpdateModalMessage, setVersionUpdateModalMessage] =
-    useState('');
+  const [versionUpdateResult, setVersionUpdateResult] =
+    useState<ServerVersionUpdateResult | null>(null);
+  const [versionUpdateError, setVersionUpdateError] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [isDeletingServer, setIsDeletingServer] = useState(false);
@@ -730,12 +736,18 @@ const ServerDetail: React.FC = () => {
   const handleVersionUpdate = async () => {
     if (!server || !selectedVersion) return;
     try {
+      setVersionUpdateResult(null);
+      setVersionUpdateError('');
+      setVersionUpdateModalTitle('Updating Server Version');
+      setIsVersionUpdateModalOpen(true);
       setIsUpdatingVersion(true);
-      await api.updateServerVersion(server.id, { version: selectedVersion });
+      const result = await api.updateServerVersion(server.id, {
+        version: selectedVersion,
+        includeDependencies: true,
+      });
       await Promise.all([fetchServer(), fetchSettingsData()]);
       setVersionUpdateModalTitle('Version Updated');
-      setVersionUpdateModalMessage('Server version updated successfully.');
-      setIsVersionUpdateModalOpen(true);
+      setVersionUpdateResult(result.data);
     } catch (err) {
       console.error('Failed to update server version:', err);
       let errorMessage = 'Failed to update server version.';
@@ -752,8 +764,7 @@ const ServerDetail: React.FC = () => {
         }
       }
       setVersionUpdateModalTitle('Version Update Failed');
-      setVersionUpdateModalMessage(errorMessage);
-      setIsVersionUpdateModalOpen(true);
+      setVersionUpdateError(errorMessage);
     } finally {
       setIsUpdatingVersion(false);
     }
@@ -872,6 +883,70 @@ const ServerDetail: React.FC = () => {
     server?.loader || '',
   );
   const addonsLabel = server?.loader === 'paper' ? 'Plugins' : 'Mods';
+
+  const renderVersionUpdateProgress = () => (
+    <div className="server-v2-version-update-progress">
+      <div className="server-v2-version-update-spinner">
+        <LoaderCircle size={28} className="spin" />
+      </div>
+      <div>
+        <strong>Updating to {selectedVersion}</strong>
+        <p>Creating a backup, updating the server, and checking addons.</p>
+      </div>
+      <div className="server-v2-version-update-steps">
+        <span>Backup server files</span>
+        <span>Install new server version</span>
+        <span>Update or disable incompatible addons</span>
+      </div>
+    </div>
+  );
+
+  const renderVersionUpdateResult = () => {
+    if (!versionUpdateResult) return null;
+    const addons = versionUpdateResult.addons;
+    const updatedCount = addons?.updated.length ?? 0;
+    const disabledCount = addons?.disabled.length ?? 0;
+    const failedCount = addons?.failed.length ?? 0;
+
+    return (
+      <div className="server-v2-version-update-result">
+        <div className="server-v2-version-update-hero success">
+          <Shield size={22} />
+          <div>
+            <strong>Server updated to {versionUpdateResult.version}</strong>
+            <span>Backup created before applying changes.</span>
+          </div>
+        </div>
+        <div className="server-v2-version-update-backup">
+          <span>Backup</span>
+          <code>{versionUpdateResult.backupName}</code>
+        </div>
+        <div className="server-v2-version-update-grid">
+          <div>
+            <strong>{updatedCount}</strong>
+            <span>Addons updated</span>
+          </div>
+          <div>
+            <strong>{disabledCount}</strong>
+            <span>Addons disabled</span>
+          </div>
+          <div>
+            <strong>{failedCount}</strong>
+            <span>Addon failures</span>
+          </div>
+        </div>
+        {failedCount > 0 && addons && (
+          <div className="server-v2-version-update-failures">
+            {addons.failed.slice(0, 3).map((failure) => (
+              <p key={failure.id}>
+                <strong>{failure.name || failure.id}:</strong> {failure.reason}
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
   const isDeleteNameMatch =
     deleteConfirmName.trim() !== '' &&
     deleteConfirmName.trim() === (server?.name || '');
@@ -2246,20 +2321,39 @@ const ServerDetail: React.FC = () => {
 
       <Modal
         isOpen={isVersionUpdateModalOpen}
-        onClose={() => setIsVersionUpdateModalOpen(false)}
+        onClose={() => {
+          if (!isUpdatingVersion) setIsVersionUpdateModalOpen(false);
+        }}
         title={versionUpdateModalTitle}
+        hideCloseButton={isUpdatingVersion}
       >
         <div className="server-v2-delete-modal">
-          <p>{versionUpdateModalMessage}</p>
-          <div className="modal-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setIsVersionUpdateModalOpen(false)}
-            >
-              OK
-            </Button>
-          </div>
+          {isUpdatingVersion && renderVersionUpdateProgress()}
+          {!isUpdatingVersion &&
+            versionUpdateResult &&
+            renderVersionUpdateResult()}
+          {!isUpdatingVersion && versionUpdateError && (
+            <div className="server-v2-version-update-result">
+              <div className="server-v2-version-update-hero danger">
+                <Ban size={22} />
+                <div>
+                  <strong>Update failed</strong>
+                  <span>{versionUpdateError}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {!isUpdatingVersion && (
+            <div className="modal-actions">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsVersionUpdateModalOpen(false)}
+              >
+                OK
+              </Button>
+            </div>
+          )}
         </div>
       </Modal>
 

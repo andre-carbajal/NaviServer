@@ -11,14 +11,20 @@ import (
 	"strings"
 )
 
-const PaperAPIURL = "https://api.papermc.io/v2/projects/paper/"
+const PaperAPIURL = "https://fill.papermc.io/v3/projects/paper"
 
 type PaperVersionsResponse struct {
-	Versions []string `json:"versions"`
+	Versions map[string][]string `json:"versions"`
 }
 
-type PaperBuildsResponse struct {
-	Builds []int `json:"builds"`
+type paperBuildDownload struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+type paperBuild struct {
+	ID        int                           `json:"id"`
+	Downloads map[string]paperBuildDownload `json:"downloads"`
 }
 
 type PaperLoader struct{}
@@ -90,32 +96,44 @@ func (l *PaperLoader) Load(options LoaderOptions, destDir string, progressChan c
 		return "", fmt.Errorf("version %s not found in Paper", versionID)
 	}
 
+	builds, err := l.getBuildDetails(versionID)
+	if err != nil {
+		return "", fmt.Errorf("error getting Paper builds: %w", err)
+	}
+	if len(builds) == 0 {
+		return "", fmt.Errorf("no builds found for version %s", versionID)
+	}
+
 	selectedBuild := options.BuildVersion
 	if selectedBuild == "" {
 		if progressChan != nil {
 			progressChan <- domain.ProgressEvent{Message: "Getting latest build..."}
 		}
-		latestBuild, err := l.getLatestBuild(versionID)
-		if err != nil {
-			return "", fmt.Errorf("error getting latest build: %w", err)
-		}
-		selectedBuild = fmt.Sprintf("%d", latestBuild)
+		selectedBuild = fmt.Sprintf("%d", builds[0].ID)
 	}
-	buildInt := 0
-	_, _ = fmt.Sscanf(selectedBuild, "%d", &buildInt)
-	if buildInt <= 0 {
+
+	var build *paperBuild
+	for i := range builds {
+		if fmt.Sprintf("%d", builds[i].ID) == selectedBuild {
+			build = &builds[i]
+			break
+		}
+	}
+	if build == nil {
 		return "", fmt.Errorf("invalid Paper build version: %s", selectedBuild)
 	}
 
-	downloadURL := fmt.Sprintf("%sversions/%s/builds/%d/downloads/paper-%s-%d.jar",
-		PaperAPIURL, versionID, buildInt, versionID, buildInt)
+	download, ok := build.Downloads["server:default"]
+	if !ok || strings.TrimSpace(download.URL) == "" {
+		return "", fmt.Errorf("paper build %s does not provide a server download", selectedBuild)
+	}
 
 	finalPath := filepath.Join(destDir, "server.jar")
 	if progressChan != nil {
-		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Downloading Paper server.jar from: %s", downloadURL)}
+		progressChan <- domain.ProgressEvent{Message: fmt.Sprintf("Downloading Paper server.jar from: %s", download.URL)}
 	}
 
-	err = l.downloadFile(downloadURL, finalPath, progressChan)
+	err = l.downloadFile(download.URL, finalPath, progressChan)
 	if err != nil {
 		return "", err
 	}
@@ -142,32 +160,42 @@ func (l *PaperLoader) getVersions() ([]string, error) {
 		return nil, err
 	}
 
-	var filteredVersions []string
-	for _, v := range response.Versions {
-		if !strings.Contains(v, "-") {
-			filteredVersions = append(filteredVersions, v)
-		}
-	}
-
-	SortVersions(filteredVersions)
-	return filteredVersions, nil
+	return stablePaperVersions(response.Versions), nil
 }
 
-func (l *PaperLoader) getLatestBuild(version string) (int, error) {
-	builds, err := l.getBuilds(version)
-	if err != nil {
-		return 0, err
+func stablePaperVersions(groups map[string][]string) []string {
+	seen := make(map[string]bool)
+	versions := make([]string, 0)
+	for _, groupedVersions := range groups {
+		for _, version := range groupedVersions {
+			if strings.Contains(version, "-") || seen[version] {
+				continue
+			}
+			versions = append(versions, version)
+			seen[version] = true
+		}
 	}
-	if len(builds) == 0 {
-		return 0, fmt.Errorf("no builds found for version %s", version)
-	}
-	latest := 0
-	_, _ = fmt.Sscanf(builds[0], "%d", &latest)
-	return latest, nil
+	SortVersions(versions)
+	return versions
 }
 
 func (l *PaperLoader) getBuilds(version string) ([]string, error) {
-	url := fmt.Sprintf("%sversions/%s", PaperAPIURL, version)
+	builds, err := l.getBuildDetails(version)
+	if err != nil {
+		return nil, err
+	}
+	if len(builds) == 0 {
+		return nil, fmt.Errorf("no builds found for version %s", version)
+	}
+	buildVersions := make([]string, 0, len(builds))
+	for _, build := range builds {
+		buildVersions = append(buildVersions, fmt.Sprintf("%d", build.ID))
+	}
+	return buildVersions, nil
+}
+
+func (l *PaperLoader) getBuildDetails(version string) ([]paperBuild, error) {
+	url := fmt.Sprintf("%s/versions/%s/builds", PaperAPIURL, version)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -178,17 +206,9 @@ func (l *PaperLoader) getBuilds(version string) ([]string, error) {
 		return nil, fmt.Errorf("API responded with status %d", resp.StatusCode)
 	}
 
-	var response PaperBuildsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	builds := make([]paperBuild, 0)
+	if err := json.NewDecoder(resp.Body).Decode(&builds); err != nil {
 		return nil, err
-	}
-
-	if len(response.Builds) == 0 {
-		return nil, fmt.Errorf("no builds found for version %s", version)
-	}
-	builds := make([]string, 0, len(response.Builds))
-	for i := len(response.Builds) - 1; i >= 0; i-- {
-		builds = append(builds, fmt.Sprintf("%d", response.Builds[i]))
 	}
 	return builds, nil
 }

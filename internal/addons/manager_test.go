@@ -1,8 +1,13 @@
 package addons
 
 import (
+	"naviserver/internal/domain"
+	"naviserver/internal/server"
+	"naviserver/internal/storage"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestAddonScopeForLoader(t *testing.T) {
@@ -198,5 +203,35 @@ func TestIsLikelyClientOnlyCurseProjectAllowsCommonServerMods(t *testing.T) {
 	}
 	if isLikelyClientOnlyCurseProject("Bookshelf", "A common library mod", categories) {
 		t.Fatalf("did not expect library mod to be flagged")
+	}
+}
+
+func TestUpdateAddonsForServerVersionNoopsForVanilla(t *testing.T) {
+	tempDir := t.TempDir()
+	store, err := storage.NewGormStore(filepath.Join(tempDir, "test.db"))
+	if err != nil {
+		t.Fatalf("failed to create store: %v", err)
+	}
+	srv := &domain.Server{
+		ID:         "srv-1",
+		Name:       "Vanilla",
+		FolderName: "vanilla",
+		Version:    "1.21.1",
+		Loader:     "vanilla",
+		Status:     "STOPPED",
+		CreatedAt:  time.Now(),
+	}
+	if err := store.SaveServer(srv); err != nil {
+		t.Fatalf("failed to save server: %v", err)
+	}
+
+	serverManager := server.NewManager(filepath.Join(tempDir, "servers"), store)
+	m := NewManager(serverManager, store)
+	result, err := m.UpdateAddonsForServerVersion(nil, srv.ID, true)
+	if err != nil {
+		t.Fatalf("expected vanilla no-op, got %v", err)
+	}
+	if result == nil || len(result.Updated) != 0 || len(result.Disabled) != 0 || len(result.Failed) != 0 {
+		t.Fatalf("expected empty no-op result, got %#v", result)
 	}
 }

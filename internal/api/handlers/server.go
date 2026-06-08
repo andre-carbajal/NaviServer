@@ -10,6 +10,7 @@ import (
 	"naviserver/internal/loader"
 	"naviserver/internal/server"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
@@ -336,37 +337,111 @@ func (h *ServerHandler) HandleUpdateServerVersion(w http.ResponseWriter, r *http
 		http.Error(w, "Missing ID", http.StatusBadRequest)
 		return
 	}
-
 	var req struct {
-		Version string `json:"version"`
+		Version             string `json:"version"`
+		IncludeDependencies *bool  `json:"includeDependencies,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+	includeDependencies := true
+	if req.IncludeDependencies != nil {
+		includeDependencies = *req.IncludeDependencies
+	}
 
-	if err := h.Manager.UpdateServerVersion(id, req.Version); err != nil {
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "not found") {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		if strings.Contains(msg, "must be stopped") {
-			http.Error(w, err.Error(), http.StatusConflict)
-			return
-		}
-		if strings.Contains(msg, "version") && (strings.Contains(msg, "required") ||
-			strings.Contains(msg, "not available") ||
-			strings.Contains(msg, "must be greater") ||
-			strings.Contains(msg, "unable to compare")) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	srv, version, err := h.Manager.ValidateServerVersionUpdate(id, req.Version)
+	if err != nil {
+		h.writeVersionUpdateError(w, err)
+		return
+	}
+	if h.BackupManager == nil {
+		http.Error(w, "Backup manager is not configured", http.StatusServiceUnavailable)
 		return
 	}
 
+	userID := "system"
+	if userCtx := r.Context().Value(domain.UserContextKey); userCtx != nil {
+		claims := userCtx.(map[string]string)
+		if claims["id"] != "" {
+			userID = claims["id"]
+		}
+	}
+
+	backupLabel := fmt.Sprintf("pre-update-%s-%s-to-%s", srv.Name, srv.Version, version)
+	backupPath, err := h.BackupManager.CreateBackup(r.Context(), id, backupLabel, userID, nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to create pre-update backup: %v", err), http.StatusInternalServerError)
+		return
+	}
+	backupName := filepath.Base(backupPath)
+
+	resolvedVersion, err := h.Manager.ApplyServerVersionUpdate(id, version)
+	if err != nil {
+		restoreErr := h.BackupManager.RestoreBackup(backupName, id, "", 0, "", "")
+		if restoreErr != nil {
+			http.Error(
+				w,
+				fmt.Sprintf("version update failed: %v; backup %s restore failed: %v", err, backupName, restoreErr),
+				http.StatusInternalServerError,
+			)
+			return
+		}
+		http.Error(
+			w,
+			fmt.Sprintf("version update failed: %v; restored backup %s", err, backupName),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	var addonsResult any
+	if h.AddonsManager != nil {
+		result, err := h.AddonsManager.UpdateAddonsForServerVersion(r.Context(), id, includeDependencies)
+		if err != nil {
+			addonsResult = map[string]any{
+				"updated":  []string{},
+				"disabled": []string{},
+				"failed": []map[string]string{{
+					"id":     "addons",
+					"reason": err.Error(),
+				}},
+			}
+		} else {
+			addonsResult = result
+		}
+	}
+
+	response := map[string]any{
+		"backupName":    backupName,
+		"restored":      false,
+		"serverUpdated": true,
+		"version":       resolvedVersion,
+		"addons":        addonsResult,
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *ServerHandler) writeVersionUpdateError(w http.ResponseWriter, err error) {
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "not found") {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if strings.Contains(msg, "must be stopped") {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+	if strings.Contains(msg, "version") && (strings.Contains(msg, "required") ||
+		strings.Contains(msg, "not available") ||
+		strings.Contains(msg, "must be greater") ||
+		strings.Contains(msg, "unable to compare")) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 func (h *ServerHandler) HandleDeleteServer(w http.ResponseWriter, r *http.Request) {

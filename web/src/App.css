@@ -3739,3 +3739,164 @@ nav {
     min-width: 0;
   }
 }
+
+.server-v2-version-update-progress,
+.server-v2-version-update-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.server-v2-version-update-progress {
+  align-items: center;
+  text-align: center;
+}
+
+.server-v2-version-update-spinner {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(37, 99, 235, 0.18);
+  color: #93c5fd;
+}
+
+.server-v2-version-update-progress strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
+.server-v2-version-update-progress p {
+  margin: 6px 0 0;
+  color: #cbd5e1;
+}
+
+.server-v2-version-update-steps {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.server-v2-version-update-steps span {
+  position: relative;
+  padding: 10px 12px 10px 34px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.42);
+  color: #dbeafe;
+  text-align: left;
+}
+
+.server-v2-version-update-steps span::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.16);
+  transform: translateY(-50%);
+}
+
+.server-v2-version-update-hero {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 16px;
+}
+
+.server-v2-version-update-hero.success {
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+.server-v2-version-update-hero.danger {
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+}
+
+.server-v2-version-update-hero strong,
+.server-v2-version-update-hero span {
+  display: block;
+}
+
+.server-v2-version-update-hero strong {
+  color: #f8fafc;
+}
+
+.server-v2-version-update-hero span {
+  margin-top: 3px;
+  color: #cbd5e1;
+}
+
+.server-v2-version-update-backup {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.server-v2-version-update-backup span {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.server-v2-version-update-backup code {
+  overflow-wrap: anywhere;
+  color: #e0f2fe;
+}
+
+.server-v2-version-update-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.server-v2-version-update-grid div {
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.server-v2-version-update-grid strong,
+.server-v2-version-update-grid span {
+  display: block;
+}
+
+.server-v2-version-update-grid strong {
+  color: #f8fafc;
+  font-size: 1.25rem;
+}
+
+.server-v2-version-update-grid span {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.server-v2-version-update-failures {
+  display: grid;
+  gap: 8px;
+}
+
+.server-v2-version-update-failures p {
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(248, 113, 113, 0.12);
+  color: #fecaca;
+}

@@ -11,6 +11,7 @@ import type {
   Server,
   ServerSettings,
   ServerStats,
+  ServerVersionUpdateResult,
 } from '../types';
 
 const API_HOST = window.location.hostname;
@@ -179,8 +180,15 @@ export const api = {
   ) => apiInstance.put<Server>(`/servers/${id}/auto-backup`, data),
   getServerVersionOptions: (id: string) =>
     apiInstance.get<{ versions: string[] }>(`/servers/${id}/version-options`),
-  updateServerVersion: (id: string, data: { version: string }) =>
-    apiInstance.post(`/servers/${id}/version-update`, data),
+  updateServerVersion: (
+    id: string,
+    data: { version: string; includeDependencies?: boolean },
+  ) =>
+    apiInstance.post<ServerVersionUpdateResult>(
+      `/servers/${id}/version-update`,
+      data,
+      { timeout: 300000 },
+    ),
   deleteServer: (id: string) => apiInstance.delete(`/servers/${id}`),
   startServer: (id: string) => apiInstance.post(`/servers/${id}/start`),
   stopServer: (id: string) => apiInstance.post(`/servers/${id}/stop`),

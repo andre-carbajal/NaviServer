@@ -894,6 +894,10 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 }
 
 func unarchive(src, dest string) error {
+	if strings.HasSuffix(strings.ToLower(src), ".zip") {
+		return unarchiveZip(src, dest)
+	}
+
 	archive, err := unarr.NewArchive(src)
 	if err != nil {
 		return err
@@ -936,6 +940,63 @@ func unarchive(src, dest string) error {
 		f.Close()
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func unarchiveZip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	destClean := filepath.Clean(dest)
+	if err := os.MkdirAll(destClean, 0755); err != nil {
+		return err
+	}
+
+	for _, entry := range r.File {
+		name := filepath.Clean(entry.Name)
+		if name == "." || strings.HasPrefix(name, "..") || filepath.IsAbs(name) {
+			return fmt.Errorf("illegal archive entry: %s", entry.Name)
+		}
+
+		target := filepath.Join(destClean, name)
+		if !strings.HasPrefix(target, destClean+string(os.PathSeparator)) && target != destClean {
+			return fmt.Errorf("illegal archive entry: %s", entry.Name)
+		}
+
+		if entry.FileInfo().IsDir() {
+			if err := os.MkdirAll(target, entry.Mode()); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+
+		rc, err := entry.Open()
+		if err != nil {
+			return err
+		}
+		out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, entry.Mode())
+		if err != nil {
+			rc.Close()
+			return err
+		}
+		_, copyErr := io.Copy(out, rc)
+		closeErr := out.Close()
+		rc.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+		if closeErr != nil {
+			return closeErr
 		}
 	}
 

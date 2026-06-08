@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"naviserver/internal/domain"
 	"naviserver/internal/loader"
 	"path/filepath"
 	"strconv"
@@ -218,33 +219,33 @@ func (m *Manager) GetVersionOptions(id string) ([]string, error) {
 	return versions, nil
 }
 
-func (m *Manager) UpdateServerVersion(id string, targetVersion string) error {
+func (m *Manager) ValidateServerVersionUpdate(id string, targetVersion string) (*domain.Server, string, error) {
 	srv, err := m.GetServer(id)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	if srv == nil {
-		return fmt.Errorf("server not found")
+		return nil, "", fmt.Errorf("server not found")
 	}
 	if srv.Status != "STOPPED" {
-		return fmt.Errorf("server must be stopped to update version")
+		return nil, "", fmt.Errorf("server must be stopped to update version")
 	}
 
 	version := strings.TrimSpace(targetVersion)
 	if version == "" {
-		return fmt.Errorf("version is required")
+		return nil, "", fmt.Errorf("version is required")
 	}
 	isFuture, comparable := isFutureVersion(version, srv.Version)
 	if !comparable {
-		return fmt.Errorf("unable to compare versions: current=%s target=%s", srv.Version, version)
+		return nil, "", fmt.Errorf("unable to compare versions: current=%s target=%s", srv.Version, version)
 	}
 	if !isFuture {
-		return fmt.Errorf("target version must be greater than current version")
+		return nil, "", fmt.Errorf("target version must be greater than current version")
 	}
 
 	versions, err := m.GetVersionOptions(id)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	versionFound := false
@@ -255,30 +256,45 @@ func (m *Manager) UpdateServerVersion(id string, targetVersion string) error {
 		}
 	}
 	if !versionFound {
-		return fmt.Errorf("version %s is not available for loader %s", version, srv.Loader)
+		return nil, "", fmt.Errorf("version %s is not available for loader %s", version, srv.Loader)
+	}
+
+	return srv, version, nil
+}
+
+func (m *Manager) ApplyServerVersionUpdate(id string, version string) (string, error) {
+	srv, err := m.GetServer(id)
+	if err != nil {
+		return "", err
+	}
+	if srv == nil {
+		return "", fmt.Errorf("server not found")
 	}
 
 	root, err := m.serverRootByID(id)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	downloader, err := loader.GetLoader(srv.Loader)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	resolvedVersion, err := downloader.Load(loader.LoaderOptions{
 		MCVersion: version,
 	}, root, nil)
 	if err != nil {
-		return fmt.Errorf("version update failed: %w", err)
+		return "", fmt.Errorf("version update failed: %w", err)
 	}
 
 	if strings.TrimSpace(resolvedVersion) == "" {
 		resolvedVersion = version
 	}
-	return m.Store.UpdateServerVersion(id, resolvedVersion)
+	if err := m.Store.UpdateServerVersion(id, resolvedVersion); err != nil {
+		return "", err
+	}
+	return resolvedVersion, nil
 }
 
 func validateSettings(next ServerSettings) error {

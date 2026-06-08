@@ -176,3 +176,19 @@ export interface AddonSearchResponse {
 export interface AddonVersionsResponse {
   versions: AddonVersion[];
 }
+
+export interface ServerVersionUpdateResult {
+  backupName: string;
+  restored: boolean;
+  serverUpdated: boolean;
+  version: string;
+  addons?: {
+    updated: Addon[];
+    disabled: Addon[];
+    failed: Array<{
+      id: string;
+      name?: string;
+      reason: string;
+    }>;
+  } | null;
+}
