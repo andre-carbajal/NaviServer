@@ -52,8 +52,32 @@ func TestTrimJarSuffix(t *testing.T) {
 	if got := trimJarSuffix("example.jar"); got != "example" {
 		t.Fatalf("unexpected value: %s", got)
 	}
+	if got := trimJarSuffix("example.jar.disabled"); got != "example" {
+		t.Fatalf("unexpected disabled value: %s", got)
+	}
 	if got := trimJarSuffix("example"); got != "example" {
 		t.Fatalf("unexpected value without suffix: %s", got)
+	}
+}
+
+func TestAddonDisabledFilenameHelpers(t *testing.T) {
+	if !isAddonJarFile("example.jar") {
+		t.Fatalf("expected .jar to be accepted")
+	}
+	if !isAddonJarFile("example.jar.disabled") {
+		t.Fatalf("expected .jar.disabled to be accepted")
+	}
+	if isAddonJarFile("example.disabled") {
+		t.Fatalf("did not expect non-jar disabled file to be accepted")
+	}
+	if !isAddonDisabledFile("example.jar.disabled") {
+		t.Fatalf("expected disabled file to be detected")
+	}
+	if got := normalizeAddonFileName("example"); got != "example.jar" {
+		t.Fatalf("unexpected normalized file name: %s", got)
+	}
+	if got := normalizeAddonFileName("example.jar.disabled"); got != "example.jar.disabled" {
+		t.Fatalf("unexpected normalized disabled file name: %s", got)
 	}
 }
 

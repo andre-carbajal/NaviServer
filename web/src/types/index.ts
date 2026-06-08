@@ -145,6 +145,7 @@ export interface Addon {
   modifiedAt: string;
   latest?: AddonVersion;
   missingDependencies?: AddonDependency[];
+  disabled: boolean;
 }
 
 export interface AddonListResponse {

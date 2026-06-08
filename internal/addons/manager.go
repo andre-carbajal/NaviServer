@@ -101,6 +101,7 @@ type Addon struct {
 	ModifiedAt          string        `json:"modifiedAt"`
 	Latest              *AddonVersion `json:"latest,omitempty"`
 	MissingDependencies []Dependency  `json:"missingDependencies,omitempty"`
+	Disabled            bool          `json:"disabled"`
 }
 
 type ListResponse struct {
@@ -179,6 +180,7 @@ type scannedAddonFile struct {
 	sha1        string
 	sha512      string
 	fingerprint uint32
+	disabled    bool
 }
 
 func NewManager(serverManager *server.Manager, store *storage.GormStore) *Manager {
@@ -264,10 +266,11 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 
 	scannedItems := make([]scannedAddonFile, 0)
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".jar") {
+		if entry.IsDir() || !isAddonJarFile(entry.Name()) {
 			continue
 		}
-		fullPath := filepath.Join(addonDir, entry.Name())
+		entryName := entry.Name()
+		fullPath := filepath.Join(addonDir, entryName)
 		info, err := entry.Info()
 		if err != nil {
 			continue
@@ -281,7 +284,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			relPath = "/" + relPath
 		}
 		scannedItems = append(scannedItems, scannedAddonFile{
-			fileName:    entry.Name(),
+			fileName:    entryName,
 			fullPath:    fullPath,
 			relPath:     relPath,
 			size:        info.Size(),
@@ -289,6 +292,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			sha1:        sha1Hash,
 			sha512:      sha512Hash,
 			fingerprint: fp,
+			disabled:    isAddonDisabledFile(entryName),
 		})
 	}
 
@@ -317,6 +321,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			CurseFingerprint: item.fingerprint,
 			Size:             item.size,
 			ModifiedAt:       item.modifiedAt.UTC().Format(time.RFC3339),
+			Disabled:         item.disabled,
 		}
 
 		if current, ok := modrinthCurrent[item.sha1]; ok {
@@ -340,7 +345,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			addon.VersionLabel = current.VersionNumber
 			addon.ReleaseType = ReleaseType(current.VersionType)
 
-			if latest, hasLatest := modrinthLatest[item.sha1]; hasLatest {
+			if latest, hasLatest := modrinthLatest[item.sha1]; hasLatest && !item.disabled {
 				if latest.VersionID != "" && latest.VersionID != current.VersionID {
 					addon.Status = AddonStatusUpdateAvailable
 					addon.Latest = &AddonVersion{
@@ -369,7 +374,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			addon.ReleaseType = mapCurseReleaseType(match.File.ReleaseType)
 
 			latest, deps := m.findLatestCurseFile(ctx, match.File.ModID, srv.Version, srv.Loader)
-			if latest != nil && latest.ID != match.File.ID {
+			if latest != nil && latest.ID != match.File.ID && !item.disabled {
 				addon.Status = AddonStatusUpdateAvailable
 				addon.Latest = &AddonVersion{
 					VersionID:    strconv.FormatInt(latest.ID, 10),
@@ -628,12 +633,47 @@ func (m *Manager) DeleteAddon(serverID, addonID string) error {
 		return fmt.Errorf("addon id is required")
 	}
 
-	base := filepath.Base(addonID)
-	if !strings.HasSuffix(strings.ToLower(base), ".jar") {
-		base = base + ".jar"
-	}
+	base := normalizeAddonFileName(addonID)
 	target := filepath.Join(addonDir, base)
 	if err := os.Remove(target); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("addon not found")
+		}
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) SetAddonDisabled(serverID, addonID string, disabled bool) error {
+	srv, _, _, addonDir, _, err := m.resolveServerAddonContext(serverID)
+	if err != nil {
+		return err
+	}
+	if srv.Status != "STOPPED" {
+		return fmt.Errorf("server must be stopped to modify addons")
+	}
+	if strings.TrimSpace(addonID) == "" {
+		return fmt.Errorf("addon id is required")
+	}
+
+	base := normalizeAddonFileName(addonID)
+	currentDisabled := isAddonDisabledFile(base)
+	if currentDisabled == disabled {
+		return nil
+	}
+
+	source := filepath.Join(addonDir, base)
+	targetName := base + ".disabled"
+	if !disabled {
+		targetName = strings.TrimSuffix(base, ".disabled")
+	}
+	target := filepath.Join(addonDir, targetName)
+	if _, err := os.Stat(target); err == nil {
+		return fmt.Errorf("target addon already exists")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := os.Rename(source, target); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("addon not found")
 		}
@@ -758,10 +798,30 @@ func addonScopeForLoader(loader string) (AddonType, string, []string, bool) {
 }
 
 func trimJarSuffix(name string) string {
+	name = strings.TrimSuffix(name, ".disabled")
 	if strings.HasSuffix(strings.ToLower(name), ".jar") {
 		return name[:len(name)-4]
 	}
 	return name
+}
+
+func isAddonJarFile(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.HasSuffix(lower, ".jar") ||
+		strings.HasSuffix(lower, ".jar.disabled")
+}
+
+func isAddonDisabledFile(name string) bool {
+	return strings.HasSuffix(strings.ToLower(name), ".jar.disabled")
+}
+
+func normalizeAddonFileName(addonID string) string {
+	base := filepath.Base(addonID)
+	lower := strings.ToLower(base)
+	if strings.HasSuffix(lower, ".jar") || strings.HasSuffix(lower, ".jar.disabled") {
+		return base
+	}
+	return base + ".jar"
 }
 
 func computeJarMetadata(path string) (sha1Hash string, sha512Hash string, fingerprint uint32, err error) {

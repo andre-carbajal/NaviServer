@@ -347,7 +347,22 @@ export const api = {
     data?: {
       includeDependencies?: boolean;
     },
-  ) => apiInstance.post(`/servers/${serverId}/addons/${addonId}/update`, data),
+  ) =>
+    apiInstance.post(
+      `/servers/${serverId}/addons/${encodeURIComponent(addonId)}/update`,
+      data,
+    ),
+  setAddonDisabled: (
+    serverId: string,
+    addonId: string,
+    data: {
+      disabled: boolean;
+    },
+  ) =>
+    apiInstance.post(
+      `/servers/${serverId}/addons/${encodeURIComponent(addonId)}/disabled`,
+      data,
+    ),
   updateAllAddons: (
     serverId: string,
     data?: {
@@ -355,7 +370,9 @@ export const api = {
     },
   ) => apiInstance.post(`/servers/${serverId}/addons/update-all`, data),
   deleteAddon: (serverId: string, addonId: string) =>
-    apiInstance.delete(`/servers/${serverId}/addons/${addonId}`),
+    apiInstance.delete(
+      `/servers/${serverId}/addons/${encodeURIComponent(addonId)}`,
+    ),
   login: (username: string, password: string) =>
     apiInstance.post('/auth/login', { username, password }),
   logout: () => apiInstance.post('/auth/logout'),

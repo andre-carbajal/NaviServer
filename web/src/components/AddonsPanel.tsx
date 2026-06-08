@@ -3,6 +3,7 @@ import {
   Download,
   Globe,
   Loader2,
+  Power,
   RefreshCw,
   Search,
   Trash2,
@@ -633,9 +634,13 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
         ) : (
           <ul className="server-v2-addon-list">
             {items.map((addon) => {
-              const canUpdate = addon.status === 'update_available';
+              const canUpdate =
+                addon.status === 'update_available' && !addon.disabled;
               return (
-                <li key={addon.id}>
+                <li
+                  key={addon.id}
+                  className={addon.disabled ? 'disabled' : undefined}
+                >
                   <div className="server-v2-installed-addon-meta">
                     {addon.iconUrl ? (
                       <img
@@ -652,6 +657,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                         {addon.source} • {addon.fileName}
                         {addon.versionLabel ? ` • ${addon.versionLabel}` : ''}
                       </small>
+                      {addon.disabled && <small>Disabled</small>}
                       {canUpdate && addon.latest && (
                         <small>
                           Update available: {addon.latest.versionLabel}
@@ -660,6 +666,24 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                     </div>
                   </div>
                   <div className="server-v2-addon-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        runAction(`toggle-${addon.id}`, () =>
+                          api.setAddonDisabled(server.id, addon.id, {
+                            disabled: !addon.disabled,
+                          }),
+                        )
+                      }
+                      disabled={!canManage || !isStopped || actionKey !== null}
+                      title={addon.disabled ? 'Enable' : 'Disable'}
+                    >
+                      {actionKey === `toggle-${addon.id}` ? (
+                        <Loader2 size={14} className="spin" />
+                      ) : (
+                        <Power size={14} />
+                      )}
+                    </Button>
                     <Button
                       variant="secondary"
                       onClick={() =>

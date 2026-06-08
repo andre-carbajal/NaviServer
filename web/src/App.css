@@ -3357,6 +3357,10 @@ nav {
   opacity: 0.65;
 }
 
+.server-v2-addon-list li.disabled {
+  opacity: 0.65;
+}
+
 .server-v2-addons-results li.installed .server-v2-install-row {
   cursor: not-allowed;
 }

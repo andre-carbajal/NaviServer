@@ -172,6 +172,36 @@ func (h *AddonsHandler) HandleDeleteAddon(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *AddonsHandler) HandleSetAddonDisabled(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureManager(w) {
+		return
+	}
+	id := r.PathValue("id")
+	addonID := r.PathValue("addonId")
+	if id == "" || addonID == "" {
+		http.Error(w, "Missing id", http.StatusBadRequest)
+		return
+	}
+	if !h.canManageAddons(r, id) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	var body struct {
+		Disabled bool `json:"disabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.AddonsManager.SetAddonDisabled(id, addonID, body.Disabled); err != nil {
+		h.writeAddonError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *AddonsHandler) HandleUpdateAddon(w http.ResponseWriter, r *http.Request) {
 	if !h.ensureManager(w) {
 		return

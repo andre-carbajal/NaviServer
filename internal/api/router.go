@@ -145,6 +145,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("POST /servers/{id}/addons/install", protect(addonsHandler.HandleInstallAddon, ""))
 	mux.Handle("POST /servers/{id}/addons/update-all", protect(addonsHandler.HandleUpdateAllAddons, ""))
 	mux.Handle("POST /servers/{id}/addons/{addonId}/update", protect(addonsHandler.HandleUpdateAddon, ""))
+	mux.Handle("POST /servers/{id}/addons/{addonId}/disabled", protect(addonsHandler.HandleSetAddonDisabled, ""))
 	mux.Handle("DELETE /servers/{id}/addons/{addonId}", protect(addonsHandler.HandleDeleteAddon, ""))
 
 	mux.Handle("POST /servers/{id}/start", protect(serverHandler.HandleStartServer, ""))
