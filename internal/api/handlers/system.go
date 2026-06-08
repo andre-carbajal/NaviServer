@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 type SystemHandler struct {
@@ -53,6 +55,21 @@ func (h *SystemHandler) HandleGetNetworkInterfaces(w http.ResponseWriter, r *htt
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string][]string{"interfaces": addresses})
+}
+
+func (h *SystemHandler) HandleGetSystemResources(w http.ResponseWriter, r *http.Request) {
+	vm, err := mem.VirtualMemory()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	totalMemoryMB := int(vm.Total / 1024 / 1024)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int{
+		"totalMemoryMb": totalMemoryMB,
+	})
 }
 
 func (h *SystemHandler) HandleRestartDaemon(w http.ResponseWriter, r *http.Request) {

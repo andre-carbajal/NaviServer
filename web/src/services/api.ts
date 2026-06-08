@@ -215,6 +215,8 @@ export const api = {
   clearCurseForgeKey: () => apiInstance.delete('/settings/curseforge-key'),
   getNetworkInterfaces: () =>
     apiInstance.get<{ interfaces: string[] }>('/system/interfaces'),
+  getSystemResources: () =>
+    apiInstance.get<{ totalMemoryMb: number }>('/system/resources'),
   listBackups: (serverId: string) =>
     apiInstance.get<Backup[]>(`/servers/${serverId}/backups`),
   listAllBackups: () => apiInstance.get<Backup[]>('/backups'),

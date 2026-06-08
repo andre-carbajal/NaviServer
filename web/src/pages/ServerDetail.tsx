@@ -142,6 +142,8 @@ const MINEATAR_BASE_URL = 'https://api.mineatar.io/head';
 const STEVE_UUID = '8667ba71-b85a-4004-af54-457a9734eed7';
 const SERVER_POLL_MS = 2000;
 const SERVER_POLL_MAX_BACKOFF_MS = 30000;
+const RAM_MIN_MB = 512;
+const FALLBACK_RAM_MAX_MB = 262144;
 
 const getAvatarUrl = (uuid?: string) =>
   `${MINEATAR_BASE_URL}/${encodeURIComponent(uuid || STEVE_UUID)}?scale=8&overlay=true`;
@@ -182,8 +184,20 @@ const isFutureMinecraftVersion = (candidate: string, current: string) => {
   return comparison !== null && comparison > 0;
 };
 
-const normalizeServerSettings = (settings: ServerSettings): ServerSettings => ({
+const clampRamAllocation = (value: number, maxRamMb?: number) => {
+  const upperBound = Number.isFinite(maxRamMb)
+    ? Math.max(RAM_MIN_MB, Number(maxRamMb))
+    : FALLBACK_RAM_MAX_MB;
+
+  return Math.min(upperBound, Math.max(RAM_MIN_MB, value));
+};
+
+const normalizeServerSettings = (
+  settings: ServerSettings,
+  maxRamMb?: number,
+): ServerSettings => ({
   ...settings,
+  ram: clampRamAllocation(settings.ram, maxRamMb),
   onlineMode: settings.onlineMode ?? true,
   spawnProtection:
     Number.isFinite(settings.spawnProtection) && settings.spawnProtection >= 0
@@ -292,6 +306,7 @@ const ServerDetail: React.FC = () => {
     useState<ServerSettings | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [systemMemoryMb, setSystemMemoryMb] = useState<number | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsModalTitle, setSettingsModalTitle] = useState('');
   const [settingsModalMessage, setSettingsModalMessage] = useState('');
@@ -570,11 +585,19 @@ const ServerDetail: React.FC = () => {
     if (!id || user?.role !== 'admin') return;
     try {
       setIsLoadingSettings(true);
-      const [settingsRes, versionsRes] = await Promise.all([
+      const [settingsRes, versionsRes, resourcesRes] = await Promise.all([
         api.getServerSettings(id),
         api.getServerVersionOptions(id),
+        api.getSystemResources().catch(() => null),
       ]);
-      let normalizedSettings = normalizeServerSettings(settingsRes.data);
+      const maxRamMb = resourcesRes?.data.totalMemoryMb ?? settingsRes.data.ram;
+      if (resourcesRes) {
+        setSystemMemoryMb(resourcesRes.data.totalMemoryMb);
+      }
+      let normalizedSettings = normalizeServerSettings(
+        settingsRes.data,
+        maxRamMb,
+      );
       if (
         !Number.isFinite(settingsRes.data.spawnProtection) ||
         (settingsRes.data.spawnProtection ?? -1) < 0
@@ -629,7 +652,10 @@ const ServerDetail: React.FC = () => {
 
       try {
         const refreshed = await api.getServerSettings(server.id);
-        const normalized = normalizeServerSettings(refreshed.data);
+        const normalized = normalizeServerSettings(
+          refreshed.data,
+          systemMemoryMb ?? undefined,
+        );
         if (normalized.spawnProtection !== expectedSpawnProtection) {
           const fileRes = await api.getFileContent(
             server.id,
@@ -960,11 +986,26 @@ const ServerDetail: React.FC = () => {
         ? 'Waiting for performance data...'
         : null;
 
+  const ramAllocationMaxMb = Math.max(
+    RAM_MIN_MB,
+    systemMemoryMb ?? server?.ram ?? settingsDraft?.ram ?? FALLBACK_RAM_MAX_MB,
+  );
+
   const updateSettingsField = <K extends keyof ServerSettings>(
     field: K,
     value: ServerSettings[K],
   ) => {
-    setSettingsDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+    setSettingsDraft((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        [field]:
+          field === 'ram'
+            ? clampRamAllocation(Number(value), ramAllocationMaxMb)
+            : value,
+      };
+    });
   };
 
   const players = stats.players || [];
@@ -1933,29 +1974,8 @@ const ServerDetail: React.FC = () => {
                           <input
                             className="form-input"
                             type="number"
-                            min={512}
-                            max={262144}
-                            step={256}
-                            value={settingsDraft.ram}
-                            onChange={(e) =>
-                              updateSettingsField(
-                                'ram',
-                                Math.max(512, Number(e.target.value)),
-                              )
-                            }
-                            disabled={!canApplySettings}
-                          />
-                        </label>
-
-                        <label>
-                          <span>
-                            Memory Slider{' '}
-                            <strong>{settingsDraft.ram} MB</strong>
-                          </span>
-                          <input
-                            type="range"
-                            min={512}
-                            max={Math.max(16384, settingsDraft.ram + 1024)}
+                            min={RAM_MIN_MB}
+                            max={ramAllocationMaxMb}
                             step={256}
                             value={settingsDraft.ram}
                             onChange={(e) =>

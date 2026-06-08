@@ -174,6 +174,7 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("DELETE /settings/curseforge-key", protect(settingsHandler.HandleDeleteCurseForgeKey, "admin"))
 
 	mux.Handle("GET /system/interfaces", protect(systemHandler.HandleGetNetworkInterfaces, "admin"))
+	mux.Handle("GET /system/resources", protect(systemHandler.HandleGetSystemResources, "admin"))
 	mux.Handle("POST /system/restart", protect(systemHandler.HandleRestartDaemon, "admin"))
 	mux.Handle("GET /updates", protect(systemHandler.HandleCheckUpdates, "admin"))
 	mux.Handle("GET /version", protect(systemHandler.HandleGetVersion, ""))
