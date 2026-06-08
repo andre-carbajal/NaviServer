@@ -65,6 +65,8 @@ const resolveWsBaseUrl = (apiBaseUrl: string) => {
 const API_BASE_URL = resolveApiBaseUrl();
 export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL);
 const NETWORK_ERROR_COOLDOWN_MS = 8000;
+const ADDON_SYNC_TIMEOUT_MS = 30000;
+const ADDON_DOWNLOAD_TIMEOUT_MS = 300000;
 
 let lastNetworkErrorAt = 0;
 let isBackendOffline = false;
@@ -308,9 +310,17 @@ export const api = {
     });
   },
   listAddons: (serverId: string) =>
-    apiInstance.get<AddonListResponse>(`/servers/${serverId}/addons`),
+    apiInstance.get<AddonListResponse>(`/servers/${serverId}/addons`, {
+      timeout: ADDON_SYNC_TIMEOUT_MS,
+    }),
   syncAddons: (serverId: string) =>
-    apiInstance.post<AddonListResponse>(`/servers/${serverId}/addons/sync`),
+    apiInstance.post<AddonListResponse>(
+      `/servers/${serverId}/addons/sync`,
+      undefined,
+      {
+        timeout: ADDON_SYNC_TIMEOUT_MS,
+      },
+    ),
   searchAddons: (
     serverId: string,
     data: {
@@ -350,7 +360,10 @@ export const api = {
       fileId?: number;
       includeDependencies?: boolean;
     },
-  ) => apiInstance.post(`/servers/${serverId}/addons/install`, data),
+  ) =>
+    apiInstance.post(`/servers/${serverId}/addons/install`, data, {
+      timeout: ADDON_DOWNLOAD_TIMEOUT_MS,
+    }),
   updateAddon: (
     serverId: string,
     addonId: string,
@@ -361,6 +374,9 @@ export const api = {
     apiInstance.post(
       `/servers/${serverId}/addons/${encodeURIComponent(addonId)}/update`,
       data,
+      {
+        timeout: ADDON_DOWNLOAD_TIMEOUT_MS,
+      },
     ),
   setAddonDisabled: (
     serverId: string,
@@ -378,7 +394,10 @@ export const api = {
     data?: {
       includeDependencies?: boolean;
     },
-  ) => apiInstance.post(`/servers/${serverId}/addons/update-all`, data),
+  ) =>
+    apiInstance.post(`/servers/${serverId}/addons/update-all`, data, {
+      timeout: ADDON_DOWNLOAD_TIMEOUT_MS,
+    }),
   deleteAddon: (serverId: string, addonId: string) =>
     apiInstance.delete(
       `/servers/${serverId}/addons/${encodeURIComponent(addonId)}`,
