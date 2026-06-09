@@ -53,7 +53,27 @@ func (h *AddonsHandler) HandleListAddons(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *AddonsHandler) HandleSyncAddons(w http.ResponseWriter, r *http.Request) {
-	h.HandleListAddons(w, r)
+	if !h.ensureManager(w) {
+		return
+	}
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing server id", http.StatusBadRequest)
+		return
+	}
+	if !h.canManageAddons(r, id) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	result, err := h.AddonsManager.SyncAddons(r.Context(), id)
+	if err != nil {
+		h.writeAddonError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (h *AddonsHandler) HandleSearchAddons(w http.ResponseWriter, r *http.Request) {

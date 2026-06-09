@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"naviserver/internal/domain"
@@ -28,7 +29,8 @@ const (
 	modrinthBaseURL   = "https://api.modrinth.com/v2"
 	curseForgeBaseURL = "https://api.curseforge.com/v1"
 
-	minecraftGameID = 432
+	minecraftGameID        = 432
+	addonListCacheDuration = 2 * time.Minute
 )
 
 type AddonSource string
@@ -166,6 +168,30 @@ type Manager struct {
 	store         *storage.GormStore
 	httpClient    *http.Client
 	userAgent     string
+	addonCacheMu  sync.Mutex
+	addonCache    map[string]addonCacheEntry
+}
+
+type addonCacheEntry struct {
+	key       string
+	expiresAt time.Time
+	response  *ListResponse
+}
+
+type persistentAddonCache struct {
+	SchemaVersion int                             `json:"schemaVersion"`
+	ServerID      string                          `json:"serverId"`
+	Loader        string                          `json:"loader"`
+	Version       string                          `json:"version"`
+	AddonType     AddonType                       `json:"addonType"`
+	GeneratedAt   string                          `json:"generatedAt"`
+	Entries       map[string]persistentAddonEntry `json:"entries"`
+}
+
+type persistentAddonEntry struct {
+	Size           int64 `json:"size"`
+	ModifiedAtUnix int64 `json:"modifiedAtUnix"`
+	Addon          Addon `json:"addon"`
 }
 
 // BuildCurseForgeAPIKey is injected at build time via ldflags in CI.
@@ -190,7 +216,8 @@ func NewManager(serverManager *server.Manager, store *storage.GormStore) *Manage
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		userAgent: "andre-carbajal/naviserver",
+		userAgent:  "andre-carbajal/naviserver",
+		addonCache: make(map[string]addonCacheEntry),
 	}
 }
 
@@ -250,7 +277,197 @@ func (m *Manager) ClearCustomCurseForgeAPIKey() error {
 	return m.store.SetSetting("curseforge_api_key", "")
 }
 
+func addonCacheFilePath(addonDir string) string {
+	return filepath.Join(addonDir, ".cache", "naviserver-addons.json")
+}
+
+func readPersistentAddonCache(addonDir string, srv *domain.Server, addonType AddonType) (*persistentAddonCache, error) {
+	content, err := os.ReadFile(addonCacheFilePath(addonDir))
+	if err != nil {
+		return nil, err
+	}
+	var cache persistentAddonCache
+	if err := json.Unmarshal(content, &cache); err != nil {
+		return nil, err
+	}
+	if cache.SchemaVersion != 1 || cache.ServerID != srv.ID || cache.Loader != srv.Loader || cache.Version != srv.Version || cache.AddonType != addonType {
+		return nil, fmt.Errorf("addon cache metadata mismatch")
+	}
+	if cache.Entries == nil {
+		cache.Entries = map[string]persistentAddonEntry{}
+	}
+	return &cache, nil
+}
+
+func writePersistentAddonCache(addonDir string, srv *domain.Server, addonType AddonType, response *ListResponse) error {
+	cache := persistentAddonCache{
+		SchemaVersion: 1,
+		ServerID:      srv.ID,
+		Loader:        srv.Loader,
+		Version:       srv.Version,
+		AddonType:     addonType,
+		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
+		Entries:       make(map[string]persistentAddonEntry, len(response.Items)),
+	}
+	for _, addon := range response.Items {
+		cache.Entries[addon.FileName] = persistentAddonEntry{
+			Size:           addon.Size,
+			ModifiedAtUnix: addonModifiedUnix(addon.ModifiedAt),
+			Addon:          addon,
+		}
+	}
+	cacheDir := filepath.Dir(addonCacheFilePath(addonDir))
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return err
+	}
+	payload, err := json.MarshalIndent(cache, "", "  ")
+	if err != nil {
+		return err
+	}
+	target := addonCacheFilePath(addonDir)
+	tmp := target + ".tmp"
+	if err := os.WriteFile(tmp, payload, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, target)
+}
+
+func addonModifiedUnix(value string) int64 {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return 0
+	}
+	return parsed.UnixNano()
+}
+
+func cachedAddonForItem(cache *persistentAddonCache, item scannedAddonFile, addonType AddonType) (Addon, bool) {
+	if cache == nil {
+		return Addon{}, false
+	}
+	entry, ok := cache.Entries[item.fileName]
+	if !ok || entry.Size != item.size || entry.ModifiedAtUnix != item.modifiedAt.UnixNano() {
+		return Addon{}, false
+	}
+	addon := entry.Addon
+	addon.ID = item.fileName
+	addon.FileName = item.fileName
+	addon.Path = item.relPath
+	addon.Type = addonType
+	addon.Size = item.size
+	addon.ModifiedAt = item.modifiedAt.UTC().Format(time.RFC3339Nano)
+	addon.Disabled = item.disabled
+	return addon, true
+}
+
+func addonListCacheKey(serverID string, srv *domain.Server, items []scannedAddonFile) string {
+	var builder strings.Builder
+	builder.WriteString(serverID)
+	builder.WriteString("|")
+	builder.WriteString(srv.Loader)
+	builder.WriteString("|")
+	builder.WriteString(srv.Version)
+	for _, item := range items {
+		builder.WriteString("|")
+		builder.WriteString(item.fileName)
+		builder.WriteString(":")
+		builder.WriteString(strconv.FormatInt(item.size, 10))
+		builder.WriteString(":")
+		builder.WriteString(strconv.FormatInt(item.modifiedAt.UnixNano(), 10))
+	}
+	return builder.String()
+}
+
+func cloneAddonListResponse(response *ListResponse) *ListResponse {
+	if response == nil {
+		return nil
+	}
+	clone := &ListResponse{
+		AddonType: response.AddonType,
+		Items:     make([]Addon, len(response.Items)),
+	}
+	copy(clone.Items, response.Items)
+	return clone
+}
+
+func (m *Manager) getCachedAddonList(serverID, key string) (*ListResponse, bool) {
+	m.addonCacheMu.Lock()
+	defer m.addonCacheMu.Unlock()
+	if m.addonCache == nil {
+		return nil, false
+	}
+	entry, ok := m.addonCache[serverID]
+	if !ok || entry.key != key || time.Now().After(entry.expiresAt) {
+		return nil, false
+	}
+	return cloneAddonListResponse(entry.response), true
+}
+
+func (m *Manager) storeCachedAddonList(serverID, key string, response *ListResponse) {
+	m.addonCacheMu.Lock()
+	defer m.addonCacheMu.Unlock()
+	if m.addonCache == nil {
+		m.addonCache = make(map[string]addonCacheEntry)
+	}
+	m.addonCache[serverID] = addonCacheEntry{
+		key:       key,
+		expiresAt: time.Now().Add(addonListCacheDuration),
+		response:  cloneAddonListResponse(response),
+	}
+}
+
+func (m *Manager) preloadModrinthIcons(ctx context.Context, versions map[string]modrinthVersion) map[string]string {
+	projectIDs := make(map[string]struct{})
+	for _, version := range versions {
+		projectID := strings.TrimSpace(version.ProjectID)
+		if projectID != "" {
+			projectIDs[projectID] = struct{}{}
+		}
+	}
+	if len(projectIDs) == 0 {
+		return map[string]string{}
+	}
+
+	icons := make(map[string]string, len(projectIDs))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 8)
+
+	for projectID := range projectIDs {
+		projectID := projectID
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
+			case <-ctx.Done():
+				return
+			}
+
+			iconURL, err := m.getModrinthProjectIcon(ctx, projectID)
+			if err != nil || strings.TrimSpace(iconURL) == "" {
+				return
+			}
+
+			mu.Lock()
+			icons[projectID] = iconURL
+			mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	return icons
+}
+
 func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListResponse, error) {
+	return m.listAddons(ctx, serverID, false)
+}
+
+func (m *Manager) SyncAddons(ctx context.Context, serverID string) (*ListResponse, error) {
+	return m.listAddons(ctx, serverID, true)
+}
+
+func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh bool) (*ListResponse, error) {
 	srv, root, addonType, addonDir, loaders, err := m.resolveServerAddonContext(serverID)
 	if err != nil {
 		return nil, err
@@ -275,38 +492,97 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 		if err != nil {
 			continue
 		}
-		sha1Hash, sha512Hash, fp, err := computeJarMetadata(fullPath)
-		if err != nil {
-			continue
-		}
 		relPath := strings.ReplaceAll(strings.TrimPrefix(fullPath, root), "\\", "/")
 		if !strings.HasPrefix(relPath, "/") {
 			relPath = "/" + relPath
 		}
 		scannedItems = append(scannedItems, scannedAddonFile{
-			fileName:    entryName,
-			fullPath:    fullPath,
-			relPath:     relPath,
-			size:        info.Size(),
-			modifiedAt:  info.ModTime(),
-			sha1:        sha1Hash,
-			sha512:      sha512Hash,
-			fingerprint: fp,
-			disabled:    isAddonDisabledFile(entryName),
+			fileName:   entryName,
+			fullPath:   fullPath,
+			relPath:    relPath,
+			size:       info.Size(),
+			modifiedAt: info.ModTime(),
+			disabled:   isAddonDisabledFile(entryName),
 		})
 	}
 
-	if len(scannedItems) == 0 {
-		return &ListResponse{AddonType: addonType, Items: []Addon{}}, nil
+	cacheKey := addonListCacheKey(serverID, srv, scannedItems)
+	if !forceRefresh {
+		if cached, ok := m.getCachedAddonList(serverID, cacheKey); ok {
+			return cached, nil
+		}
 	}
 
-	modrinthCurrent, _ := m.modrinthVersionsFromHashes(ctx, scannedItems)
-	modrinthLatest, _ := m.modrinthLatestFromHashes(ctx, scannedItems, loaders, []string{srv.Version})
-	curseMatches, _ := m.curseForgeByFingerprints(ctx, scannedItems)
-	modrinthIconCache := map[string]string{}
+	persistentCache, err := readPersistentAddonCache(addonDir, srv, addonType)
+	if err != nil {
+		persistentCache = nil
+	}
 
-	addons := make([]Addon, 0, len(scannedItems))
+	cachedAddons := make([]Addon, 0, len(scannedItems))
+	itemsToRefresh := make([]scannedAddonFile, 0, len(scannedItems))
 	for _, item := range scannedItems {
+		if !forceRefresh {
+			if addon, ok := cachedAddonForItem(persistentCache, item, addonType); ok {
+				cachedAddons = append(cachedAddons, addon)
+				continue
+			}
+		}
+		sha1Hash, sha512Hash, fp, err := computeJarMetadata(item.fullPath)
+		if err != nil {
+			continue
+		}
+		item.sha1 = sha1Hash
+		item.sha512 = sha512Hash
+		item.fingerprint = fp
+		itemsToRefresh = append(itemsToRefresh, item)
+	}
+
+	if len(scannedItems) == 0 {
+		response := &ListResponse{AddonType: addonType, Items: []Addon{}}
+		m.storeCachedAddonList(serverID, cacheKey, response)
+		_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+		return response, nil
+	}
+
+	if len(itemsToRefresh) == 0 {
+		response := &ListResponse{AddonType: addonType, Items: cachedAddons}
+		sortAddons(response.Items)
+		m.storeCachedAddonList(serverID, cacheKey, response)
+		_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+		return response, nil
+	}
+
+	modrinthCurrent := map[string]modrinthVersion{}
+	modrinthLatest := map[string]modrinthVersion{}
+	curseMatches := map[uint32]curseMatch{}
+
+	var metadataWG sync.WaitGroup
+	metadataWG.Add(3)
+	go func() {
+		defer metadataWG.Done()
+		if result, err := m.modrinthVersionsFromHashes(ctx, itemsToRefresh); err == nil {
+			modrinthCurrent = result
+		}
+	}()
+	go func() {
+		defer metadataWG.Done()
+		if result, err := m.modrinthLatestFromHashes(ctx, itemsToRefresh, loaders, []string{srv.Version}); err == nil {
+			modrinthLatest = result
+		}
+	}()
+	go func() {
+		defer metadataWG.Done()
+		if result, err := m.curseForgeByFingerprints(ctx, itemsToRefresh); err == nil {
+			curseMatches = result
+		}
+	}()
+	metadataWG.Wait()
+
+	modrinthIconCache := m.preloadModrinthIcons(ctx, modrinthCurrent)
+
+	addons := make([]Addon, 0, len(cachedAddons)+len(itemsToRefresh))
+	addons = append(addons, cachedAddons...)
+	for _, item := range itemsToRefresh {
 		_ = item.fullPath
 		addon := Addon{
 			ID:               item.fileName,
@@ -320,7 +596,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			HashSHA512:       item.sha512,
 			CurseFingerprint: item.fingerprint,
 			Size:             item.size,
-			ModifiedAt:       item.modifiedAt.UTC().Format(time.RFC3339),
+			ModifiedAt:       item.modifiedAt.UTC().Format(time.RFC3339Nano),
 			Disabled:         item.disabled,
 		}
 
@@ -332,13 +608,7 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 			addon.ProjectSlug = current.ProjectSlug
 			addon.ProjectURL = "https://modrinth.com/project/" + current.ProjectID
 			if current.ProjectID != "" {
-				if cached, ok := modrinthIconCache[current.ProjectID]; ok {
-					addon.IconURL = cached
-				} else {
-					iconURL, _ := m.getModrinthProjectIcon(ctx, current.ProjectID)
-					addon.IconURL = iconURL
-					modrinthIconCache[current.ProjectID] = iconURL
-				}
+				addon.IconURL = modrinthIconCache[current.ProjectID]
 			}
 			addon.VersionID = current.VersionID
 			addon.VersionName = current.VersionName
@@ -394,14 +664,21 @@ func (m *Manager) ListAddons(ctx context.Context, serverID string) (*ListRespons
 		addons = append(addons, addon)
 	}
 
+	sortAddons(addons)
+
+	response := &ListResponse{AddonType: addonType, Items: addons}
+	m.storeCachedAddonList(serverID, cacheKey, response)
+	_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+	return response, nil
+}
+
+func sortAddons(addons []Addon) {
 	sort.Slice(addons, func(i, j int) bool {
 		if addons[i].Status != addons[j].Status {
 			return addons[i].Status < addons[j].Status
 		}
 		return strings.ToLower(addons[i].Name) < strings.ToLower(addons[j].Name)
 	})
-
-	return &ListResponse{AddonType: addonType, Items: addons}, nil
 }
 
 func (m *Manager) SearchAddons(

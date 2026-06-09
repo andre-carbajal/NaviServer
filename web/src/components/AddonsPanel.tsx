@@ -69,7 +69,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
   const isStopped = server.status === 'STOPPED';
 
   const loadAddons = useCallback(
-    async (useSync = true) => {
+    async (useSync = false) => {
       setLoading(true);
       setError(null);
       try {
@@ -94,7 +94,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAddons(true);
+    loadAddons(false);
   }, [loadAddons]);
 
   const runAction = async (key: string, action: () => Promise<unknown>) => {
