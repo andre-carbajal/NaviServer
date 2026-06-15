@@ -1726,6 +1726,24 @@ const ServerDetail: React.FC = () => {
                       </div>
 
                       <div className="server-v2-settings-form-grid">
+                        <label className="server-v2-settings-full">
+                          <span>
+                            Server Name
+                            <span title="Display name used across NaviServer.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <input
+                            className="form-input"
+                            value={settingsDraft.name}
+                            onChange={(e) =>
+                              updateSettingsField('name', e.target.value)
+                            }
+                            disabled={!canApplySettings}
+                            maxLength={64}
+                          />
+                        </label>
+
                         <label>
                           <span>
                             Game Mode
