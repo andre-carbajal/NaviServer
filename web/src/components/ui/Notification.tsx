@@ -9,7 +9,7 @@ const Notification: React.FC<NotificationProps> = ({ message, onClose }) => {
   return (
     <div className="notification">
       <p>{message}</p>
-      <button onClick={onClose}>&times;</button>
+      <button type="button" onClick={onClose}>&times;</button>
     </div>
   );
 };

@@ -41,13 +41,15 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setMode('existing');
-      setSelectedServer('');
-      setNewServerName('');
-      setNewServerRam(2048);
-      setNewServerLoader('vanilla');
-      setNewServerVersion('1.20.1');
-      setIsSubmitting(false);
+      const resetTimer = window.setTimeout(() => {
+        setMode('existing');
+        setSelectedServer('');
+        setNewServerName('');
+        setNewServerRam(2048);
+        setNewServerLoader('vanilla');
+        setNewServerVersion('1.20.1');
+        setIsSubmitting(false);
+      }, 0);
 
       api
         .getLoaders()
@@ -60,6 +62,8 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
         .catch((error) => {
           console.error('Failed to fetch loaders', error);
         });
+
+      return () => window.clearTimeout(resetTimer);
     }
   }, [isOpen]);
 

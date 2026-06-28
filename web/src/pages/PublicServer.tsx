@@ -52,9 +52,14 @@ const PublicServer: React.FC = () => {
   }, [token]);
 
   useEffect(() => {
-    fetchInfo();
+    const initialFetch = window.setTimeout(() => {
+      void fetchInfo();
+    }, 0);
     const interval = setInterval(fetchInfo, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialFetch);
+      clearInterval(interval);
+    };
   }, [fetchInfo, refreshKey]);
 
   const handleAction = async (action: 'start' | 'stop') => {
@@ -223,7 +228,7 @@ const PublicServer: React.FC = () => {
           style={{ marginTop: '24px' }}
         >
           {info.status === 'OFFLINE' || info.status === 'STOPPED' ? (
-            <button
+            <button type="button"
               className="btn btn-primary"
               onClick={() => handleAction('start')}
               disabled={actionLoading}
@@ -237,7 +242,7 @@ const PublicServer: React.FC = () => {
               Start Server
             </button>
           ) : (
-            <button
+            <button type="button"
               className="btn btn-danger"
               onClick={() => handleAction('stop')}
               disabled={

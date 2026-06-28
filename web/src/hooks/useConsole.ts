@@ -16,8 +16,9 @@ export const useConsole = (serverId: string) => {
   useEffect(() => {
     if (!serverId || !token) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLogs([]);
+    const resetLogsTimer = window.setTimeout(() => {
+      setLogs([]);
+    }, 0);
     reconnectAttempts.current = 0;
     shouldReconnect.current = true;
     hasLoggedDisconnect.current = false;
@@ -83,6 +84,7 @@ export const useConsole = (serverId: string) => {
 
     return () => {
       shouldReconnect.current = false;
+      window.clearTimeout(resetLogsTimer);
       clearReconnectTimer();
       if (ws.current) {
         if (ws.current.readyState === WebSocket.CONNECTING) {

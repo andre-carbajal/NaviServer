@@ -93,7 +93,7 @@ const PermissionsModal: React.FC<Props> = ({ user, onClose }) => {
             <Key size={24} className="text-blue-500" />
             Permissions for {user.username}
           </h2>
-          <button className="icon-action" onClick={onClose}>
+          <button type="button" className="icon-action" onClick={onClose}>
             <X size={20} />
           </button>
         </div>

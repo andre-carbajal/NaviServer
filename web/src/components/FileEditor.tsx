@@ -113,7 +113,7 @@ const FileEditor: React.FC<FileEditorProps> = ({
     <div className="file-explorer-container">
       <div className="editor-header">
         <div className="editor-title">
-          <button
+          <button type="button"
             onClick={onClose}
             className="toolbar-btn"
             title="Back to files"
@@ -142,7 +142,7 @@ const FileEditor: React.FC<FileEditorProps> = ({
               <span className="hidden sm:inline">Unsaved Changes</span>
             </span>
           )}
-          <button
+          <button type="button"
             onClick={handleSave}
             disabled={loading || saving || !hasChanges}
             className={`btn btn-primary ${!hasChanges || loading || saving ? 'disabled' : ''}`}
@@ -197,7 +197,7 @@ const FileEditor: React.FC<FileEditorProps> = ({
                 Error Loading File
               </p>
               <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>{error}</p>
-              <button
+              <button type="button"
                 onClick={onClose}
                 style={{
                   marginTop: '16px',

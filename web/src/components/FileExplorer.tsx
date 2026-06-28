@@ -73,7 +73,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   }, [serverId, currentPath]);
 
   useEffect(() => {
-    loadFiles();
+    const loadTimer = window.setTimeout(() => {
+      void loadFiles();
+    }, 0);
+    return () => window.clearTimeout(loadTimer);
   }, [loadFiles]);
 
   const handleUp = () => {
@@ -433,7 +436,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       )}
       <div className="file-toolbar">
         <div className="breadcrumb-nav">
-          <button
+          <button type="button"
             onClick={() => setCurrentPath('/')}
             className="breadcrumb-btn"
           >
@@ -444,7 +447,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             return (
               <React.Fragment key={path}>
                 <ChevronRight className="w-4 h-4 text-gray-600" size={16} />
-                <button
+                <button type="button"
                   onClick={() => setCurrentPath(path)}
                   className="breadcrumb-btn"
                   style={{
@@ -461,10 +464,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           })}
         </div>
         <div className="toolbar-actions">
-          <button onClick={loadFiles} className="toolbar-btn" title="Refresh">
+          <button type="button" onClick={loadFiles} className="toolbar-btn" title="Refresh">
             <RefreshCw size={16} className={`${loading ? 'spin' : ''}`} />
           </button>
-          <button
+          <button type="button"
             onClick={handleUp}
             disabled={currentPath === '/'}
             className="toolbar-btn"
@@ -472,14 +475,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           >
             <ArrowUp size={16} />
           </button>
-          <button
+          <button type="button"
             onClick={() => setCreatingDir(true)}
             className="toolbar-btn"
             title="New Folder"
           >
             <Plus size={16} />
           </button>
-          <button
+          <button type="button"
             onClick={handleUploadClick}
             className="toolbar-btn"
             title="Upload File"
@@ -491,7 +494,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
               <Upload size={16} />
             )}
           </button>
-          <button
+          <button type="button"
             onClick={handleFolderClick}
             className="toolbar-btn"
             title="Upload Folder"
@@ -554,14 +557,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
               if (e.key === 'Escape') setCreatingDir(false);
             }}
           />
-          <button
+          <button type="button"
             onClick={handleCreateDir}
             className="btn btn-primary"
             style={{ padding: '4px 12px', fontSize: '0.75rem' }}
           >
             Create
           </button>
-          <button
+          <button type="button"
             onClick={() => setCreatingDir(false)}
             className="btn btn-secondary"
             style={{ padding: '4px 12px', fontSize: '0.75rem' }}
@@ -641,7 +644,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                       onClick={(e) => e.stopPropagation()}
                     >
                       {!file.isDirectory && isEditable(file.name) && (
-                        <button
+                        <button type="button"
                           onClick={() => handleFileClick(file)}
                           className="file-manage-btn"
                           title="Edit"
@@ -649,14 +652,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                           <Edit2 size={14} />
                         </button>
                       )}
-                      <button
+                      <button type="button"
                         onClick={() => handleDownload(file)}
                         className="file-manage-btn"
                         title="Download"
                       >
                         <Download size={14} />
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => handleDelete(file)}
                         className="file-manage-btn delete"
                         title="Delete"

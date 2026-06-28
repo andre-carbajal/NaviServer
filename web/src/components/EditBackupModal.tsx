@@ -27,9 +27,13 @@ const EditBackupModal: React.FC<EditBackupModalProps> = ({
   );
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    const resetTimer = window.setTimeout(() => {
       setSelectedServerId(currentServerId || '');
-    }
+    }, 0);
+
+    return () => window.clearTimeout(resetTimer);
   }, [currentServerId, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {

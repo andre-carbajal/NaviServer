@@ -25,13 +25,17 @@ const CreateBackupModal: React.FC<CreateBackupModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    const resetTimer = window.setTimeout(() => {
       setName('');
       setSelectedServer(
         defaultServerId || (servers.length > 0 ? servers[0].id : ''),
       );
       setIsSubmitting(false);
-    }
+    }, 0);
+
+    return () => window.clearTimeout(resetTimer);
   }, [isOpen, defaultServerId, servers]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

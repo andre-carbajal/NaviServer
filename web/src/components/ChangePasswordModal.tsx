@@ -51,7 +51,7 @@ const ChangePasswordModal: React.FC<Props> = ({ user, onClose }) => {
             <Lock size={24} className="text-blue-500" />
             Change Password
           </h2>
-          <button className="icon-action" onClick={onClose}>
+          <button type="button" className="icon-action" onClick={onClose}>
             <X size={20} />
           </button>
         </div>

@@ -60,11 +60,14 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
   const [selectedVersionByKey, setSelectedVersionByKey] = useState<
     Record<string, string>
   >({});
-  const wasInstallOpen = useRef(false);
   const searchRequestRef = useRef(0);
   const lastBaseSearchKey = useRef('');
   const searchResultsRef = useRef<HTMLDivElement | null>(null);
-  const hydratedVersionKeys = useRef(new Set<string>());
+  const hydratedVersionKeys = useRef<Set<string>>(null!);
+
+  if (hydratedVersionKeys.current === null) {
+    hydratedVersionKeys.current = new Set();
+  }
 
   const isStopped = server.status === 'STOPPED';
 
@@ -180,33 +183,30 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           setError('Search failed');
         }
       } finally {
-        if (searchRequestRef.current !== requestId) {
-          return;
-        }
-        if (append) {
-          setSearchingMore(false);
-        } else {
-          setSearching(false);
+        if (searchRequestRef.current === requestId) {
+          if (append) {
+            setSearchingMore(false);
+          } else {
+            setSearching(false);
+          }
         }
       }
     },
     [searchQuery, searchSource, server.id, SEARCH_BATCH_SIZE],
   );
 
-  useEffect(() => {
-    if (isInstallOpen && !wasInstallOpen.current) {
-      setSearchSource('modrinth');
-      setSearchQuery('');
-      setSearchResults([]);
-      setSearchOffset(0);
-      setSearchHasMore(false);
-      setSelectedInstalls({});
-      setSelectedVersionByKey({});
-      hydratedVersionKeys.current.clear();
-      void handleSearch({ query: '', source: 'modrinth' });
-    }
-    wasInstallOpen.current = isInstallOpen;
-  }, [handleSearch, isInstallOpen]);
+  const openInstallModal = () => {
+    setSearchSource('modrinth');
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchOffset(0);
+    setSearchHasMore(false);
+    setSelectedInstalls({});
+    setSelectedVersionByKey({});
+    hydratedVersionKeys.current.clear();
+    setIsInstallOpen(true);
+    void handleSearch({ query: '', source: 'modrinth' });
+  };
 
   const handleManualSearch = () => {
     const query = searchQuery.trim();
@@ -318,7 +318,9 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
     }
 
     let cancelled = false;
-    setLoadingSummaryVersions(true);
+    const loadingTimer = window.setTimeout(() => {
+      setLoadingSummaryVersions(true);
+    }, 0);
     void Promise.all(
       entriesToHydrate.map(async ([key, result]) => {
         const response = await api.getAddonVersions(server.id, {
@@ -373,6 +375,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(loadingTimer);
     };
   }, [isInstallSummaryOpen, selectedInstallKey, selectedInstalls, server.id]);
 
@@ -441,7 +444,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
             Update all
           </Button>
           <Button
-            onClick={() => setIsInstallOpen(true)}
+            onClick={openInstallModal}
             disabled={!canManage || !isStopped || actionKey !== null}
           >
             Install {title}
@@ -796,7 +799,8 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           </Button>
           <Button
             onClick={() => {
-              void runAction(`install-bulk-${Date.now()}`, async () => {
+              const bulkInstallKey = `install-bulk-${Date.now()}`;
+              void runAction(bulkInstallKey, async () => {
                 for (const [key, result] of selectedInstallEntries) {
                   const version = resolveChosenVersion(key, result);
                   if (!version) continue;

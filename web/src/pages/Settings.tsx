@@ -2,18 +2,9 @@ import React, { useEffect, useState } from 'react';
 
 import { Button } from '../components/ui/Button';
 import { api } from '../services/api';
+import { humanSize } from '../utils/format';
 
 const BYTES_PER_LINE_ESTIMATE = 200;
-
-function humanSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(2)} KB`;
-  const mb = kb / 1024;
-  if (mb < 1024) return `${mb.toFixed(2)} MB`;
-  const gb = mb / 1024;
-  return `${gb.toFixed(2)} GB`;
-}
 
 const Settings: React.FC = () => {
   const [portRange, setPortRange] = useState({ start: 0, end: 0 });

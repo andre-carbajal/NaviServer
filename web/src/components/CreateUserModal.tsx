@@ -16,16 +16,10 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [usernameError, setUsernameError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  React.useEffect(() => {
-    if (username.includes(' ')) {
-      setUsernameError('Username cannot contain spaces');
-    } else {
-      setUsernameError('');
-    }
-  }, [username]);
+  const usernameError = username.includes(' ')
+    ? 'Username cannot contain spaces'
+    : '';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

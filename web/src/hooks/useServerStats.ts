@@ -30,8 +30,10 @@ export const useServerStats = (serverId: string, isRunning: boolean) => {
 
     retryDelayRef.current = isRunning ? RUNNING_POLL_MS : IDLE_POLL_MS;
     offlineLoggedRef.current = false;
-    setLoading(true);
-    setIsOffline(false);
+    const resetTimer = window.setTimeout(() => {
+      setLoading(true);
+      setIsOffline(false);
+    }, 0);
 
     const scheduleNext = (delay: number) => {
       if (cancelled) return;
@@ -70,6 +72,7 @@ export const useServerStats = (serverId: string, isRunning: boolean) => {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(resetTimer);
       if (timer !== null) {
         window.clearTimeout(timer);
       }

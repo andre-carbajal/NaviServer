@@ -30,23 +30,30 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
   const [selectedIcon, setSelectedIcon] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [iconCacheBust] = useState(() => Date.now());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen && server) {
-      setName((prev) => (prev === '' ? server.name : prev));
-      setRam((prev) => (prev === 0 ? server.ram : prev));
-      setCustomArgs((prev) => (prev === '' ? server.customArgs || '' : prev));
-    }
+    const syncTimer = window.setTimeout(() => {
+      if (isOpen && server) {
+        setName((prev) => (prev === '' ? server.name : prev));
+        setRam((prev) => (prev === 0 ? server.ram : prev));
+        setCustomArgs((prev) =>
+          prev === '' ? server.customArgs || '' : prev,
+        );
+      }
 
-    if (!isOpen) {
-      setName('');
-      setRam(0);
-      setCustomArgs('');
-      setSelectedIcon(null);
-      setIconPreview(null);
-      setImageError(false);
-    }
+      if (!isOpen) {
+        setName('');
+        setRam(0);
+        setCustomArgs('');
+        setSelectedIcon(null);
+        setIconPreview(null);
+        setImageError(false);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(syncTimer);
   }, [isOpen, server]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +114,7 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
                 />
               ) : !imageError && server ? (
                 <img
-                  src={`${api.getServerIconUrl(server.id)}?t=${Date.now()}`}
+                  src={`${api.getServerIconUrl(server.id)}?t=${iconCacheBust}`}
                   alt="Current"
                   onError={() => setImageError(true)}
                   style={{

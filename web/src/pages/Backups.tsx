@@ -35,6 +35,32 @@ interface UploadingBackup {
   progress: number;
 }
 
+const CREATING_BACKUPS_STORAGE_KEY = 'creating_backups:v1';
+const LEGACY_CREATING_BACKUPS_STORAGE_KEY = 'creating_backups';
+
+const readCreatingBackups = (): CreatingBackup[] => {
+  const stored =
+    localStorage.getItem(CREATING_BACKUPS_STORAGE_KEY) ??
+    localStorage.getItem(LEGACY_CREATING_BACKUPS_STORAGE_KEY);
+
+  if (!stored) return [];
+
+  try {
+    return JSON.parse(stored) as CreatingBackup[];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
+const writeCreatingBackups = (backups: CreatingBackup[]) => {
+  localStorage.setItem(
+    CREATING_BACKUPS_STORAGE_KEY,
+    JSON.stringify(backups),
+  );
+  localStorage.removeItem(LEGACY_CREATING_BACKUPS_STORAGE_KEY);
+};
+
 type AutoBackupUnit = 'minute' | 'hour' | 'day';
 
 interface AutoBackupDraft {
@@ -67,9 +93,17 @@ const Backups: React.FC = () => {
   const [autoBackupDrafts, setAutoBackupDrafts] = useState<
     Record<string, AutoBackupDraft>
   >({});
-  const activeSockets = useRef<Set<string>>(new Set());
-  const wsMap = useRef<Map<string, WebSocket>>(new Map());
+  const activeSockets = useRef<Set<string>>(null!);
+  const wsMap = useRef<Map<string, WebSocket>>(null!);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  if (activeSockets.current === null) {
+    activeSockets.current = new Set();
+  }
+
+  if (wsMap.current === null) {
+    wsMap.current = new Map();
+  }
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -112,16 +146,10 @@ const Backups: React.FC = () => {
 
   const removeCreatingBackup = useCallback((requestId: string) => {
     setCreatingBackups((prev) => prev.filter((b) => b.requestId !== requestId));
-    const stored = localStorage.getItem('creating_backups');
-    if (stored) {
-      try {
-        const list: CreatingBackup[] = JSON.parse(stored);
-        const newList = list.filter((b) => b.requestId !== requestId);
-        localStorage.setItem('creating_backups', JSON.stringify(newList));
-      } catch {
-        // Ignore JSON parse errors
-      }
-    }
+    const newList = readCreatingBackups().filter(
+      (b) => b.requestId !== requestId,
+    );
+    writeCreatingBackups(newList);
 
     const ws = wsMap.current.get(requestId);
     if (ws) {
@@ -177,18 +205,18 @@ const Backups: React.FC = () => {
   );
 
   useEffect(() => {
-    const stored = localStorage.getItem('creating_backups');
-    if (stored) {
-      try {
-        const list: CreatingBackup[] = JSON.parse(stored);
-        setCreatingBackups(list);
-        list.forEach((b) => {
-          if (b.requestId) trackProgress(b.requestId);
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const restoreTimer = window.setTimeout(() => {
+      const list = readCreatingBackups();
+      if (list.length === 0) return;
+
+      writeCreatingBackups(list);
+      setCreatingBackups(list);
+      list.forEach((b) => {
+        if (b.requestId) trackProgress(b.requestId);
+      });
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
   }, [trackProgress, token]);
 
   const handleCreateBackup = async (serverId: string, name: string) => {
@@ -208,10 +236,9 @@ const Backups: React.FC = () => {
 
     setCreatingBackups((prev) => [...prev, tempBackup]);
 
-    const stored = localStorage.getItem('creating_backups');
-    const list: CreatingBackup[] = stored ? JSON.parse(stored) : [];
+    const list = readCreatingBackups();
     list.push(tempBackup);
-    localStorage.setItem('creating_backups', JSON.stringify(list));
+    writeCreatingBackups(list);
 
     trackProgress(requestId);
 
@@ -349,8 +376,9 @@ const Backups: React.FC = () => {
   );
 
   useEffect(() => {
-    setAutoBackupDrafts((prev) => {
-      const next: Record<string, AutoBackupDraft> = {};
+    const draftTimer = window.setTimeout(() => {
+      setAutoBackupDrafts((prev) => {
+        const next: Record<string, AutoBackupDraft> = {};
 
       servers.forEach((server) => {
         const serverConfig: Omit<
@@ -387,8 +415,11 @@ const Backups: React.FC = () => {
         };
       });
 
-      return next;
-    });
+        return next;
+      });
+    }, 0);
+
+    return () => window.clearTimeout(draftTimer);
   }, [servers]);
 
   const updateAutoBackupDraft = (
@@ -815,7 +846,7 @@ const Backups: React.FC = () => {
                     style={{ border: 'none', padding: 0, margin: 0 }}
                   >
                     {user?.role === 'admin' && (
-                      <button
+                      <button type="button"
                         className="icon-action"
                         title="Edit Association"
                         onClick={() => handleEditClick(backup)}
@@ -832,14 +863,14 @@ const Backups: React.FC = () => {
                     >
                       <Download size={18} />
                     </a>
-                    <button
+                    <button type="button"
                       className="icon-action"
                       title="Restore"
                       onClick={() => handleRestoreClick(backup.name)}
                     >
                       <RotateCcw size={18} />
                     </button>
-                    <button
+                    <button type="button"
                       className="icon-action danger"
                       title="Delete"
                       onClick={() => handleDelete(backup.name)}

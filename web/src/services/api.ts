@@ -1,6 +1,11 @@
 import type { AxiosProgressEvent } from 'axios';
 import axios from 'axios';
 
+import {
+  resolveApiBaseUrl,
+  resolveWsBaseUrl,
+} from '../utils/apiUrls';
+
 import type {
   AddonListResponse,
   AddonSearchResponse,
@@ -14,56 +19,8 @@ import type {
   ServerVersionUpdateResult,
 } from '../types';
 
-const API_HOST = window.location.hostname;
-const API_PROTOCOL = window.location.protocol;
-const API_ORIGIN = `${window.location.protocol}//${window.location.host}`;
-const DEV_API_PORT = 23009;
-
-const normalizeBaseUrl = (value: string) =>
-  value.endsWith('/') ? value.slice(0, -1) : value;
-
-const resolveApiBaseUrl = () => {
-  const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
-  if (typeof envBaseUrl === 'string' && envBaseUrl.trim() !== '') {
-    return normalizeBaseUrl(envBaseUrl.trim());
-  }
-
-  const envApiPort = import.meta.env.VITE_API_PORT;
-  const resolvedEnvApiPort =
-    typeof envApiPort === 'number'
-      ? String(envApiPort)
-      : typeof envApiPort === 'string'
-        ? envApiPort
-        : '';
-  if (resolvedEnvApiPort.trim() !== '') {
-    return `${API_PROTOCOL}//${API_HOST}:${resolvedEnvApiPort.trim()}`;
-  }
-
-  if (import.meta.env.DEV) {
-    return `${API_PROTOCOL}//${API_HOST}:${DEV_API_PORT}`;
-  }
-
-  return normalizeBaseUrl(API_ORIGIN);
-};
-
-const resolveWsBaseUrl = (apiBaseUrl: string) => {
-  const envWsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
-  if (typeof envWsBaseUrl === 'string' && envWsBaseUrl.trim() !== '') {
-    return normalizeBaseUrl(envWsBaseUrl.trim());
-  }
-
-  if (apiBaseUrl.startsWith('https://')) {
-    return `wss://${apiBaseUrl.slice('https://'.length)}`;
-  }
-  if (apiBaseUrl.startsWith('http://')) {
-    return `ws://${apiBaseUrl.slice('http://'.length)}`;
-  }
-
-  return apiBaseUrl;
-};
-
-const API_BASE_URL = resolveApiBaseUrl();
-export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL);
+const API_BASE_URL = resolveApiBaseUrl(import.meta.env, window.location);
+export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL, import.meta.env);
 const NETWORK_ERROR_COOLDOWN_MS = 8000;
 const ADDON_SYNC_TIMEOUT_MS = 30000;
 const ADDON_DOWNLOAD_TIMEOUT_MS = 300000;

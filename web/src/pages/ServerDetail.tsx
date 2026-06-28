@@ -41,6 +41,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import React, {
   useCallback,
   useEffect,
@@ -67,6 +68,16 @@ import type {
   ServerSettings,
   ServerVersionUpdateResult,
 } from '../types';
+import {
+  clampRamAllocation,
+  FALLBACK_RAM_MAX_MB,
+  getAvatarUrl,
+  isFutureMinecraftVersion,
+  normalizeServerSettings,
+  RAM_MIN_MB,
+  readIntPropertyFromContent,
+  upsertPropertyLine,
+} from '../utils/serverDetail';
 
 type DetailTab =
   | 'performance'
@@ -138,146 +149,22 @@ const RANGE_TO_MS: Record<ChartRange, number> = {
 };
 
 const MAX_HISTORY_WINDOW_MS = RANGE_TO_MS['4h'];
-const MINEATAR_BASE_URL = 'https://api.mineatar.io/head';
-const STEVE_UUID = '8667ba71-b85a-4004-af54-457a9734eed7';
 const SERVER_POLL_MS = 2000;
 const SERVER_POLL_MAX_BACKOFF_MS = 30000;
-const RAM_MIN_MB = 512;
-const FALLBACK_RAM_MAX_MB = 262144;
 
-const getAvatarUrl = (uuid?: string) =>
-  `${MINEATAR_BASE_URL}/${encodeURIComponent(uuid || STEVE_UUID)}?scale=8&overlay=true`;
-
-const parseMinecraftVersionParts = (value: string): number[] | null => {
-  const normalized = value.trim().toLowerCase().replace(/^v/, '');
-  if (normalized === '') return null;
-
-  const parts = normalized.split('.');
-  const parsed: number[] = [];
-
-  for (const part of parts) {
-    const digits = part.match(/^\d+/)?.[0];
-    if (!digits) return null;
-    parsed.push(Number(digits));
-  }
-
-  return parsed;
-};
-
-const compareMinecraftVersions = (a: string, b: string): number | null => {
-  const left = parseMinecraftVersionParts(a);
-  const right = parseMinecraftVersionParts(b);
-  if (!left || !right) return null;
-
-  const maxLen = Math.max(left.length, right.length);
-  for (let i = 0; i < maxLen; i += 1) {
-    const lv = left[i] ?? 0;
-    const rv = right[i] ?? 0;
-    if (lv > rv) return 1;
-    if (lv < rv) return -1;
-  }
-  return 0;
-};
-
-const isFutureMinecraftVersion = (candidate: string, current: string) => {
-  const comparison = compareMinecraftVersions(candidate, current);
-  return comparison !== null && comparison > 0;
-};
-
-const clampRamAllocation = (value: number, maxRamMb?: number) => {
-  const upperBound = Number.isFinite(maxRamMb)
-    ? Math.max(RAM_MIN_MB, Number(maxRamMb))
-    : FALLBACK_RAM_MAX_MB;
-
-  return Math.min(upperBound, Math.max(RAM_MIN_MB, value));
-};
-
-const normalizeServerSettings = (
-  settings: ServerSettings,
-  maxRamMb?: number,
-): ServerSettings => ({
-  ...settings,
-  ram: clampRamAllocation(settings.ram, maxRamMb),
-  onlineMode: settings.onlineMode ?? true,
-  spawnProtection:
-    Number.isFinite(settings.spawnProtection) && settings.spawnProtection >= 0
-      ? settings.spawnProtection
-      : 16,
-});
-
-const upsertPropertyLine = (content: string, key: string, value: string) => {
-  const normalized = content.replace(/\r\n/g, '\n');
-  const lines = normalized.split('\n');
-  let updated = false;
-  const nextLines = lines.map((line) => {
-    const trimmed = line.trim();
-    if (trimmed === '' || trimmed.startsWith('#') || !line.includes('=')) {
-      return line;
-    }
-
-    const [rawKey] = line.split('=', 1);
-    if (rawKey.trim() !== key) {
-      return line;
-    }
-
-    updated = true;
-    return `${key}=${value}`;
-  });
-
-  if (!updated) {
-    if (nextLines.length > 0 && nextLines[nextLines.length - 1] !== '') {
-      nextLines.push('');
-    }
-    nextLines.push(`${key}=${value}`);
-  }
-
-  return nextLines.join('\n');
-};
-
-const readIntPropertyFromContent = (
-  content: string,
-  key: string,
-): number | null => {
-  const normalized = content.replace(/\r\n/g, '\n');
-  const lines = normalized.split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === '' || trimmed.startsWith('#') || !line.includes('=')) {
-      continue;
-    }
-    const [rawKey, rawValue = ''] = line.split('=', 2);
-    if (rawKey.trim() !== key) {
-      continue;
-    }
-    const parsed = Number.parseInt(rawValue.trim(), 10);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-    return null;
-  }
-  return null;
-};
-
-const PlayerAvatar: React.FC<{ player: PlayerInfo }> = ({ player }) => {
-  const [src, setSrc] = useState(getAvatarUrl(player.id));
-
-  useEffect(() => {
-    setSrc(getAvatarUrl(player.id));
-  }, [player.id]);
-
-  return (
-    <img
-      src={src}
-      alt={`${player.name} avatar`}
-      className="server-v2-player-avatar"
-      onError={() => {
-        if (src !== getAvatarUrl()) {
-          setSrc(getAvatarUrl());
-        }
-      }}
-    />
-  );
-};
+const PlayerAvatar: React.FC<{ player: PlayerInfo }> = ({ player }) => (
+  <img
+    src={getAvatarUrl(player.id)}
+    alt={`${player.name} avatar`}
+    className="server-v2-player-avatar"
+    onError={(event) => {
+      const fallbackUrl = getAvatarUrl();
+      if (event.currentTarget.src !== fallbackUrl) {
+        event.currentTarget.src = fallbackUrl;
+      }
+    }}
+  />
+);
 
 const ServerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -371,7 +258,7 @@ const ServerDetail: React.FC = () => {
       }
     };
 
-    fetchPublicIP();
+    void fetchPublicIP();
   }, []);
 
   const fetchServer = useCallback(async (): Promise<boolean> => {
@@ -424,19 +311,27 @@ const ServerDetail: React.FC = () => {
         window.clearTimeout(timer);
       }
     };
-  }, [fetchServer]);
+  }, [fetchServer, id]);
 
   useEffect(() => {
-    if (server?.status === 'STOPPED') {
+    if (server?.status !== 'STOPPED') return;
+
+    const resetCommandState = window.setTimeout(() => {
       setCommandHistory([]);
       setHistoryIndex(-1);
-    }
+    }, 0);
+
+    return () => window.clearTimeout(resetCommandState);
   }, [server?.status]);
 
   useEffect(() => {
-    setSelectedSettingsIcon(null);
-    setSettingsIconPreview(null);
-    setSettingsIconError(false);
+    const resetSettingsIconState = window.setTimeout(() => {
+      setSelectedSettingsIcon(null);
+      setSettingsIconPreview(null);
+      setSettingsIconError(false);
+    }, 0);
+
+    return () => window.clearTimeout(resetSettingsIconState);
   }, [server?.id]);
 
   const readJsonList = useCallback(
@@ -468,9 +363,17 @@ const ServerDetail: React.FC = () => {
   useEffect(() => {
     if (!id || activeTab !== 'players') return;
 
-    refreshPlayerLists();
-    const interval = setInterval(refreshPlayerLists, 8000);
-    return () => clearInterval(interval);
+    const refreshTimeout = window.setTimeout(() => {
+      void refreshPlayerLists();
+    }, 0);
+    const interval = window.setInterval(() => {
+      void refreshPlayerLists();
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(refreshTimeout);
+      window.clearInterval(interval);
+    };
   }, [activeTab, id, refreshPlayerLists]);
 
   useEffect(() => {
@@ -484,11 +387,15 @@ const ServerDetail: React.FC = () => {
       ramMb: stats.ram / 1024 / 1024,
     };
 
-    setStatsHistory((prev) => {
-      const cutoff = nextSnapshot.ts - MAX_HISTORY_WINDOW_MS;
-      const pruned = prev.filter((item) => item.ts >= cutoff);
-      return [...pruned, nextSnapshot];
-    });
+    const snapshotTimeout = window.setTimeout(() => {
+      setStatsHistory((prev) => {
+        const cutoff = nextSnapshot.ts - MAX_HISTORY_WINDOW_MS;
+        const pruned = prev.filter((item) => item.ts >= cutoff);
+        return [...pruned, nextSnapshot];
+      });
+    }, 0);
+
+    return () => window.clearTimeout(snapshotTimeout);
   }, [server?.status, stats.cpu, stats.ram]);
 
   useEffect(() => {
@@ -638,9 +545,13 @@ const ServerDetail: React.FC = () => {
   }, [id, user?.role]);
 
   useEffect(() => {
-    if (activeTab === 'settings' && user?.role === 'admin') {
-      fetchSettingsData();
-    }
+    if (activeTab !== 'settings' || user?.role !== 'admin') return;
+
+    const fetchSettingsTimeout = window.setTimeout(() => {
+      void fetchSettingsData();
+    }, 0);
+
+    return () => window.clearTimeout(fetchSettingsTimeout);
   }, [activeTab, fetchSettingsData, user?.role]);
 
   const handleSaveSettings = async () => {
@@ -706,7 +617,7 @@ const ServerDetail: React.FC = () => {
   };
 
   const handleSettingsIconSelected = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -811,7 +722,7 @@ const ServerDetail: React.FC = () => {
     }
   };
 
-  const handleCommandSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCommandSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!commandInput.trim()) return;
 
@@ -821,7 +732,7 @@ const ServerDetail: React.FC = () => {
     setCommandInput('');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (historyIndex < commandHistory.length - 1) {
@@ -861,13 +772,13 @@ const ServerDetail: React.FC = () => {
     return `${secs}s`;
   };
 
-  const now = Date.now();
   const selectedRangeMs = RANGE_TO_MS[chartRange];
-  const rangeStart = now - selectedRangeMs;
+  const rangeEnd = statsHistory[statsHistory.length - 1]?.ts ?? 0;
+  const rangeStart = rangeEnd - selectedRangeMs;
 
   const visibleHistory = useMemo(() => {
     const inRange = statsHistory.filter(
-      (point) => point.ts >= rangeStart && point.ts <= now,
+      (point) => point.ts >= rangeStart && point.ts <= rangeEnd,
     );
 
     if (inRange.length > 0) {
@@ -879,7 +790,7 @@ const ServerDetail: React.FC = () => {
     }
 
     return [];
-  }, [now, rangeStart, statsHistory]);
+  }, [rangeEnd, rangeStart, statsHistory]);
 
   const ramDomainMax = useMemo(() => {
     const dataMax = visibleHistory.reduce(
@@ -1008,7 +919,7 @@ const ServerDetail: React.FC = () => {
     });
   };
 
-  const players = stats.players || [];
+  const players = useMemo(() => stats.players ?? [], [stats.players]);
   const canModeratePlayers = Boolean(server?.permissions?.canViewConsole);
   const normalizedSearch = playersSearch.trim().toLowerCase();
 
@@ -1150,7 +1061,7 @@ const ServerDetail: React.FC = () => {
 
   const queuePlayerDataRefresh = () => {
     setTimeout(() => {
-      refreshPlayerLists();
+      void refreshPlayerLists();
     }, 1200);
   };
 
@@ -1216,11 +1127,10 @@ const ServerDetail: React.FC = () => {
   return (
     <div className="server-v2">
       <header className="server-v2-header">
-        <button
+        <button type="button"
           className="server-v2-back"
           onClick={() => navigate('/')}
           title="Back to dashboard"
-          type="button"
         >
           <ArrowLeft size={18} />
         </button>
@@ -1406,7 +1316,7 @@ const ServerDetail: React.FC = () => {
                           dataKey="ts"
                           type="number"
                           scale="time"
-                          domain={[rangeStart, now]}
+                          domain={[rangeStart, rangeEnd]}
                           stroke="var(--text-muted)"
                           tickFormatter={formatTimeTick}
                           minTickGap={24}

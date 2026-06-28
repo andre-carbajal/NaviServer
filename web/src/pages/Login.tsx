@@ -49,13 +49,17 @@ const Login: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    checkSetupStatus();
+    const initialCheck = window.setTimeout(() => {
+      void checkSetupStatus();
+    }, 0);
     const retryOnRecovery = () => {
       void checkSetupStatus();
     };
     window.addEventListener('network-recovered', retryOnRecovery);
-    return () =>
+    return () => {
+      window.clearTimeout(initialCheck);
       window.removeEventListener('network-recovered', retryOnRecovery);
+    };
   }, [checkSetupStatus]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -136,7 +140,7 @@ const Login: React.FC = () => {
         </form>
         {canToggle && (
           <div className="login-footer">
-            <button className="btn-link" onClick={() => setIsSetup(!isSetup)}>
+            <button type="button" className="btn-link" onClick={() => setIsSetup(!isSetup)}>
               {isSetup
                 ? 'Already have an account? Login'
                 : 'Need to setup? (First run only)'}

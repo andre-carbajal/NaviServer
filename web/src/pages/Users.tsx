@@ -65,7 +65,7 @@ const UsersPage: React.FC = () => {
     <div className="users-page">
       <div className="modal-header">
         <h1>User Management</h1>
-        <button
+        <button type="button"
           className="btn btn-primary"
           onClick={() => setShowCreateModal(true)}
         >
@@ -110,14 +110,14 @@ const UsersPage: React.FC = () => {
                     >
                       {user.role !== 'admin' && (
                         <>
-                          <button
+                          <button type="button"
                             className="icon-action"
                             title="Permissions"
                             onClick={() => setEditingPermissionsUser(user)}
                           >
                             <Key size={18} />
                           </button>
-                          <button
+                          <button type="button"
                             className="icon-action"
                             title="Change Password"
                             onClick={() => setChangingPasswordUser(user)}
@@ -126,7 +126,7 @@ const UsersPage: React.FC = () => {
                           </button>
                         </>
                       )}
-                      <button
+                      <button type="button"
                         className="icon-action danger"
                         title="Delete"
                         onClick={() => handleDelete(user)}

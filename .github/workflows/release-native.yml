@@ -1,13 +1,55 @@
-name: Build
+name: Release Native
 
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
-  build-native:
+  run-tests-before-release:
+    name: Run tests before release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.4'
+          check-latest: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: web
+        run: npm run test
+
+      - name: Build frontend
+        working-directory: web
+        run: npm run build
+
+      - name: Run Go tests
+        run: go test ./...
+
+      - name: Vet Go code
+        env:
+          CGO_ENABLED: 1
+        run: go vet ./...
+
+  build-binaries:
     name: Build on ${{ matrix.os }}
+    needs: run-tests-before-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,10 +68,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26.4"
+          go-version: '1.26.4'
           check-latest: true
 
-      - name: Install Linux Dependencies
+      - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
@@ -38,14 +80,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          cache: "npm"
+          node-version: '24'
+          cache: 'npm'
           cache-dependency-path: web/package-lock.json
-
-      - name: Vet Go code
-        env:
-          CGO_ENABLED: 1
-        run: go vet ./...
 
       - name: Build (Linux/macOS)
         if: runner.os != 'Windows'
@@ -81,13 +118,13 @@ jobs:
           if ($v -like 'v*') { $v = $v.Substring(1) }
           Write-Output "MYAPP_VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Build the Inno Setup Installer
+      - name: Build the Inno Setup installer
         if: runner.os == 'Windows'
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
         with:
           path: setup.iss
 
-      - name: Prepare Artifacts (Windows)
+      - name: Prepare artifacts (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -98,7 +135,7 @@ jobs:
           $ZIP_NAME = "NaviServer-${VERSION}-windows.zip"
           Compress-Archive -Path "dist/*" -DestinationPath "build/$ZIP_NAME" -Force
 
-      - name: Create Zip Archive (Linux/macOS)
+      - name: Create zip archive (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           VERSION="${{ github.ref_name }}"
@@ -127,28 +164,30 @@ jobs:
           zip -r "../${ZIP_NAME}" ./*
         shell: bash
 
-      - name: Upload Artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-build
           path: build/NaviServer-*.*
 
-  release:
-    needs: build-native
+  publish-release:
+    name: Publish package manager and release artifacts
+    needs: build-binaries
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download Artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: build
           merge-multiple: true
 
-      - name: Create Release
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: build/NaviServer-*.*

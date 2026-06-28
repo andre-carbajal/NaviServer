@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -62,7 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
-    void checkAuth();
+    const initialCheck = window.setTimeout(() => {
+      void checkAuth();
+    }, 0);
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -71,16 +74,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () =>
+    return () => {
+      window.clearTimeout(initialCheck);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [checkAuth]);
 
-  const login = (_newToken: string, newUser: User) => {
+  const login = useCallback((_newToken: string, newUser: User) => {
     setToken('authenticated');
     setUser(newUser);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await api.logout();
     } catch (error) {
@@ -88,14 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   const isAuthenticated = token !== null && user !== null;
 
+  const contextValue = useMemo(
+    () => ({ user, token, login, logout, loading, isAuthenticated }),
+    [user, token, login, logout, loading, isAuthenticated],
+  );
+
   return (
-    <AuthContext.Provider
-      value={{ user, token, login, logout, loading, isAuthenticated }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

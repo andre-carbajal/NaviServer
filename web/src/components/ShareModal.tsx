@@ -50,12 +50,16 @@ const ShareModal: React.FC<ShareModalProps> = ({
   }, [serverId]);
 
   useEffect(() => {
-    if (isOpen && serverId) {
-      checkLinkStatus();
-    } else {
-      setToken(null);
-      setError('');
-    }
+    const syncTimer = window.setTimeout(() => {
+      if (isOpen && serverId) {
+        void checkLinkStatus();
+      } else {
+        setToken(null);
+        setError('');
+      }
+    }, 0);
+
+    return () => window.clearTimeout(syncTimer);
   }, [isOpen, serverId, checkLinkStatus]);
 
   const handleDeactivate = async () => {

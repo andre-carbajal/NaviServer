@@ -63,12 +63,16 @@ const CreateModal: React.FC<CreateModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    setMcVersion('');
-    setBuildVersion('');
-    setLoaderVersion('');
-    setIncludeSnapshots(false);
-    setIncludeUnstable(false);
-    setMetadata({});
+    const resetTimer = window.setTimeout(() => {
+      setMcVersion('');
+      setBuildVersion('');
+      setLoaderVersion('');
+      setIncludeSnapshots(false);
+      setIncludeUnstable(false);
+      setMetadata({});
+    }, 0);
+
+    return () => window.clearTimeout(resetTimer);
   }, [loader]);
 
   useEffect(() => {
@@ -101,7 +105,15 @@ const CreateModal: React.FC<CreateModalProps> = ({
           setLoaderVersion(md.loaderVersions[0]);
         }
       });
-  }, [loader, isOpen, mcVersion, includeSnapshots, includeUnstable]);
+  }, [
+    loader,
+    isOpen,
+    mcVersion,
+    includeSnapshots,
+    includeUnstable,
+    buildVersion,
+    loaderVersion,
+  ]);
 
   const showUnstableToggle = useMemo(
     () => ['fabric', 'neoforge'].includes(loader),

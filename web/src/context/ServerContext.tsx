@@ -3,6 +3,7 @@ import React, {
   createContext,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -10,6 +11,32 @@ import React, {
 import { WS_BASE_URL, api } from '../services/api';
 import type { Server } from '../types';
 import { useAuth } from './AuthContext';
+
+const CREATING_SERVERS_STORAGE_KEY = 'creating_servers:v1';
+const LEGACY_CREATING_SERVERS_STORAGE_KEY = 'creating_servers';
+
+const readCreatingServers = (): Server[] => {
+  const stored =
+    localStorage.getItem(CREATING_SERVERS_STORAGE_KEY) ??
+    localStorage.getItem(LEGACY_CREATING_SERVERS_STORAGE_KEY);
+
+  if (!stored) return [];
+
+  try {
+    return JSON.parse(stored) as Server[];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+
+const writeCreatingServers = (servers: Server[]) => {
+  localStorage.setItem(
+    CREATING_SERVERS_STORAGE_KEY,
+    JSON.stringify(servers),
+  );
+  localStorage.removeItem(LEGACY_CREATING_SERVERS_STORAGE_KEY);
+};
 
 interface ServerContextType {
   servers: Server[];
@@ -46,8 +73,16 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
   const { token } = useAuth();
   const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
-  const activeSockets = useRef<Set<string>>(new Set());
-  const wsMap = useRef<Map<string, WebSocket>>(new Map());
+  const activeSockets = useRef<Set<string>>(null!);
+  const wsMap = useRef<Map<string, WebSocket>>(null!);
+
+  if (activeSockets.current === null) {
+    activeSockets.current = new Set();
+  }
+
+  if (wsMap.current === null) {
+    wsMap.current = new Map();
+  }
 
   const fetchServers = useCallback(async () => {
     try {
@@ -74,16 +109,8 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
 
   const removeCreatingServer = useCallback((id: string) => {
     setServers((prev) => prev.filter((s) => s.id !== id));
-    const stored = localStorage.getItem('creating_servers');
-    if (stored) {
-      try {
-        const list: Server[] = JSON.parse(stored);
-        const newList = list.filter((s) => s.id !== id);
-        localStorage.setItem('creating_servers', JSON.stringify(newList));
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const newList = readCreatingServers().filter((s) => s.id !== id);
+    writeCreatingServers(newList);
 
     const ws = wsMap.current.get(id);
     if (ws) {
@@ -198,23 +225,23 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   useEffect(() => {
-    const stored = localStorage.getItem('creating_servers');
-    if (stored) {
-      try {
-        const creatingServers: Server[] = JSON.parse(stored);
-        setServers((prev) => {
-          const existingIds = new Set(prev.map((s) => s.id));
-          const toAdd = creatingServers.filter((s) => !existingIds.has(s.id));
-          return [...prev, ...toAdd];
-        });
-        creatingServers.forEach((s) => trackProgress(s.id));
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    const restoreTimer = window.setTimeout(() => {
+      const creatingServers = readCreatingServers();
+      if (creatingServers.length === 0) return;
+
+      writeCreatingServers(creatingServers);
+      setServers((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const toAdd = creatingServers.filter((s) => !existingIds.has(s.id));
+        return [...prev, ...toAdd];
+      });
+      creatingServers.forEach((s) => trackProgress(s.id));
+    }, 0);
+
+    return () => window.clearTimeout(restoreTimer);
   }, [trackProgress]);
 
-  const createServer = async (data: {
+  const createServer = useCallback(async (data: {
     name: string;
     loader: string;
     version?: string;
@@ -245,10 +272,9 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
 
     setServers((prev) => [...prev, tempServer]);
 
-    const stored = localStorage.getItem('creating_servers');
-    const list: Server[] = stored ? JSON.parse(stored) : [];
+    const list = readCreatingServers();
     list.push(tempServer);
-    localStorage.setItem('creating_servers', JSON.stringify(list));
+    writeCreatingServers(list);
 
     trackProgress(tempId);
 
@@ -260,9 +286,9 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
       removeCreatingServer(tempId);
       throw err;
     }
-  };
+  }, [removeCreatingServer, trackProgress]);
 
-  const startServer = async (id: string) => {
+  const startServer = useCallback(async (id: string) => {
     try {
       setServers((prev) =>
         prev.map((s) => (s.id === id ? { ...s, status: 'STARTING' } : s)),
@@ -272,18 +298,18 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
       console.error(err);
       await fetchServers();
     }
-  };
+  }, [fetchServers]);
 
-  const stopServer = async (id: string) => {
+  const stopServer = useCallback(async (id: string) => {
     try {
       await api.stopServer(id);
       await fetchServers();
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [fetchServers]);
 
-  const deleteServer = async (id: string) => {
+  const deleteServer = useCallback(async (id: string) => {
     const isCreating = servers.find((s) => s.id === id)?.status === 'CREATING';
 
     if (isCreating) {
@@ -298,31 +324,49 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
       console.error(err);
       await fetchServers();
     }
-  };
+  }, [fetchServers, removeCreatingServer, servers]);
 
   useEffect(() => {
     if (!token) {
-      setServers([]);
-      return;
+      const clearServersTimer = window.setTimeout(() => {
+        setServers([]);
+      }, 0);
+      return () => window.clearTimeout(clearServersTimer);
     }
 
-    fetchServers();
+    const initialFetch = window.setTimeout(() => {
+      void fetchServers();
+    }, 0);
     const interval = setInterval(fetchServers, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(initialFetch);
+      clearInterval(interval);
+    };
   }, [fetchServers, token]);
 
+  const contextValue = useMemo(
+    () => ({
+      servers,
+      loading,
+      createServer,
+      startServer,
+      stopServer,
+      deleteServer,
+      refresh: fetchServers,
+    }),
+    [
+      servers,
+      loading,
+      createServer,
+      startServer,
+      stopServer,
+      deleteServer,
+      fetchServers,
+    ],
+  );
+
   return (
-    <ServerContext.Provider
-      value={{
-        servers,
-        loading,
-        createServer,
-        startServer,
-        stopServer,
-        deleteServer,
-        refresh: fetchServers,
-      }}
-    >
+    <ServerContext.Provider value={contextValue}>
       {children}
     </ServerContext.Provider>
   );
