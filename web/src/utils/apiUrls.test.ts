@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type ApiUrlEnv,
+  type BrowserLocationLike,
   normalizeBaseUrl,
   resolveApiBaseUrl,
   resolveWsBaseUrl,
-  type ApiUrlEnv,
-  type BrowserLocationLike,
 } from './apiUrls';
 
 const baseLocation: BrowserLocationLike = {

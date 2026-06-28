@@ -8,11 +8,13 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import CreateUserModal from '../components/CreateUserModal';
 import PermissionsModal from '../components/PermissionsModal';
 import { useAuth } from '../context/AuthContext';
+import { useModalDialog } from '../hooks/useModalDialog';
 import { api } from '../services/api';
 import type { User } from '../types';
 
 const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const { showAlert, modalDialog } = useModalDialog();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,7 +52,11 @@ const UsersPage: React.FC = () => {
         await api.deleteUser(userToDelete.id);
         setUsers(users.filter((u) => u.id !== userToDelete.id));
       } catch {
-        alert('Failed to delete user');
+        await showAlert({
+          title: 'Delete Failed',
+          message: 'Failed to delete user.',
+          variant: 'danger',
+        });
       }
       setUserToDelete(null);
     }
@@ -63,9 +69,11 @@ const UsersPage: React.FC = () => {
 
   return (
     <div className="users-page">
+      {modalDialog}
       <div className="modal-header">
         <h1>User Management</h1>
-        <button type="button"
+        <button
+          type="button"
           className="btn btn-primary"
           onClick={() => setShowCreateModal(true)}
         >
@@ -110,14 +118,16 @@ const UsersPage: React.FC = () => {
                     >
                       {user.role !== 'admin' && (
                         <>
-                          <button type="button"
+                          <button
+                            type="button"
                             className="icon-action"
                             title="Permissions"
                             onClick={() => setEditingPermissionsUser(user)}
                           >
                             <Key size={18} />
                           </button>
-                          <button type="button"
+                          <button
+                            type="button"
                             className="icon-action"
                             title="Change Password"
                             onClick={() => setChangingPasswordUser(user)}
@@ -126,7 +136,8 @@ const UsersPage: React.FC = () => {
                           </button>
                         </>
                       )}
-                      <button type="button"
+                      <button
+                        type="button"
                         className="icon-action danger"
                         title="Delete"
                         onClick={() => handleDelete(user)}

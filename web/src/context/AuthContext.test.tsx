@@ -1,6 +1,9 @@
-import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import React from 'react';
+
+import { AuthProvider, useAuth } from './AuthContext';
 
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {
@@ -12,8 +15,6 @@ const { mockApi } = vi.hoisted(() => ({
 vi.mock('../services/api', () => ({
   api: mockApi,
 }));
-
-import { AuthProvider, useAuth } from './AuthContext';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
@@ -103,7 +104,7 @@ describe('AuthContext', () => {
     expect(result.current.user?.username).toBe('new-user');
 
     await act(async () => {
-      await result.current.logout();
+      result.current.logout();
     });
 
     expect(result.current.user).toBeNull();

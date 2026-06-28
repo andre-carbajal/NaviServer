@@ -31,10 +31,7 @@ const readCreatingServers = (): Server[] => {
 };
 
 const writeCreatingServers = (servers: Server[]) => {
-  localStorage.setItem(
-    CREATING_SERVERS_STORAGE_KEY,
-    JSON.stringify(servers),
-  );
+  localStorage.setItem(CREATING_SERVERS_STORAGE_KEY, JSON.stringify(servers));
   localStorage.removeItem(LEGACY_CREATING_SERVERS_STORAGE_KEY);
 };
 
@@ -241,90 +238,103 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
     return () => window.clearTimeout(restoreTimer);
   }, [trackProgress]);
 
-  const createServer = useCallback(async (data: {
-    name: string;
-    loader: string;
-    version?: string;
-    ram: number;
-    requestId?: string;
-    loaderOptions?: {
-      mcVersion?: string;
-      includeSnapshots?: boolean;
-      includeUnstable?: boolean;
-      buildVersion?: string;
-      loaderVersion?: string;
-      installerVersion?: string;
-    };
-  }) => {
-    const tempId = data.requestId || `temp-${Date.now()}`;
+  const createServer = useCallback(
+    async (data: {
+      name: string;
+      loader: string;
+      version?: string;
+      ram: number;
+      requestId?: string;
+      loaderOptions?: {
+        mcVersion?: string;
+        includeSnapshots?: boolean;
+        includeUnstable?: boolean;
+        buildVersion?: string;
+        loaderVersion?: string;
+        installerVersion?: string;
+      };
+    }) => {
+      const tempId = data.requestId || `temp-${Date.now()}`;
 
-    const tempServer: Server = {
-      id: tempId,
-      name: data.name,
-      loader: data.loader,
-      version: data.loaderOptions?.mcVersion || data.version || 'latest',
-      ram: data.ram,
-      port: 0,
-      status: 'CREATING',
-      progress: 0,
-      progressMessage: 'Initializing...',
-    };
+      const tempServer: Server = {
+        id: tempId,
+        name: data.name,
+        loader: data.loader,
+        version: data.loaderOptions?.mcVersion || data.version || 'latest',
+        ram: data.ram,
+        port: 0,
+        status: 'CREATING',
+        progress: 0,
+        progressMessage: 'Initializing...',
+      };
 
-    setServers((prev) => [...prev, tempServer]);
+      setServers((prev) => [...prev, tempServer]);
 
-    const list = readCreatingServers();
-    list.push(tempServer);
-    writeCreatingServers(list);
+      const list = readCreatingServers();
+      list.push(tempServer);
+      writeCreatingServers(list);
 
-    trackProgress(tempId);
+      trackProgress(tempId);
 
-    try {
-      await api.createServer(data);
-      return true;
-    } catch (err) {
-      console.error(err);
-      removeCreatingServer(tempId);
-      throw err;
-    }
-  }, [removeCreatingServer, trackProgress]);
+      try {
+        await api.createServer(data);
+        return true;
+      } catch (err) {
+        console.error(err);
+        removeCreatingServer(tempId);
+        throw err;
+      }
+    },
+    [removeCreatingServer, trackProgress],
+  );
 
-  const startServer = useCallback(async (id: string) => {
-    try {
-      setServers((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, status: 'STARTING' } : s)),
-      );
-      await api.startServer(id);
-    } catch (err) {
-      console.error(err);
-      await fetchServers();
-    }
-  }, [fetchServers]);
+  const startServer = useCallback(
+    async (id: string) => {
+      try {
+        setServers((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, status: 'STARTING' } : s)),
+        );
+        await api.startServer(id);
+      } catch (err) {
+        console.error(err);
+        await fetchServers();
+      }
+    },
+    [fetchServers],
+  );
 
-  const stopServer = useCallback(async (id: string) => {
-    try {
-      await api.stopServer(id);
-      await fetchServers();
-    } catch (err) {
-      console.error(err);
-    }
-  }, [fetchServers]);
+  const stopServer = useCallback(
+    async (id: string) => {
+      try {
+        await api.stopServer(id);
+        await fetchServers();
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [fetchServers],
+  );
 
-  const deleteServer = useCallback(async (id: string) => {
-    const isCreating = servers.find((s) => s.id === id)?.status === 'CREATING';
+  const deleteServer = useCallback(
+    async (id: string) => {
+      const isCreating =
+        servers.find((s) => s.id === id)?.status === 'CREATING';
 
-    if (isCreating) {
-      removeCreatingServer(id);
-      return;
-    }
+      if (isCreating) {
+        removeCreatingServer(id);
+        return;
+      }
 
-    try {
-      setServers((prev) => prev.filter((s) => s.id !== id));
-      await api.deleteServer(id);
-    } catch (err) {
-      console.error(err);
-      await fetchServers();
-    }
-  }, [fetchServers, removeCreatingServer, servers]);
+      try {
+        setServers((prev) => prev.filter((s) => s.id !== id));
+        await api.deleteServer(id);
+      } catch (err) {
+        console.error(err);
+        await fetchServers();
+      }
+    },
+    [fetchServers, removeCreatingServer, servers],
+  );
 
   useEffect(() => {
     if (!token) {

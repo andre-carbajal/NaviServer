@@ -93,7 +93,12 @@ const Layout: React.FC = () => {
             <span className="user-name">{user?.username}</span>
             <span className="user-role-badge">{user?.role}</span>
           </div>
-          <button type="button" onClick={logout} className="logout-btn" title="Logout">
+          <button
+            type="button"
+            onClick={logout}
+            className="logout-btn"
+            title="Logout"
+          >
             <LogOut size={18} />
           </button>
         </div>
@@ -198,7 +203,12 @@ const Layout: React.FC = () => {
                 )}
               </div>
             </div>
-            <button type="button" onClick={logout} className="logout-btn" title="Logout">
+            <button
+              type="button"
+              onClick={logout}
+              className="logout-btn"
+              title="Logout"
+            >
               <LogOut size={18} />
             </button>
           </div>

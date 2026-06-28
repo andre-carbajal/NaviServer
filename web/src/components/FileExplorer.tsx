@@ -17,9 +17,12 @@ import {
 
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { useModalDialog } from '../hooks/useModalDialog';
 import { api } from '../services/api';
 import type { FileEntry } from '../types';
 import FileEditor from './FileEditor';
+import { Button } from './ui/Button';
+import { Modal } from './ui/Modal';
 
 const IGNORED_EDIT_EXTENSIONS = new Set([
   '.jar',
@@ -80,6 +83,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   const [creatingDir, setCreatingDir] = useState(false);
   const [newDirName, setNewDirName] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [filePendingDelete, setFilePendingDelete] = useState<FileEntry | null>(
+    null,
+  );
+  const [deletingFile, setDeletingFile] = useState(false);
+  const { showAlert, showConfirm, modalDialog } = useModalDialog();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const folderInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -123,7 +131,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       setCurrentPath(newPath);
     } else {
       if (!isEditable(file.name)) {
-        alert('This file type cannot be edited.');
+        void showAlert({
+          title: 'Cannot Edit File',
+          message: 'This file type cannot be edited.',
+          variant: 'danger',
+        });
         return;
       }
       const filePath =
@@ -132,15 +144,23 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     }
   };
 
-  const handleDelete = async (file: FileEntry) => {
-    if (!confirm(`Are you sure you want to delete ${file.name}?`)) return;
+  const handleDelete = (file: FileEntry) => {
+    setFilePendingDelete(file);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!filePendingDelete || deletingFile) return;
 
     const filePath =
-      currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+      currentPath === '/'
+        ? `/${filePendingDelete.name}`
+        : `${currentPath}/${filePendingDelete.name}`;
 
+    setDeletingFile(true);
     try {
       await api.deleteFile(serverId, filePath);
-      loadFiles();
+      setFilePendingDelete(null);
+      void loadFiles();
     } catch (err: unknown) {
       let errorMessage = 'Failed to delete file';
       if (err instanceof Error) {
@@ -149,7 +169,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         const axiosError = err as AxiosError<string>;
         errorMessage = axiosError.response?.data || errorMessage;
       }
-      alert(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setDeletingFile(false);
     }
   };
 
@@ -162,7 +184,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       await api.createDirectory(serverId, newPath);
       setCreatingDir(false);
       setNewDirName('');
-      loadFiles();
+      await loadFiles();
     } catch (err: unknown) {
       let errorMessage = 'Failed to create directory';
       if (err instanceof Error) {
@@ -171,7 +193,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         const axiosError = err as AxiosError<string>;
         errorMessage = axiosError.response?.data || errorMessage;
       }
-      alert(errorMessage);
+      await showAlert({
+        title: 'Action Failed',
+        message: errorMessage,
+        variant: 'danger',
+      });
     }
   };
 
@@ -194,9 +220,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     for (const folderName of foldersToUpload) {
       // Use the 'files' state (existing files) to check for duplicates
       if (files.some((f) => f.name === folderName && f.isDirectory)) {
-        alert(
-          `A folder named "${folderName}" already exists. Please delete it or rename it before uploading.`,
-        );
+        await showAlert({
+          title: 'Folder Already Exists',
+          message: `A folder named "${folderName}" already exists. Please delete it or rename it before uploading.`,
+          variant: 'danger',
+        });
         return;
       }
     }
@@ -206,7 +234,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         ? `Are you sure you want to upload ${filesToUpload[0].name}?`
         : `Are you sure you want to upload ${filesToUpload.length} items?`;
 
-    if (!confirm(confirmMessage)) return;
+    const shouldUpload = await showConfirm({
+      title: 'Upload Files',
+      message: confirmMessage,
+      confirmText: 'Upload',
+    });
+    if (!shouldUpload) return;
 
     setUploading(true);
     try {
@@ -215,7 +248,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         const relativePath = (file as ExtendedFile).webkitRelativePath;
         await api.uploadFile(serverId, currentPath, file, relativePath);
       }
-      loadFiles();
+      await loadFiles();
     } catch (err: unknown) {
       let errorMessage = 'Failed to upload file';
       if (err instanceof Error) {
@@ -224,7 +257,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         const axiosError = err as AxiosError<string>;
         errorMessage = axiosError.response?.data || errorMessage;
       }
-      alert(errorMessage);
+      await showAlert({
+        title: 'Upload Failed',
+        message: errorMessage,
+        variant: 'danger',
+      });
     } finally {
       setUploading(false);
     }
@@ -277,9 +314,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       const entry = items[i].webkitGetAsEntry() as FileSystemEntry | null;
       if (entry && entry.isDirectory) {
         if (files.some((f) => f.name === entry.name && f.isDirectory)) {
-          alert(
-            `A folder named "${entry.name}" already exists. Please delete it or rename it before uploading.`,
-          );
+          await showAlert({
+            title: 'Folder Already Exists',
+            message: `A folder named "${entry.name}" already exists. Please delete it or rename it before uploading.`,
+            variant: 'danger',
+          });
           return;
         }
       }
@@ -290,7 +329,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         ? `Are you sure you want to upload the dropped item?`
         : `Are you sure you want to upload ${items.length} dropped items?`;
 
-    if (!confirm(confirmMessage)) return;
+    const shouldUploadDroppedItems = await showConfirm({
+      title: 'Upload Dropped Items',
+      message: confirmMessage,
+      confirmText: 'Upload',
+    });
+    if (!shouldUploadDroppedItems) return;
 
     const filesToUpload: { file: File; relativePath?: string }[] = [];
 
@@ -350,7 +394,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         const axiosError = err as AxiosError<string>;
         errorMessage = axiosError.response?.data || errorMessage;
       }
-      alert(errorMessage);
+      await showAlert({
+        title: 'Upload Failed',
+        message: errorMessage,
+        variant: 'danger',
+      });
     } finally {
       setUploading(false);
     }
@@ -370,7 +418,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       link.click();
       link.remove();
     } catch {
-      alert('Failed to download');
+      await showAlert({
+        title: 'Download Failed',
+        message: 'Failed to download.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -401,6 +453,38 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         boxShadow: isDragging ? '0 0 0 2px rgba(100, 108, 255, 0.2)' : 'none',
       }}
     >
+      {modalDialog}
+      <Modal
+        isOpen={filePendingDelete !== null}
+        onClose={() => {
+          if (!deletingFile) setFilePendingDelete(null);
+        }}
+        title={`Delete ${filePendingDelete?.isDirectory ? 'Folder' : 'File'}`}
+      >
+        <div className="file-delete-modal-body">
+          <p>
+            Do you want to delete{' '}
+            <strong>{filePendingDelete?.name || 'this item'}</strong>?
+          </p>
+          <p className="file-delete-warning">This action cannot be undone.</p>
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              onClick={() => setFilePendingDelete(null)}
+              disabled={deletingFile}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmDelete}
+              disabled={deletingFile}
+            >
+              {deletingFile ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
       {isDragging && (
         <div
           style={{
@@ -437,7 +521,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       )}
       <div className="file-toolbar">
         <div className="breadcrumb-nav">
-          <button type="button"
+          <button
+            type="button"
             onClick={() => setCurrentPath('/')}
             className="breadcrumb-btn"
           >
@@ -448,7 +533,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             return (
               <React.Fragment key={path}>
                 <ChevronRight className="w-4 h-4 text-gray-600" size={16} />
-                <button type="button"
+                <button
+                  type="button"
                   onClick={() => setCurrentPath(path)}
                   className="breadcrumb-btn"
                   style={{
@@ -465,10 +551,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           })}
         </div>
         <div className="toolbar-actions">
-          <button type="button" onClick={loadFiles} className="toolbar-btn" title="Refresh">
+          <button
+            type="button"
+            onClick={loadFiles}
+            className="toolbar-btn"
+            title="Refresh"
+          >
             <RefreshCw size={16} className={`${loading ? 'spin' : ''}`} />
           </button>
-          <button type="button"
+          <button
+            type="button"
             onClick={handleUp}
             disabled={currentPath === '/'}
             className="toolbar-btn"
@@ -476,14 +568,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           >
             <ArrowUp size={16} />
           </button>
-          <button type="button"
+          <button
+            type="button"
             onClick={() => setCreatingDir(true)}
             className="toolbar-btn"
             title="New Folder"
           >
             <Plus size={16} />
           </button>
-          <button type="button"
+          <button
+            type="button"
             onClick={handleUploadClick}
             className="toolbar-btn"
             title="Upload File"
@@ -495,7 +589,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
               <Upload size={16} />
             )}
           </button>
-          <button type="button"
+          <button
+            type="button"
             onClick={handleFolderClick}
             className="toolbar-btn"
             title="Upload Folder"
@@ -560,14 +655,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
               if (e.key === 'Escape') setCreatingDir(false);
             }}
           />
-          <button type="button"
+          <button
+            type="button"
             onClick={handleCreateDir}
             className="btn btn-primary"
             style={{ padding: '4px 12px', fontSize: '0.75rem' }}
           >
             Create
           </button>
-          <button type="button"
+          <button
+            type="button"
             onClick={() => setCreatingDir(false)}
             className="btn btn-secondary"
             style={{ padding: '4px 12px', fontSize: '0.75rem' }}
@@ -647,7 +744,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                       onClick={(e) => e.stopPropagation()}
                     >
                       {!file.isDirectory && isEditable(file.name) && (
-                        <button type="button"
+                        <button
+                          type="button"
                           onClick={() => handleFileClick(file)}
                           className="file-manage-btn"
                           title="Edit"
@@ -655,14 +753,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                           <Edit2 size={14} />
                         </button>
                       )}
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => handleDownload(file)}
                         className="file-manage-btn"
                         title="Download"
                       >
                         <Download size={14} />
                       </button>
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => handleDelete(file)}
                         className="file-manage-btn delete"
                         title="Delete"

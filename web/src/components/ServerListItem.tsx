@@ -104,24 +104,18 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
           <div className="server-name-row">
             <span className="server-name">{server.name}</span>
           </div>
-          <div className="header-meta" style={{ fontSize: '0.85rem' }}>
+          <div className="header-meta server-list-meta">
             <div className="meta-item">
               <span className="meta-label">{server.loader}</span>
               <span>{server.version}</span>
             </div>
             <div className="meta-dot"></div>
-            <div className="meta-item">
+            <div className="meta-item server-address-meta">
               <button
                 type="button"
                 onClick={handleCopyAddress}
                 aria-label="Copiar dirección"
-                className="meta-value"
-                style={{
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
+                className="meta-value server-address-button"
                 title="Click to copy"
               >
                 {address}

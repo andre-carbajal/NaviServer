@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { Button } from '../components/ui/Button';
+import { useModalDialog } from '../hooks/useModalDialog';
 import { api } from '../services/api';
 import { humanSize } from '../utils/format';
 
@@ -28,6 +29,7 @@ const Settings: React.FC = () => {
   const [curseForgeKey, setCurseForgeKey] = useState('');
   const [isSavingCurseForgeKey, setIsSavingCurseForgeKey] = useState(false);
   const [isClearingCurseForgeKey, setIsClearingCurseForgeKey] = useState(false);
+  const { showAlert, showConfirm, modalDialog } = useModalDialog();
   const [curseForgeKeyStatus, setCurseForgeKeyStatus] = useState<{
     hasCustomKey: boolean;
     hasEmbeddedKey: boolean;
@@ -160,21 +162,29 @@ const Settings: React.FC = () => {
   };
 
   const handleRestart = async () => {
-    if (
-      !confirm(
+    const shouldRestart = await showConfirm({
+      title: 'Restart Daemon',
+      message:
         'Are you sure you want to restart the daemon? This will stop all running servers.',
-      )
-    ) {
-      return;
-    }
+      confirmText: 'Restart',
+      variant: 'danger',
+    });
+    if (!shouldRestart) return;
+
     setIsRestarting(true);
     try {
       await api.restartDaemon();
-      alert(
-        'Daemon restart command sent. The page may lose connection briefly.',
-      );
+      await showAlert({
+        title: 'Restart Sent',
+        message:
+          'Daemon restart command sent. The page may lose connection briefly.',
+      });
     } catch (err) {
-      alert('Failed to send daemon restart command. Please try again.');
+      await showAlert({
+        title: 'Restart Failed',
+        message: 'Failed to send daemon restart command. Please try again.',
+        variant: 'danger',
+      });
       console.error('Failed to restart daemon:', err);
     } finally {
       setIsRestarting(false);
@@ -192,7 +202,11 @@ const Settings: React.FC = () => {
       setCurseForgeKey('');
     } catch (err) {
       console.error('Failed to save CurseForge API key:', err);
-      alert('Failed to save CurseForge API key.');
+      await showAlert({
+        title: 'Save Failed',
+        message: 'Failed to save CurseForge API key.',
+        variant: 'danger',
+      });
     } finally {
       setIsSavingCurseForgeKey(false);
     }
@@ -206,7 +220,11 @@ const Settings: React.FC = () => {
       setCurseForgeKeyStatus(status.data);
     } catch (err) {
       console.error('Failed to clear CurseForge API key:', err);
-      alert('Failed to clear CurseForge API key.');
+      await showAlert({
+        title: 'Clear Failed',
+        message: 'Failed to clear CurseForge API key.',
+        variant: 'danger',
+      });
     } finally {
       setIsClearingCurseForgeKey(false);
     }
@@ -216,6 +234,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="settings-page">
+      {modalDialog}
       <h1>Settings</h1>
 
       <div className="card">
@@ -317,7 +336,9 @@ const Settings: React.FC = () => {
           the embedded build key. Modrinth remains the default source.
         </p>
         <div className="form-group">
-          <label htmlFor="settings-curseforge-key">Custom CurseForge API Key</label>
+          <label htmlFor="settings-curseforge-key">
+            Custom CurseForge API Key
+          </label>
           <input
             id="settings-curseforge-key"
             type="password"

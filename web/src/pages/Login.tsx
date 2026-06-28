@@ -142,7 +142,11 @@ const Login: React.FC = () => {
         </form>
         {canToggle && (
           <div className="login-footer">
-            <button type="button" className="btn-link" onClick={() => setIsSetup(!isSetup)}>
+            <button
+              type="button"
+              className="btn-link"
+              onClick={() => setIsSetup(!isSetup)}
+            >
               {isSetup
                 ? 'Already have an account? Login'
                 : 'Need to setup? (First run only)'}

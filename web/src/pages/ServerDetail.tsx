@@ -53,7 +53,6 @@ import React, {
 
 import AddonsPanel from '../components/AddonsPanel';
 import ConsoleView from '../components/ConsoleView';
-
 import ShareModal from '../components/ShareModal';
 import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
@@ -61,6 +60,7 @@ import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useConsole } from '../hooks/useConsole';
 import { useCopy } from '../hooks/useCopy';
+import { useModalDialog } from '../hooks/useModalDialog';
 import { useServerStats } from '../hooks/useServerStats';
 import { api } from '../services/api';
 import type {
@@ -70,12 +70,12 @@ import type {
   ServerVersionUpdateResult,
 } from '../types';
 import {
-  clampRamAllocation,
   FALLBACK_RAM_MAX_MB,
+  RAM_MIN_MB,
+  clampRamAllocation,
   getAvatarUrl,
   isFutureMinecraftVersion,
   normalizeServerSettings,
-  RAM_MIN_MB,
   readIntPropertyFromContent,
   upsertPropertyLine,
 } from '../utils/serverDetail';
@@ -192,6 +192,7 @@ const ServerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showAlert, showConfirm, modalDialog } = useModalDialog();
 
   const [server, setServer] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
@@ -638,9 +639,7 @@ const ServerDetail: React.FC = () => {
     }
   };
 
-  const handleSettingsIconSelected = (
-    e: ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleSettingsIconSelected = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -738,7 +737,11 @@ const ServerDetail: React.FC = () => {
       navigate('/');
     } catch (err) {
       console.error('Failed to delete server:', err);
-      alert('Failed to delete server.');
+      await showAlert({
+        title: 'Delete Failed',
+        message: 'Failed to delete server.',
+        variant: 'danger',
+      });
     } finally {
       setIsDeletingServer(false);
     }
@@ -1067,11 +1070,19 @@ const ServerDetail: React.FC = () => {
 
   const runConsoleAction = async (command: string) => {
     if (!canModeratePlayers) {
-      alert('You do not have permission to perform this action.');
+      void showAlert({
+        title: 'Permission Required',
+        message: 'You do not have permission to perform this action.',
+        variant: 'danger',
+      });
       return;
     }
     if (!isConnected) {
-      alert('Console is disconnected. Please wait and try again.');
+      void showAlert({
+        title: 'Console Disconnected',
+        message: 'Console is disconnected. Please wait and try again.',
+        variant: 'danger',
+      });
       return;
     }
 
@@ -1089,19 +1100,30 @@ const ServerDetail: React.FC = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete ${selectedPlayer.name} playerdata file from this server?`,
-    );
+    const confirmed = await showConfirm({
+      title: 'Delete Player Data',
+      message: `Delete ${selectedPlayer.name} playerdata file from this server?`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
     if (!confirmed) return;
 
     setIsPlayerActionLoading(true);
     try {
       await api.deleteFile(id, `/world/playerdata/${selectedPlayer.id}.dat`);
-      alert('Player data deleted successfully.');
+      await showAlert({
+        title: 'Player Data Deleted',
+        message: 'Player data deleted successfully.',
+        variant: 'success',
+      });
       setIsPlayerActionsOpen(false);
     } catch (err) {
       console.error('Failed to delete player data:', err);
-      alert('Failed to delete player data.');
+      await showAlert({
+        title: 'Delete Failed',
+        message: 'Failed to delete player data.',
+        variant: 'danger',
+      });
     } finally {
       setIsPlayerActionLoading(false);
     }
@@ -1126,8 +1148,10 @@ const ServerDetail: React.FC = () => {
 
   return (
     <div className="server-v2">
+      {modalDialog}
       <header className="server-v2-header">
-        <button type="button"
+        <button
+          type="button"
           className="server-v2-back"
           onClick={() => navigate('/')}
           title="Back to dashboard"
@@ -1486,33 +1510,36 @@ const ServerDetail: React.FC = () => {
                           className={canModeratePlayers ? 'clickable' : ''}
                           disabled={!canModeratePlayers}
                           onClick={() => {
-                          if (!canModeratePlayers) return;
-                          const normalizedName = player.name.toLowerCase();
-                          const normalizedUuid = player.uuid?.toLowerCase();
-                          const isOperator = Boolean(
-                            operatorNameSet.has(normalizedName) ||
-                            (normalizedUuid &&
-                              operatorUuidSet.has(normalizedUuid)),
-                          );
-                          setSelectedPlayer({
-                            name: player.name,
-                            id: player.uuid || '',
-                            isOnline: true,
-                            isOperator,
-                          });
-                          setIsPlayerActionsOpen(true);
-                        }}
-                      >
-                        <PlayerAvatar
-                          player={{ name: player.name, id: player.uuid || '' }}
-                        />
-                        <div>
-                          <strong>{player.name}</strong>
-                          <small>{player.uuid || 'No UUID available'}</small>
-                        </div>
-                        <span className="server-v2-player-badge online">
-                          Online
-                        </span>
+                            if (!canModeratePlayers) return;
+                            const normalizedName = player.name.toLowerCase();
+                            const normalizedUuid = player.uuid?.toLowerCase();
+                            const isOperator = Boolean(
+                              operatorNameSet.has(normalizedName) ||
+                              (normalizedUuid &&
+                                operatorUuidSet.has(normalizedUuid)),
+                            );
+                            setSelectedPlayer({
+                              name: player.name,
+                              id: player.uuid || '',
+                              isOnline: true,
+                              isOperator,
+                            });
+                            setIsPlayerActionsOpen(true);
+                          }}
+                        >
+                          <PlayerAvatar
+                            player={{
+                              name: player.name,
+                              id: player.uuid || '',
+                            }}
+                          />
+                          <div>
+                            <strong>{player.name}</strong>
+                            <small>{player.uuid || 'No UUID available'}</small>
+                          </div>
+                          <span className="server-v2-player-badge online">
+                            Online
+                          </span>
                         </button>
                       </li>
                     ))}
@@ -1533,31 +1560,33 @@ const ServerDetail: React.FC = () => {
                           className={canModeratePlayers ? 'clickable' : ''}
                           disabled={!canModeratePlayers}
                           onClick={() => {
-                          if (!canModeratePlayers) return;
-                          setSelectedPlayer({
-                            name: operator.name,
-                            id: operator.uuid || '',
-                            isOnline: operator.isOnline,
-                            isOperator: true,
-                          });
-                          setIsPlayerActionsOpen(true);
-                        }}
-                      >
-                        <PlayerAvatar
-                          player={{
-                            name: operator.name,
-                            id: operator.uuid || '',
+                            if (!canModeratePlayers) return;
+                            setSelectedPlayer({
+                              name: operator.name,
+                              id: operator.uuid || '',
+                              isOnline: operator.isOnline,
+                              isOperator: true,
+                            });
+                            setIsPlayerActionsOpen(true);
                           }}
-                        />
-                        <div>
-                          <strong>{operator.name}</strong>
-                          <small>{operator.uuid || 'No UUID available'}</small>
-                        </div>
-                        <span
-                          className={`server-v2-player-badge ${operator.isOnline ? 'online' : 'offline'}`}
                         >
-                          {operator.isOnline ? 'Online' : 'Offline'}
-                        </span>
+                          <PlayerAvatar
+                            player={{
+                              name: operator.name,
+                              id: operator.uuid || '',
+                            }}
+                          />
+                          <div>
+                            <strong>{operator.name}</strong>
+                            <small>
+                              {operator.uuid || 'No UUID available'}
+                            </small>
+                          </div>
+                          <span
+                            className={`server-v2-player-badge ${operator.isOnline ? 'online' : 'offline'}`}
+                          >
+                            {operator.isOnline ? 'Online' : 'Offline'}
+                          </span>
                         </button>
                       </li>
                     ))}

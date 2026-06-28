@@ -4,6 +4,7 @@ import { registerJson5Language } from 'monaco-json5-highlighter';
 
 import React, { Suspense, useEffect, useState } from 'react';
 
+import { useModalDialog } from '../hooks/useModalDialog';
 import { api } from '../services/api';
 
 const getLanguage = (path: string) => {
@@ -67,6 +68,7 @@ const FileEditor: React.FC<FileEditorProps> = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showAlert, modalDialog } = useModalDialog();
 
   useEffect(() => {
     const loadContent = async () => {
@@ -102,10 +104,18 @@ const FileEditor: React.FC<FileEditorProps> = ({
     try {
       await api.saveFileContent(serverId, filePath, content);
       setOriginalContent(content);
-      alert('File saved successfully!');
+      await showAlert({
+        title: 'File Saved',
+        message: 'File saved successfully.',
+        variant: 'success',
+      });
     } catch (err) {
       const error = err as Error & { response?: { data?: string } };
-      alert(error.response?.data || 'Failed to save file');
+      await showAlert({
+        title: 'Save Failed',
+        message: error.response?.data || 'Failed to save file.',
+        variant: 'danger',
+      });
     } finally {
       setSaving(false);
     }
@@ -116,9 +126,11 @@ const FileEditor: React.FC<FileEditorProps> = ({
 
   return (
     <div className="file-explorer-container">
+      {modalDialog}
       <div className="editor-header">
         <div className="editor-title">
-          <button type="button"
+          <button
+            type="button"
             onClick={onClose}
             className="toolbar-btn"
             title="Back to files"
@@ -147,7 +159,8 @@ const FileEditor: React.FC<FileEditorProps> = ({
               <span className="hidden sm:inline">Unsaved Changes</span>
             </span>
           )}
-          <button type="button"
+          <button
+            type="button"
             onClick={handleSave}
             disabled={loading || saving || !hasChanges}
             className={`btn btn-primary ${!hasChanges || loading || saving ? 'disabled' : ''}`}
@@ -202,7 +215,8 @@ const FileEditor: React.FC<FileEditorProps> = ({
                 Error Loading File
               </p>
               <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>{error}</p>
-              <button type="button"
+              <button
+                type="button"
                 onClick={onClose}
                 style={{
                   marginTop: '16px',

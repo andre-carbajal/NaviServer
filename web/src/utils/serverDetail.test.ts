@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ServerSettings } from '../types';
-
 import {
   clampRamAllocation,
   compareMinecraftVersions,

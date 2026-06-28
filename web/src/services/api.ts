@@ -1,11 +1,6 @@
 import type { AxiosProgressEvent } from 'axios';
 import axios from 'axios';
 
-import {
-  resolveApiBaseUrl,
-  resolveWsBaseUrl,
-} from '../utils/apiUrls';
-
 import type {
   AddonListResponse,
   AddonSearchResponse,
@@ -18,6 +13,7 @@ import type {
   ServerStats,
   ServerVersionUpdateResult,
 } from '../types';
+import { resolveApiBaseUrl, resolveWsBaseUrl } from '../utils/apiUrls';
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env, window.location);
 export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL, import.meta.env);
@@ -116,14 +112,6 @@ export const api = {
       installerVersion?: string;
     };
   }) => apiInstance.post<Server>('/servers', data),
-  updateServer: (
-    id: string,
-    data: {
-      name?: string;
-      ram?: number;
-      customArgs?: string;
-    },
-  ) => apiInstance.put<Server>(`/servers/${id}`, data),
   getServerSettings: (id: string) =>
     apiInstance.get<ServerSettings>(`/servers/${id}/settings`),
   updateServerSettings: (id: string, data: ServerSettings) =>

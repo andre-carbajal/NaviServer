@@ -21,6 +21,7 @@ import RestoreBackupModal from '../components/RestoreBackupModal';
 import UploadBackupModal from '../components/UploadBackupModal';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+import { useModalDialog } from '../hooks/useModalDialog';
 import { useServers } from '../hooks/useServers';
 import { WS_BASE_URL, api } from '../services/api';
 import type { Backup } from '../types';
@@ -54,10 +55,7 @@ const readCreatingBackups = (): CreatingBackup[] => {
 };
 
 const writeCreatingBackups = (backups: CreatingBackup[]) => {
-  localStorage.setItem(
-    CREATING_BACKUPS_STORAGE_KEY,
-    JSON.stringify(backups),
-  );
+  localStorage.setItem(CREATING_BACKUPS_STORAGE_KEY, JSON.stringify(backups));
   localStorage.removeItem(LEGACY_CREATING_BACKUPS_STORAGE_KEY);
 };
 
@@ -90,6 +88,7 @@ const Backups: React.FC = () => {
   );
   const [isDragging, setIsDragging] = useState(false);
   const { servers, refresh: refreshServers } = useServers();
+  const { showAlert, modalDialog } = useModalDialog();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isUploadModalOpen, setUploadModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
@@ -254,7 +253,11 @@ const Backups: React.FC = () => {
     } catch (error) {
       console.error('Failed to initiate backup creation:', error);
       removeCreatingBackup(requestId);
-      alert('Failed to start backup creation.');
+      await showAlert({
+        title: 'Backup Failed',
+        message: 'Failed to start backup creation.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -304,8 +307,12 @@ const Backups: React.FC = () => {
 
   const handleRestore = async (backupName: string, data: RestoreData) => {
     await api.restoreBackup(backupName, data);
-    alert('Backup restored successfully!');
-    refreshServers();
+    await showAlert({
+      title: 'Backup Restored',
+      message: 'Backup restored successfully.',
+      variant: 'success',
+    });
+    await refreshServers();
   };
 
   const handleUploadClick = () => {
@@ -320,9 +327,11 @@ const Backups: React.FC = () => {
       const ext = file.name.split('.').pop()?.toLowerCase();
 
       if (ext !== 'zip' && ext !== 'rar') {
-        alert(
-          `File ${file.name} is not a valid backup file (.zip or .rar only).`,
-        );
+        await showAlert({
+          title: 'Invalid Backup File',
+          message: `File ${file.name} is not a valid backup file (.zip or .rar only).`,
+          variant: 'danger',
+        });
         continue;
       }
 
@@ -351,7 +360,11 @@ const Backups: React.FC = () => {
         );
       } catch (error) {
         console.error(`Failed to upload backup ${file.name}:`, error);
-        alert(`Failed to upload backup ${file.name}.`);
+        await showAlert({
+          title: 'Upload Failed',
+          message: `Failed to upload backup ${file.name}.`,
+          variant: 'danger',
+        });
         try {
           await api.deleteBackup(file.name);
         } catch (e) {
@@ -387,40 +400,40 @@ const Backups: React.FC = () => {
       setAutoBackupDrafts((prev) => {
         const next: Record<string, AutoBackupDraft> = {};
 
-      servers.forEach((server) => {
-        const serverConfig: Omit<
-          AutoBackupDraft,
-          'saving' | 'dirty' | 'saved'
-        > = {
-          enabled: server.autoBackupEnabled ?? false,
-          intervalValue: server.autoBackupIntervalValue ?? 24,
-          intervalUnit: server.autoBackupIntervalUnit ?? 'hour',
-          maxBackups: server.autoBackupMaxBackups ?? 10,
-        };
+        servers.forEach((server) => {
+          const serverConfig: Omit<
+            AutoBackupDraft,
+            'saving' | 'dirty' | 'saved'
+          > = {
+            enabled: server.autoBackupEnabled ?? false,
+            intervalValue: server.autoBackupIntervalValue ?? 24,
+            intervalUnit: server.autoBackupIntervalUnit ?? 'hour',
+            maxBackups: server.autoBackupMaxBackups ?? 10,
+          };
 
-        const existing = prev[server.id];
-        if (!existing) {
+          const existing = prev[server.id];
+          if (!existing) {
+            next[server.id] = {
+              ...serverConfig,
+              saving: false,
+              dirty: false,
+              saved: false,
+            };
+            return;
+          }
+
+          if (existing.dirty || existing.saving) {
+            next[server.id] = existing;
+            return;
+          }
+
           next[server.id] = {
             ...serverConfig,
             saving: false,
             dirty: false,
             saved: false,
           };
-          return;
-        }
-
-        if (existing.dirty || existing.saving) {
-          next[server.id] = existing;
-          return;
-        }
-
-        next[server.id] = {
-          ...serverConfig,
-          saving: false,
-          dirty: false,
-          saved: false,
-        };
-      });
+        });
 
         return next;
       });
@@ -469,15 +482,27 @@ const Backups: React.FC = () => {
           : value * 24 * 60;
 
     if (minutes < 5) {
-      alert('Automatic backup interval must be at least 5 minutes.');
+      await showAlert({
+        title: 'Invalid Interval',
+        message: 'Automatic backup interval must be at least 5 minutes.',
+        variant: 'danger',
+      });
       return;
     }
     if (minutes > 30 * 24 * 60) {
-      alert('Automatic backup interval cannot exceed 30 days.');
+      await showAlert({
+        title: 'Invalid Interval',
+        message: 'Automatic backup interval cannot exceed 30 days.',
+        variant: 'danger',
+      });
       return;
     }
     if (!Number.isFinite(limit) || limit <= 0) {
-      alert('Max backups must be greater than 0.');
+      await showAlert({
+        title: 'Invalid Backup Limit',
+        message: 'Max backups must be greater than 0.',
+        variant: 'danger',
+      });
       return;
     }
 
@@ -498,7 +523,11 @@ const Backups: React.FC = () => {
       }, 2500);
     } catch (error) {
       console.error('Failed to save auto backup config:', error);
-      alert('Failed to save automatic backup configuration.');
+      await showAlert({
+        title: 'Save Failed',
+        message: 'Failed to save automatic backup configuration.',
+        variant: 'danger',
+      });
     } finally {
       updateAutoBackupDraft(serverId, { saving: false });
     }
@@ -519,6 +548,7 @@ const Backups: React.FC = () => {
         boxShadow: isDragging ? '0 0 0 2px rgba(100, 108, 255, 0.2)' : 'none',
       }}
     >
+      {modalDialog}
       <div className="modal-header">
         <h1>Backups</h1>
         <div className="backup-actions-header">
@@ -850,7 +880,8 @@ const Backups: React.FC = () => {
                     style={{ border: 'none', padding: 0, margin: 0 }}
                   >
                     {user?.role === 'admin' && (
-                      <button type="button"
+                      <button
+                        type="button"
                         className="icon-action"
                         title="Edit Association"
                         onClick={() => handleEditClick(backup)}
@@ -867,14 +898,16 @@ const Backups: React.FC = () => {
                     >
                       <Download size={18} />
                     </a>
-                    <button type="button"
+                    <button
+                      type="button"
                       className="icon-action"
                       title="Restore"
                       onClick={() => handleRestoreClick(backup.name)}
                     >
                       <RotateCcw size={18} />
                     </button>
-                    <button type="button"
+                    <button
+                      type="button"
                       className="icon-action danger"
                       title="Delete"
                       onClick={() => handleDelete(backup.name)}
