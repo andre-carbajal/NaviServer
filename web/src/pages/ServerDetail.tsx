@@ -43,6 +43,7 @@ import {
 
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import React, {
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -52,7 +53,7 @@ import React, {
 
 import AddonsPanel from '../components/AddonsPanel';
 import ConsoleView from '../components/ConsoleView';
-import FileExplorer from '../components/FileExplorer';
+
 import ShareModal from '../components/ShareModal';
 import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
@@ -78,6 +79,8 @@ import {
   readIntPropertyFromContent,
   upsertPropertyLine,
 } from '../utils/serverDetail';
+
+const FileExplorer = React.lazy(() => import('../components/FileExplorer'));
 
 type DetailTab =
   | 'performance'
@@ -1025,7 +1028,7 @@ const ServerDetail: React.FC = () => {
   );
 
   const filteredOperatorItems = useMemo(() => {
-    const sortedOperators = [...operatorItems].sort((a, b) => {
+    const sortedOperators = operatorItems.toSorted((a, b) => {
       if (a.isOnline !== b.isOnline) {
         return a.isOnline ? -1 : 1;
       }
@@ -1477,22 +1480,12 @@ const ServerDetail: React.FC = () => {
                 ) : (
                   <ul className="server-v2-player-list">
                     {filteredOnlineItems.map((player) => (
-                      <li
-                        key={player.key}
-                        className={canModeratePlayers ? 'clickable' : ''}
-                        role={canModeratePlayers ? 'button' : undefined}
-                        tabIndex={canModeratePlayers ? 0 : undefined}
-                        onKeyDown={(event) => {
-                          if (
-                            !canModeratePlayers ||
-                            (event.key !== 'Enter' && event.key !== ' ')
-                          ) {
-                            return;
-                          }
-                          event.preventDefault();
-                          event.currentTarget.click();
-                        }}
-                        onClick={() => {
+                      <li key={player.key}>
+                        <button
+                          type="button"
+                          className={canModeratePlayers ? 'clickable' : ''}
+                          disabled={!canModeratePlayers}
+                          onClick={() => {
                           if (!canModeratePlayers) return;
                           const normalizedName = player.name.toLowerCase();
                           const normalizedUuid = player.uuid?.toLowerCase();
@@ -1520,6 +1513,7 @@ const ServerDetail: React.FC = () => {
                         <span className="server-v2-player-badge online">
                           Online
                         </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -1533,22 +1527,12 @@ const ServerDetail: React.FC = () => {
                 ) : (
                   <ul className="server-v2-player-list">
                     {filteredOperatorItems.map((operator) => (
-                      <li
-                        key={operator.key}
-                        className={canModeratePlayers ? 'clickable' : ''}
-                        role={canModeratePlayers ? 'button' : undefined}
-                        tabIndex={canModeratePlayers ? 0 : undefined}
-                        onKeyDown={(event) => {
-                          if (
-                            !canModeratePlayers ||
-                            (event.key !== 'Enter' && event.key !== ' ')
-                          ) {
-                            return;
-                          }
-                          event.preventDefault();
-                          event.currentTarget.click();
-                        }}
-                        onClick={() => {
+                      <li key={operator.key}>
+                        <button
+                          type="button"
+                          className={canModeratePlayers ? 'clickable' : ''}
+                          disabled={!canModeratePlayers}
+                          onClick={() => {
                           if (!canModeratePlayers) return;
                           setSelectedPlayer({
                             name: operator.name,
@@ -1574,6 +1558,7 @@ const ServerDetail: React.FC = () => {
                         >
                           {operator.isOnline ? 'Online' : 'Offline'}
                         </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -1627,7 +1612,17 @@ const ServerDetail: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'files' && <FileExplorer serverId={server.id} />}
+          {activeTab === 'files' && (
+            <Suspense
+              fallback={
+                <div className="server-v2-settings-card">
+                  <p>Loading files...</p>
+                </div>
+              }
+            >
+              <FileExplorer serverId={server.id} />
+            </Suspense>
+          )}
 
           {activeTab === 'addons' && supportsAddons && (
             <AddonsPanel server={server} canManage={canModeratePlayers} />

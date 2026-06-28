@@ -1,8 +1,8 @@
-import Editor, { type OnMount } from '@monaco-editor/react';
+import type { OnMount } from '@monaco-editor/react';
 import { ArrowLeft, FileCode, Loader2, Save } from 'lucide-react';
 import { registerJson5Language } from 'monaco-json5-highlighter';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 
 import { api } from '../services/api';
 
@@ -40,6 +40,11 @@ const getLanguage = (path: string) => {
       return 'plaintext';
   }
 };
+
+const MonacoEditor = React.lazy(async () => {
+  const module = await import('@monaco-editor/react');
+  return { default: module.default };
+});
 
 const handleEditorMount: OnMount = (editor, monaco) => {
   registerJson5Language(monaco);
@@ -213,23 +218,31 @@ const FileEditor: React.FC<FileEditorProps> = ({
             </div>
           </div>
         ) : (
-          <Editor
-            height="100%"
-            defaultLanguage={getLanguage(filePath)}
-            language={getLanguage(filePath)}
-            value={content}
-            theme="vs-dark"
-            onChange={(value) => setContent(value || '')}
-            onMount={handleEditorMount}
-            options={{
-              minimap: { enabled: true },
-              fontSize: 14,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-              wordWrap: 'on',
-            }}
-          />
+          <Suspense
+            fallback={
+              <div className="file-editor-loading">
+                <Loader2 className="spin" size={32} />
+              </div>
+            }
+          >
+            <MonacoEditor
+              height="100%"
+              defaultLanguage={getLanguage(filePath)}
+              language={getLanguage(filePath)}
+              value={content}
+              theme="vs-dark"
+              onChange={(value) => setContent(value || '')}
+              onMount={handleEditorMount}
+              options={{
+                minimap: { enabled: true },
+                fontSize: 14,
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                wordWrap: 'on',
+              }}
+            />
+          </Suspense>
         )}
       </div>
 

@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 
-import React from 'react';
+import React, { useId } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -19,16 +19,25 @@ export const Modal: React.FC<ModalProps> = ({
   hideCloseButton,
   contentClassName,
 }) => {
+  const titleId = useId();
+
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className={`modal-content ${contentClassName || ''}`.trim()}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <dialog
+      open
+      className="modal-overlay"
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <div className={`modal-content ${contentClassName || ''}`.trim()}>
         <div className="modal-header">
-          <h2 className="modal-title">{title}</h2>
+          <h2 id={titleId} className="modal-title">
+            {title}
+          </h2>
           {!hideCloseButton && (
             <button className="icon-action" onClick={onClose} type="button">
               <X size={20} />
@@ -37,6 +46,6 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
         {children}
       </div>
-    </div>
+    </dialog>
   );
 };

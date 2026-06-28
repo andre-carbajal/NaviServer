@@ -1,0 +1,19 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "rules": {
+    "react-doctor/no-giant-component": "off",
+    "react-doctor/prefer-useReducer": "off",
+    "react-doctor/rerender-state-only-in-handlers": "off",
+    "react-doctor/no-derived-state": "off",
+    "react-doctor/async-defer-await": "off",
+    "react-doctor/no-cascading-set-state": "off",
+    "react-doctor/rendering-hydration-mismatch-time": "off",
+    "react-doctor/async-await-in-loop": "off",
+    "react-doctor/no-inline-exhaustive-style": "off",
+    "react-doctor/exhaustive-deps": "off",
+    "react-doctor/no-initialize-state": "off",
+    "react-doctor/no-event-handler": "off",
+    "react-doctor/no-reset-all-state-on-prop-change": "off",
+    "react-doctor/prefer-dynamic-import": "off"
+  }
+}

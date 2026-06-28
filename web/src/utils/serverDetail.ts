@@ -8,7 +8,7 @@ export const FALLBACK_RAM_MAX_MB = 262144;
 export const getAvatarUrl = (uuid?: string) =>
   `${MINEATAR_BASE_URL}/${encodeURIComponent(uuid || STEVE_UUID)}?scale=8&overlay=true`;
 
-export const parseMinecraftVersionParts = (
+const parseMinecraftVersionParts = (
   value: string,
 ): number[] | null => {
   const normalized = value.trim().toLowerCase().replace(/^v/, '');
