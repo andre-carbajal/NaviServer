@@ -307,12 +307,14 @@ const Backups: React.FC = () => {
 
   const handleRestore = async (backupName: string, data: RestoreData) => {
     await api.restoreBackup(backupName, data);
-    await showAlert({
-      title: 'Backup Restored',
-      message: 'Backup restored successfully.',
-      variant: 'success',
-    });
-    await refreshServers();
+    await Promise.all([
+      refreshServers(),
+      showAlert({
+        title: 'Backup Restored',
+        message: 'Backup restored successfully.',
+        variant: 'success',
+      }),
+    ]);
   };
 
   const handleUploadClick = () => {

@@ -3074,14 +3074,19 @@ dialog.modal-overlay::backdrop {
 }
 
 .server-v2-console-input {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   min-width: 0;
 }
 
 .server-v2-console-input .form-input {
   min-width: 0;
-  flex: 1;
+  width: 100%;
+}
+
+.server-v2-console-input .btn {
+  flex-shrink: 0;
 }
 
 .server-v2-players-head {
@@ -3765,6 +3770,21 @@ dialog.modal-overlay::backdrop {
 
   .server-v2-console-wrap {
     height: auto;
+  }
+
+  .server-v2-console-input {
+    grid-template-columns: minmax(0, 1fr) minmax(72px, auto);
+    width: 100%;
+  }
+
+  .server-v2-console-input .form-input {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .server-v2-console-input .btn {
+    min-width: 72px;
+    padding-inline: 10px;
   }
 
   .server-v2-identity {
