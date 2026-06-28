@@ -122,7 +122,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
     >
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Restore To</label>
+          <span className="form-label">Restore To</span>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <label>
               <input
@@ -170,8 +170,9 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
         ) : (
           <>
             <div className="form-group">
-              <label>New Server Name</label>
+              <label htmlFor="restore-new-server-name">New Server Name</label>
               <input
+                id="restore-new-server-name"
                 type="text"
                 className="form-input"
                 value={newServerName}
@@ -187,8 +188,9 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
               }}
             >
               <div className="form-group">
-                <label>Loader</label>
+                <label htmlFor="restore-new-server-loader">Loader</label>
                 <select
+                  id="restore-new-server-loader"
                   className="form-select"
                   value={newServerLoader}
                   onChange={(e) => setNewServerLoader(e.target.value)}
@@ -201,8 +203,9 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
                 </select>
               </div>
               <div className="form-group">
-                <label>Version</label>
+                <label htmlFor="restore-new-server-version">Version</label>
                 <select
+                  id="restore-new-server-version"
                   className="form-select"
                   value={newServerVersion}
                   onChange={(e) => setNewServerVersion(e.target.value)}
@@ -216,8 +219,9 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
               </div>
             </div>
             <div className="form-group">
-              <label>RAM (MB)</label>
+              <label htmlFor="restore-new-server-ram">RAM (MB)</label>
               <input
+                id="restore-new-server-ram"
                 type="number"
                 className="form-input"
                 value={newServerRam}

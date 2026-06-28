@@ -176,6 +176,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 <div className="flex gap-2">
                   <input
                     type="text"
+                    aria-label="Public share link"
                     readOnly
                     value={`${publicBaseUrl}/public/${token}`}
                     className="form-input"

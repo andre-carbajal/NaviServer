@@ -111,16 +111,9 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
             </div>
             <div className="meta-dot"></div>
             <div className="meta-item">
-              <span
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={handleCopyAddress}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleCopyAddress();
-                  }
-                }}
                 aria-label="Copiar dirección"
                 className="meta-value"
                 style={{
@@ -132,7 +125,7 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
                 title="Click to copy"
               >
                 {address}
-              </span>
+              </button>
 
               <CopyButton
                 text={address}

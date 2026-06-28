@@ -121,6 +121,7 @@ const PermissionsModal: React.FC<Props> = ({ user, onClose }) => {
                       <td className="text-center">
                         <input
                           type="checkbox"
+                          aria-label={`${server.name} power control permission`}
                           checked={perm.canControlPower || false}
                           onChange={(e) =>
                             handleCheck(
@@ -134,6 +135,7 @@ const PermissionsModal: React.FC<Props> = ({ user, onClose }) => {
                       <td className="text-center">
                         <input
                           type="checkbox"
+                          aria-label={`${server.name} console and files permission`}
                           checked={perm.canViewConsole || false}
                           onChange={(e) =>
                             handleCheck(

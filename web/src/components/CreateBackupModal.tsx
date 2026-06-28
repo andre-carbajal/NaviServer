@@ -68,13 +68,14 @@ const CreateBackupModal: React.FC<CreateBackupModalProps> = ({
         )}
 
         <div className="form-group">
-          <label>
+          <label htmlFor="create-backup-name">
             Backup Name{' '}
             <span style={{ color: 'var(--text-muted)', fontSize: '0.8em' }}>
               (Optional)
             </span>
           </label>
           <input
+            id="create-backup-name"
             type="text"
             className="form-input"
             value={name}

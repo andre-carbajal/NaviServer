@@ -6,6 +6,46 @@ import React, { useEffect, useState } from 'react';
 
 import { api } from '../services/api';
 
+const getLanguage = (path: string) => {
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'json':
+      return 'json';
+    case 'json5':
+      return 'json5';
+    case 'js':
+    case 'jsx':
+      return 'javascript';
+    case 'ts':
+    case 'tsx':
+      return 'typescript';
+    case 'html':
+      return 'html';
+    case 'css':
+      return 'css';
+    case 'xml':
+      return 'xml';
+    case 'yaml':
+    case 'yml':
+      return 'yaml';
+    case 'properties':
+    case 'ini':
+    case 'conf':
+    case 'toml':
+      return 'ini';
+    case 'sh':
+    case 'bash':
+      return 'shell';
+    default:
+      return 'plaintext';
+  }
+};
+
+const handleEditorMount: OnMount = (editor, monaco) => {
+  registerJson5Language(monaco);
+  editor.focus();
+};
+
 interface FileEditorProps {
   serverId: string;
   filePath: string;
@@ -68,46 +108,6 @@ const FileEditor: React.FC<FileEditorProps> = ({
 
   const hasChanges = content !== originalContent;
   const fileName = filePath.split('/').pop();
-
-  const getLanguage = (path: string) => {
-    const ext = path.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'json':
-        return 'json';
-      case 'json5':
-        return 'json5';
-      case 'js':
-      case 'jsx':
-        return 'javascript';
-      case 'ts':
-      case 'tsx':
-        return 'typescript';
-      case 'html':
-        return 'html';
-      case 'css':
-        return 'css';
-      case 'xml':
-        return 'xml';
-      case 'yaml':
-      case 'yml':
-        return 'yaml';
-      case 'properties':
-      case 'ini':
-      case 'conf':
-      case 'toml':
-        return 'ini';
-      case 'sh':
-      case 'bash':
-        return 'shell';
-      default:
-        return 'plaintext';
-    }
-  };
-
-  const handleEditorMount: OnMount = (editor, monaco) => {
-    registerJson5Language(monaco);
-    editor.focus();
-  };
 
   return (
     <div className="file-explorer-container">

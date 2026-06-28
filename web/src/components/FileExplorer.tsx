@@ -21,6 +21,37 @@ import { api } from '../services/api';
 import type { FileEntry } from '../types';
 import FileEditor from './FileEditor';
 
+const IGNORED_EDIT_EXTENSIONS = new Set([
+  '.jar',
+  '.zip',
+  '.tar',
+  '.gz',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.ico',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  '.DS_Store',
+]);
+
+const isEditable = (filename: string) => {
+  if (filename === '.DS_Store') return false;
+  const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
+  return !IGNORED_EDIT_EXTENSIONS.has(ext);
+};
+
+const formatSize = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 interface FileExplorerProps {
   serverId: string;
 }
@@ -85,28 +116,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     setCurrentPath(parentPath);
   };
 
-  const isEditable = (filename: string) => {
-    const ignoredExtensions = [
-      '.jar',
-      '.zip',
-      '.tar',
-      '.gz',
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.gif',
-      '.ico',
-      '.exe',
-      '.dll',
-      '.so',
-      '.dylib',
-      '.DS_Store',
-    ];
-    if (filename === '.DS_Store') return false;
-    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
-    return !ignoredExtensions.includes(ext);
-  };
-
   const handleFileClick = (file: FileEntry) => {
     if (file.isDirectory) {
       const newPath =
@@ -164,14 +173,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       }
       alert(errorMessage);
     }
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const [isDragging, setIsDragging] = useState(false);
@@ -508,12 +509,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           </button>
           <input
             type="file"
+            aria-label="Upload files"
             ref={fileInputRef}
             onChange={handleFileChange}
             style={{ display: 'none' }}
           />
           <input
             type="file"
+            aria-label="Upload folder"
             ref={folderInputRef}
             onChange={handleFolderChange}
             style={{ display: 'none' }}
@@ -546,12 +549,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           <Folder size={16} style={{ color: '#818cf8', marginLeft: '8px' }} />
           <input
             type="text"
+            aria-label="New folder name"
             value={newDirName}
             onChange={(e) => setNewDirName(e.target.value)}
             placeholder="New folder name..."
             className="form-input"
             style={{ padding: '4px 8px', fontSize: '0.875rem' }}
-            autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleCreateDir();
               if (e.key === 'Escape') setCreatingDir(false);
@@ -591,7 +594,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           <table className="file-table">
             <thead>
               <tr>
-                <th style={{ width: '32px' }}></th>
+                <th style={{ width: '32px' }} aria-label="File type"></th>
                 <th>Name</th>
                 <th style={{ width: '128px' }}>Size</th>
                 <th style={{ width: '192px' }}>Last Modified</th>
@@ -607,7 +610,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                   <td style={{ color: '#a5b4fc', fontWeight: 500 }}>..</td>
                   <td style={{ color: '#6b7280' }}>-</td>
                   <td style={{ color: '#6b7280' }}>-</td>
-                  <td></td>
+                  <td aria-label="No actions available"></td>
                 </tr>
               )}
               {(files || []).map((file) => (

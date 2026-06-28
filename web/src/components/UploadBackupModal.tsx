@@ -47,9 +47,18 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Upload Backup">
       <form onSubmit={handleSubmit} className="modal-form">
         <div className="form-group">
-          <label>Backup File (.zip, .rar)</label>
+          <label htmlFor="backup-upload-file">Backup File (.zip, .rar)</label>
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Select backup file"
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
             className="file-upload-zone"
             style={{
               border: '2px dashed var(--border-color)',
@@ -72,6 +81,7 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
                 <span>{selectedFile.name}</span>
                 <Button
                   variant="secondary"
+                  aria-label="Remove selected backup file"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedFile(null);
@@ -95,6 +105,8 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
               </div>
             )}
             <input
+              id="backup-upload-file"
+              aria-label="Backup file"
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}

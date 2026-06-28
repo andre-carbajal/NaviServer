@@ -64,8 +64,9 @@ const ChangePasswordModal: React.FC<Props> = ({ user, onClose }) => {
           {error && <div className="error-message">{error}</div>}
 
           <div className="form-group">
-            <label>New Password</label>
+            <label htmlFor="change-password-new">New Password</label>
             <input
+              id="change-password-new"
               type="password"
               className="input-field"
               value={password}
@@ -75,8 +76,9 @@ const ChangePasswordModal: React.FC<Props> = ({ user, onClose }) => {
           </div>
 
           <div className="form-group">
-            <label>Confirm Password</label>
+            <label htmlFor="change-password-confirm">Confirm Password</label>
             <input
+              id="change-password-confirm"
               type="password"
               className="input-field"
               value={confirmPassword}

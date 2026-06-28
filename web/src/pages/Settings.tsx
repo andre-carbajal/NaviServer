@@ -226,8 +226,9 @@ const Settings: React.FC = () => {
 
         <div>
           <div className="form-group">
-            <label>Start Port</label>
+            <label htmlFor="settings-start-port">Start Port</label>
             <input
+              id="settings-start-port"
               type="number"
               name="start"
               className="form-input"
@@ -236,8 +237,9 @@ const Settings: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>End Port</label>
+            <label htmlFor="settings-end-port">End Port</label>
             <input
+              id="settings-end-port"
               type="number"
               name="end"
               className="form-input"
@@ -279,8 +281,9 @@ const Settings: React.FC = () => {
         )}
 
         <div className="form-group">
-          <label>Public Address</label>
+          <label htmlFor="settings-public-address">Public Address</label>
           <select
+            id="settings-public-address"
             className="form-input"
             value={publicIP}
             onChange={(e) => setPublicIP(e.target.value)}
@@ -314,8 +317,9 @@ const Settings: React.FC = () => {
           the embedded build key. Modrinth remains the default source.
         </p>
         <div className="form-group">
-          <label>Custom CurseForge API Key</label>
+          <label htmlFor="settings-curseforge-key">Custom CurseForge API Key</label>
           <input
+            id="settings-curseforge-key"
             type="password"
             className="form-input"
             value={curseForgeKey}
@@ -362,11 +366,12 @@ const Settings: React.FC = () => {
           server while it is running.
         </p>
         <div className="form-group">
-          <label>
+          <label htmlFor="settings-log-buffer-size">
             Lines to keep in memory{' '}
             <small style={{ fontWeight: 400 }}>(use 0 to disable)</small>
           </label>
           <input
+            id="settings-log-buffer-size"
             type="number"
             min={0}
             step={1}

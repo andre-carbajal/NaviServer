@@ -73,6 +73,13 @@ interface AutoBackupDraft {
   saved: boolean;
 }
 
+const formatBackupDateTime = (value?: string) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
+};
+
 const Backups: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { token, user } = useAuth();
@@ -500,13 +507,6 @@ const Backups: React.FC = () => {
   const serverForBackup = (serverId?: string) =>
     serverId ? servers.find((server) => server.id === serverId) : undefined;
 
-  const formatBackupDateTime = (value?: string) => {
-    if (!value) return '-';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleString();
-  };
-
   return (
     <div
       className={`backups-page ${isDragging ? 'dragging' : ''}`}
@@ -629,6 +629,7 @@ const Backups: React.FC = () => {
                   <div className="auto-backup-interval">
                     <input
                       type="number"
+                      aria-label={`${server.name} auto backup interval value`}
                       min={1}
                       className="form-input"
                       value={draft.intervalValue}
@@ -643,6 +644,7 @@ const Backups: React.FC = () => {
                       }
                     />
                     <select
+                      aria-label={`${server.name} auto backup interval unit`}
                       className="form-select"
                       value={draft.intervalUnit}
                       onChange={(event) =>
@@ -663,6 +665,7 @@ const Backups: React.FC = () => {
                   <div className="auto-backup-limit">
                     <input
                       type="number"
+                      aria-label={`${server.name} maximum automatic backups`}
                       min={1}
                       className="form-input"
                       value={draft.maxBackups}
@@ -705,6 +708,7 @@ const Backups: React.FC = () => {
         <h2 className="backup-section-title">Backups</h2>
         <input
           type="file"
+          aria-label="Upload backup files"
           ref={fileInputRef}
           onChange={handleFileChange}
           style={{ display: 'none' }}

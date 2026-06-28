@@ -52,8 +52,9 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Username</label>
+            <label htmlFor="create-user-username">Username</label>
             <input
+              id="create-user-username"
               type="text"
               className="form-input"
               value={username}
@@ -67,8 +68,9 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
             )}
           </div>
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="create-user-password">Password</label>
             <input
+              id="create-user-password"
               type="password"
               className="form-input"
               value={password}

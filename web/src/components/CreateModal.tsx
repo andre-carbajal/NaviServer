@@ -146,8 +146,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Server">
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Server Name</label>
+          <label htmlFor="create-server-name">Server Name</label>
           <input
+            id="create-server-name"
             className="form-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -155,9 +156,10 @@ const CreateModal: React.FC<CreateModalProps> = ({
           />
         </div>
         <div className="form-group">
-          <label>Loader</label>
+          <label htmlFor="create-server-loader">Loader</label>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <select
+              id="create-server-loader"
               className="form-select"
               value={loader}
               onChange={(e) => setLoader(e.target.value)}
@@ -176,8 +178,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
           </div>
         </div>
         <div className="form-group">
-          <label>Minecraft Version</label>
+          <label htmlFor="create-server-mc-version">Minecraft Version</label>
           <select
+            id="create-server-mc-version"
             className="form-select"
             value={mcVersion}
             onChange={(e) => setMcVersion(e.target.value)}
@@ -211,8 +214,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
         )}
         {loader === 'paper' && (
           <div className="form-group">
-            <label>Build version</label>
+            <label htmlFor="create-server-build-version">Build version</label>
             <select
+              id="create-server-build-version"
               className="form-select"
               value={buildVersion}
               onChange={(e) => setBuildVersion(e.target.value)}
@@ -227,8 +231,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
         )}
         {['fabric', 'forge', 'neoforge'].includes(loader) && (
           <div className="form-group">
-            <label>Loader version</label>
+            <label htmlFor="create-server-loader-version">Loader version</label>
             <select
+              id="create-server-loader-version"
               className="form-select"
               value={loaderVersion}
               onChange={(e) => setLoaderVersion(e.target.value)}
@@ -242,8 +247,9 @@ const CreateModal: React.FC<CreateModalProps> = ({
           </div>
         )}
         <div className="form-group">
-          <label>RAM (MB)</label>
+          <label htmlFor="create-server-ram">RAM (MB)</label>
           <input
+            id="create-server-ram"
             type="number"
             className="form-input"
             value={ram}

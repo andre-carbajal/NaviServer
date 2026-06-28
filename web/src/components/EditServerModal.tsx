@@ -85,7 +85,7 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Server">
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Server Icon</label>
+          <label htmlFor="edit-server-icon">Server Icon</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div
               style={{
@@ -137,6 +137,8 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
             </div>
             <div style={{ flex: 1 }}>
               <input
+                id="edit-server-icon"
+                aria-label="Server icon image"
                 type="file"
                 accept="image/png,image/jpeg"
                 onChange={handleFileChange}
@@ -164,8 +166,9 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
         </div>
 
         <div className="form-group">
-          <label>Server Name</label>
+          <label htmlFor="edit-server-name">Server Name</label>
           <input
+            id="edit-server-name"
             type="text"
             className="form-input"
             value={name}
@@ -174,8 +177,9 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
           />
         </div>
         <div className="form-group">
-          <label>RAM (MB)</label>
+          <label htmlFor="edit-server-ram">RAM (MB)</label>
           <input
+            id="edit-server-ram"
             type="number"
             className="form-input"
             value={ram}
@@ -186,8 +190,9 @@ const EditServerModal: React.FC<EditServerModalProps> = ({
           />
         </div>
         <div className="form-group">
-          <label>Custom Arguments</label>
+          <label htmlFor="edit-server-custom-args">Custom Arguments</label>
           <input
+            id="edit-server-custom-args"
             type="text"
             className="form-input"
             value={customArgs}

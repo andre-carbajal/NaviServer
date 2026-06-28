@@ -152,6 +152,25 @@ const MAX_HISTORY_WINDOW_MS = RANGE_TO_MS['4h'];
 const SERVER_POLL_MS = 2000;
 const SERVER_POLL_MAX_BACKOFF_MS = 30000;
 
+const formatBytes = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const formatDuration = (seconds: number) => {
+  if (!seconds || seconds < 0) return '0s';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
+  if (mins > 0) return `${mins}m ${secs}s`;
+  return `${secs}s`;
+};
+
 const PlayerAvatar: React.FC<{ player: PlayerInfo }> = ({ player }) => (
   <img
     src={getAvatarUrl(player.id)}
@@ -753,25 +772,6 @@ const ServerDetail: React.FC = () => {
     }
   };
 
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDuration = (seconds: number) => {
-    if (!seconds || seconds < 0) return '0s';
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
-  };
-
   const selectedRangeMs = RANGE_TO_MS[chartRange];
   const rangeEnd = statsHistory[statsHistory.length - 1]?.ts ?? 0;
   const rangeStart = rangeEnd - selectedRangeMs;
@@ -931,10 +931,9 @@ const ServerDetail: React.FC = () => {
   const onlineIdSet = useMemo(
     () =>
       new Set(
-        players
-          .map((player) => player.id)
-          .filter(Boolean)
-          .map((playerId) => playerId.toLowerCase()),
+        players.flatMap((player) =>
+          player.id ? [player.id.toLowerCase()] : [],
+        ),
       ),
     [players],
   );
@@ -976,10 +975,9 @@ const ServerDetail: React.FC = () => {
   const operatorNameSet = useMemo(
     () =>
       new Set(
-        operators
-          .map((operator) => operator.name)
-          .filter(Boolean)
-          .map((name) => String(name).toLowerCase()),
+        operators.flatMap((operator) =>
+          operator.name ? [operator.name.toLowerCase()] : [],
+        ),
       ),
     [operators],
   );
@@ -987,10 +985,9 @@ const ServerDetail: React.FC = () => {
   const operatorUuidSet = useMemo(
     () =>
       new Set(
-        operators
-          .map((operator) => operator.uuid)
-          .filter(Boolean)
-          .map((uuid) => String(uuid).toLowerCase()),
+        operators.flatMap((operator) =>
+          operator.uuid ? [operator.uuid.toLowerCase()] : [],
+        ),
       ),
     [operators],
   );
@@ -1165,13 +1162,14 @@ const ServerDetail: React.FC = () => {
               <span>•</span>
               <span>{server.version}</span>
               <span>•</span>
-              <span
+              <button
+                type="button"
                 className="server-v2-address"
                 onClick={() => copy(address)}
                 title="Click to copy"
               >
                 {address}
-              </span>
+              </button>
               <CopyButton
                 text={address}
                 variant="secondary"
@@ -1408,6 +1406,7 @@ const ServerDetail: React.FC = () => {
               >
                 <input
                   type="text"
+                  aria-label="Server console command"
                   value={commandInput}
                   onChange={(e) => setCommandInput(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -1481,6 +1480,18 @@ const ServerDetail: React.FC = () => {
                       <li
                         key={player.key}
                         className={canModeratePlayers ? 'clickable' : ''}
+                        role={canModeratePlayers ? 'button' : undefined}
+                        tabIndex={canModeratePlayers ? 0 : undefined}
+                        onKeyDown={(event) => {
+                          if (
+                            !canModeratePlayers ||
+                            (event.key !== 'Enter' && event.key !== ' ')
+                          ) {
+                            return;
+                          }
+                          event.preventDefault();
+                          event.currentTarget.click();
+                        }}
                         onClick={() => {
                           if (!canModeratePlayers) return;
                           const normalizedName = player.name.toLowerCase();
@@ -1525,6 +1536,18 @@ const ServerDetail: React.FC = () => {
                       <li
                         key={operator.key}
                         className={canModeratePlayers ? 'clickable' : ''}
+                        role={canModeratePlayers ? 'button' : undefined}
+                        tabIndex={canModeratePlayers ? 0 : undefined}
+                        onKeyDown={(event) => {
+                          if (
+                            !canModeratePlayers ||
+                            (event.key !== 'Enter' && event.key !== ' ')
+                          ) {
+                            return;
+                          }
+                          event.preventDefault();
+                          event.currentTarget.click();
+                        }}
                         onClick={() => {
                           if (!canModeratePlayers) return;
                           setSelectedPlayer({
@@ -1970,6 +1993,7 @@ const ServerDetail: React.FC = () => {
                         <input
                           ref={settingsIconInputRef}
                           type="file"
+                          aria-label="Server icon image"
                           accept="image/png,image/jpeg"
                           onChange={handleSettingsIconSelected}
                           hidden
@@ -2336,6 +2360,7 @@ const ServerDetail: React.FC = () => {
           <p>Type the server name to confirm deletion.</p>
           <input
             className="form-input"
+            aria-label="Confirm server name"
             value={deleteConfirmName}
             onChange={(e) => setDeleteConfirmName(e.target.value)}
             placeholder="Type the server name"
