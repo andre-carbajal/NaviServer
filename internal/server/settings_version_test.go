@@ -32,6 +32,27 @@ func TestIsFutureVersion(t *testing.T) {
 			comparable: true,
 		},
 		{
+			name:       "newer Bedrock preview build",
+			current:    "1.26.40-preview.29",
+			target:     "1.26.40-preview.30",
+			isFuture:   true,
+			comparable: true,
+		},
+		{
+			name:       "Bedrock release supersedes matching preview",
+			current:    "1.26.40-preview.30",
+			target:     "1.26.40",
+			isFuture:   true,
+			comparable: true,
+		},
+		{
+			name:       "Bedrock preview is older than matching release",
+			current:    "1.26.40",
+			target:     "1.26.40-preview.30",
+			isFuture:   false,
+			comparable: true,
+		},
+		{
 			name:       "invalid version not comparable",
 			current:    "latest",
 			target:     "1.21.4",

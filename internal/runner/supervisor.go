@@ -16,7 +16,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -79,7 +78,7 @@ func (s *Supervisor) StartServer(serverID string) error {
 		return fmt.Errorf("error getting absolute path for server: %w", err)
 	}
 
-	if err := checkPortAvailable(srv.Port); err != nil {
+	if err := checkPortAvailable(srv.Loader, srv.Port); err != nil {
 		slog.Info("Port is busy, attempting to allocate a new one", "port", srv.Port)
 		newPort, err := server.AllocatePort(s.Store)
 		if err != nil {
@@ -93,15 +92,17 @@ func (s *Supervisor) StartServer(serverID string) error {
 		slog.Info("Reassigned server to new port", "server", srv.Name, "port", newPort)
 	}
 
-	configFile := filepath.Join(absServerDir, "server.properties")
-	if err := ensurePortInProperties(configFile, srv.Port); err != nil {
+	if err := server.UpdateServerPropertiesForLoader(absServerDir, srv.Port, srv.Loader); err != nil {
 		slog.Warn("Could not update server.properties", "error", err)
 	}
 
-	requiredJava := GetJavaVersionForMC(srv.Version)
-	javaPath, err := s.JVM.EnsureJava(requiredJava)
-	if err != nil {
-		return fmt.Errorf("error preparing Java: %w", err)
+	javaPath := ""
+	if srv.Loader != "bedrock" {
+		requiredJava := GetJavaVersionForMC(srv.Version)
+		javaPath, err = s.JVM.EnsureJava(requiredJava)
+		if err != nil {
+			return fmt.Errorf("error preparing Java: %w", err)
+		}
 	}
 
 	runner := strategy.GetRunner(srv.Loader)
@@ -345,24 +346,7 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 
 	if !exists {
 		if srv != nil && srv.Status == "RUNNING" {
-			mcServer, err := mcstatus.NewJavaServer(fmt.Sprintf("127.0.0.1:%d", srv.Port))
-			if err == nil {
-				status, err := mcServer.Status()
-				if err == nil {
-					if s, ok := status.(*mcstatus.JavaStatusResponse); ok {
-						stats.OnlinePlayers = s.Players.Online
-						stats.MaxPlayers = s.Players.Max
-						players := make([]domain.Player, 0, len(s.Players.Sample))
-						for _, player := range s.Players.Sample {
-							players = append(players, domain.Player{
-								Name: player.Name,
-								ID:   player.ID,
-							})
-						}
-						stats.Players = players
-					}
-				}
-			}
+			populateMinecraftStatus(stats, srv)
 		}
 		return stats, nil
 	}
@@ -383,24 +367,7 @@ func (s *Supervisor) GetServerStats(serverID string) (*domain.ServerStats, error
 		stats.UptimeSeconds = int64(time.Since(proc.StartedAt).Seconds())
 	}
 
-	mcServer, err := mcstatus.NewJavaServer(fmt.Sprintf("127.0.0.1:%d", srv.Port))
-	if err == nil {
-		status, err := mcServer.Status()
-		if err == nil {
-			if s, ok := status.(*mcstatus.JavaStatusResponse); ok {
-				stats.OnlinePlayers = s.Players.Online
-				stats.MaxPlayers = s.Players.Max
-				players := make([]domain.Player, 0, len(s.Players.Sample))
-				for _, player := range s.Players.Sample {
-					players = append(players, domain.Player{
-						Name: player.Name,
-						ID:   player.ID,
-					})
-				}
-				stats.Players = players
-			}
-		}
-	}
+	populateMinecraftStatus(stats, srv)
 
 	return stats, nil
 }
@@ -443,68 +410,58 @@ func (s *Supervisor) ResetRunningStates() error {
 	return nil
 }
 
-func ensurePortInProperties(path string, port int) error {
-	props := make(map[string]string)
-	var lines []string
-
-	if file, err := os.Open(path); err == nil {
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
-			lines = append(lines, line)
-
-			if strings.TrimSpace(line) == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				key := strings.TrimSpace(parts[0])
-				val := strings.TrimSpace(parts[1])
-				props[key] = val
-			}
+func populateMinecraftStatus(stats *domain.ServerStats, srv *domain.Server) {
+	address := fmt.Sprintf("127.0.0.1:%d", srv.Port)
+	if srv.Loader == "bedrock" {
+		mcServer, err := mcstatus.NewBedrockServer(address)
+		if err != nil {
+			return
 		}
-		file.Close()
-	}
-
-	portStr := fmt.Sprintf("%d", port)
-	if currentVal, ok := props["server-port"]; ok && currentVal == portStr {
-		return nil
-	}
-
-	var newContent []string
-	portUpdated := false
-
-	for _, line := range lines {
-		if strings.HasPrefix(strings.TrimSpace(line), "server-port=") || strings.HasPrefix(strings.TrimSpace(line), "server-port =") {
-			newContent = append(newContent, fmt.Sprintf("server-port=%s", portStr))
-			portUpdated = true
-		} else {
-			newContent = append(newContent, line)
+		status, err := mcServer.Status()
+		if err != nil {
+			return
 		}
+		if response, ok := status.(*mcstatus.BedrockStatusResponse); ok {
+			stats.OnlinePlayers = response.Online
+			stats.MaxPlayers = response.Max
+		}
+		return
 	}
 
-	if !portUpdated {
-		newContent = append(newContent, fmt.Sprintf("server-port=%s", portStr))
-	}
-
-	file, err := os.Create(path)
+	mcServer, err := mcstatus.NewJavaServer(address)
 	if err != nil {
-		return err
+		return
 	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	for _, line := range newContent {
-		writer.WriteString(line + "\n")
+	status, err := mcServer.Status()
+	if err != nil {
+		return
 	}
-	return writer.Flush()
+	if response, ok := status.(*mcstatus.JavaStatusResponse); ok {
+		stats.OnlinePlayers = response.Players.Online
+		stats.MaxPlayers = response.Players.Max
+		players := make([]domain.Player, 0, len(response.Players.Sample))
+		for _, player := range response.Players.Sample {
+			players = append(players, domain.Player{Name: player.Name, ID: player.ID})
+		}
+		stats.Players = players
+	}
 }
 
-func checkPortAvailable(port int) error {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		return fmt.Errorf("port %d is not available: %w", port, err)
+func checkPortAvailable(loaderType string, port int) error {
+	network := "tcp"
+	if loaderType == "bedrock" {
+		network = "udp"
 	}
-	_ = ln.Close()
-	return nil
+	if network == "udp" {
+		listener, err := net.ListenPacket(network, fmt.Sprintf(":%d", port))
+		if err != nil {
+			return fmt.Errorf("UDP port %d is not available: %w", port, err)
+		}
+		return listener.Close()
+	}
+	listener, err := net.Listen(network, fmt.Sprintf(":%d", port))
+	if err != nil {
+		return fmt.Errorf("TCP port %d is not available: %w", port, err)
+	}
+	return listener.Close()
 }

@@ -14,6 +14,7 @@ instances easy through an intuitive web interface, a powerful CLI, and clean ope
 - Fabric
 - Forge
 - NeoForge
+- Minecraft Bedrock Dedicated Server (Windows and Linux amd64)
 
 ---
 

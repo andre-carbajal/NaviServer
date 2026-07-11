@@ -37,6 +37,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
   const [newServerVersion, setNewServerVersion] = useState('1.20.1');
   const [loaders, setLoaders] = useState<string[]>([]);
   const [versions, setVersions] = useState<string[]>([]);
+  const [includePreviews, setIncludePreviews] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
         setNewServerRam(2048);
         setNewServerLoader('vanilla');
         setNewServerVersion('1.20.1');
+        setIncludePreviews(false);
         setIsSubmitting(false);
       }, 0);
 
@@ -70,7 +72,9 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
   useEffect(() => {
     if (newServerLoader) {
       api
-        .getLoaderVersions(newServerLoader)
+        .getLoaderVersions(newServerLoader, {
+          includeSnapshots: newServerLoader === 'bedrock' && includePreviews,
+        })
         .then((response) => {
           setVersions(response.data);
           if (response.data.length > 0) {
@@ -84,7 +88,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
           );
         });
     }
-  }, [newServerLoader]);
+  }, [includePreviews, newServerLoader]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,7 +101,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
     } else {
       if (!newServerName) return;
       data.newServerName = newServerName;
-      data.newServerRam = newServerRam;
+      data.newServerRam = newServerLoader === 'bedrock' ? 4096 : newServerRam;
       data.newServerLoader = newServerLoader;
       data.newServerVersion = newServerVersion;
     }
@@ -218,18 +222,34 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
                 </select>
               </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="restore-new-server-ram">RAM (MB)</label>
-              <input
-                id="restore-new-server-ram"
-                type="number"
-                className="form-input"
-                value={newServerRam}
-                onChange={(e) => setNewServerRam(Number(e.target.value))}
-                min="1024"
-                step="512"
-              />
-            </div>
+            {newServerLoader === 'bedrock' && (
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={includePreviews}
+                  onChange={(e) => setIncludePreviews(e.target.checked)}
+                />{' '}
+                Show previews
+              </label>
+            )}
+            {newServerLoader === 'bedrock' ? (
+              <p className="form-hint">
+                Bedrock Dedicated Server manages memory automatically.
+              </p>
+            ) : (
+              <div className="form-group">
+                <label htmlFor="restore-new-server-ram">RAM (MB)</label>
+                <input
+                  id="restore-new-server-ram"
+                  type="number"
+                  className="form-input"
+                  value={newServerRam}
+                  onChange={(e) => setNewServerRam(Number(e.target.value))}
+                  min="1024"
+                  step="512"
+                />
+              </div>
+            )}
           </>
         )}
 

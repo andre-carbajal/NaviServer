@@ -8,11 +8,22 @@ export const FALLBACK_RAM_MAX_MB = 262144;
 export const getAvatarUrl = (uuid?: string) =>
   `${MINEATAR_BASE_URL}/${encodeURIComponent(uuid || STEVE_UUID)}?scale=8&overlay=true`;
 
-const parseMinecraftVersionParts = (value: string): number[] | null => {
+interface ParsedMinecraftVersion {
+  parts: number[];
+  previewBuild: number | null;
+}
+
+const parseMinecraftVersionParts = (
+  value: string,
+): ParsedMinecraftVersion | null => {
   const normalized = value.trim().toLowerCase().replace(/^v/, '');
   if (normalized === '') return null;
 
-  const parts = normalized.split('.');
+  const previewMatch = normalized.match(/^(.*)-preview\.(\d+)$/);
+  const baseVersion = previewMatch?.[1] ?? normalized;
+  const previewBuild = previewMatch ? Number(previewMatch[2]) : null;
+
+  const parts = baseVersion.split('.');
   const parsed: number[] = [];
 
   for (const part of parts) {
@@ -21,7 +32,7 @@ const parseMinecraftVersionParts = (value: string): number[] | null => {
     parsed.push(Number(digits));
   }
 
-  return parsed;
+  return { parts: parsed, previewBuild };
 };
 
 export const compareMinecraftVersions = (
@@ -32,12 +43,18 @@ export const compareMinecraftVersions = (
   const right = parseMinecraftVersionParts(b);
   if (!left || !right) return null;
 
-  const maxLen = Math.max(left.length, right.length);
+  const maxLen = Math.max(left.parts.length, right.parts.length);
   for (let i = 0; i < maxLen; i += 1) {
-    const lv = left[i] ?? 0;
-    const rv = right[i] ?? 0;
+    const lv = left.parts[i] ?? 0;
+    const rv = right.parts[i] ?? 0;
     if (lv > rv) return 1;
     if (lv < rv) return -1;
+  }
+  if (left.previewBuild !== null && right.previewBuild === null) return -1;
+  if (left.previewBuild === null && right.previewBuild !== null) return 1;
+  if (left.previewBuild !== null && right.previewBuild !== null) {
+    if (left.previewBuild > right.previewBuild) return 1;
+    if (left.previewBuild < right.previewBuild) return -1;
   }
   return 0;
 };
@@ -69,6 +86,21 @@ export const normalizeServerSettings = (
     Number.isFinite(settings.spawnProtection) && settings.spawnProtection >= 0
       ? settings.spawnProtection
       : 16,
+  tickDistance:
+    Number.isFinite(settings.tickDistance) && settings.tickDistance >= 4
+      ? settings.tickDistance
+      : 4,
+  forceGamemode: settings.forceGamemode ?? false,
+  allowCheats: settings.allowCheats ?? false,
+  allowList: settings.allowList ?? false,
+  levelName: settings.levelName || 'Bedrock level',
+  defaultPlayerPermissionLevel:
+    settings.defaultPlayerPermissionLevel || 'member',
+  texturepackRequired: settings.texturepackRequired ?? false,
+  playerIdleTimeout: Number.isFinite(settings.playerIdleTimeout)
+    ? settings.playerIdleTimeout
+    : 30,
+  maxThreads: Number.isFinite(settings.maxThreads) ? settings.maxThreads : 8,
 });
 
 export const upsertPropertyLine = (

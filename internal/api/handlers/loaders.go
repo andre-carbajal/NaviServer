@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -34,7 +35,11 @@ func (h *LoadersHandler) HandleGetLoaderVersions(w http.ResponseWriter, r *http.
 	}
 	versions, err := loader.GetLoaderVersions(name, options)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		status := http.StatusInternalServerError
+		if errors.Is(err, loader.ErrBedrockPlatformUnsupported) {
+			status = http.StatusUnprocessableEntity
+		}
+		http.Error(w, err.Error(), status)
 		return
 	}
 
@@ -61,7 +66,11 @@ func (h *LoadersHandler) HandleGetLoaderMetadata(w http.ResponseWriter, r *http.
 	}
 	md, err := loader.GetLoaderMetadata(name, options)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		status := http.StatusInternalServerError
+		if errors.Is(err, loader.ErrBedrockPlatformUnsupported) {
+			status = http.StatusUnprocessableEntity
+		}
+		http.Error(w, err.Error(), status)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

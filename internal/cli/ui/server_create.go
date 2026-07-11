@@ -289,6 +289,10 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.creating {
 				return m, nil
 			}
+			if m.selectedLoader == "bedrock" && m.step == StepConfirm {
+				m.step = StepMCVersion
+				return m, nil
+			}
 			if m.step > StepName {
 				m.step--
 				return m, nil
@@ -353,6 +357,9 @@ func (m WizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedBuildVersion = ""
 					m.selectedLoaderVersion = ""
 					m.selectedInstallerVersion = ""
+					if m.selectedLoader == "bedrock" {
+						m.ramInput.SetValue("4096")
+					}
 					return m, fetchLoaderMetadata(m.client, m.selectedLoader, sdk.LoaderOptions{})
 				}
 			}
@@ -511,7 +518,11 @@ func (m WizardModel) View() string {
 		stepTitle = "Select Loader"
 		content += "\n" + m.loaderList.View()
 	case StepIncludeSnapshots:
-		stepTitle = "Show snapshots?"
+		if m.selectedLoader == "bedrock" {
+			stepTitle = "Show previews?"
+		} else {
+			stepTitle = "Show snapshots?"
+		}
 		content += "\n" + m.boolList.View()
 	case StepIncludeUnstable:
 		stepTitle = "Show unstable?"
@@ -545,12 +556,20 @@ func (m WizardModel) View() string {
 			content += fmt.Sprintf("\nInstaller Version: %s", m.selectedInstallerVersion)
 		}
 		if m.includeSnapshots {
-			content += "\nInclude snapshots: yes"
+			if m.selectedLoader == "bedrock" {
+				content += "\nInclude previews: yes"
+			} else {
+				content += "\nInclude snapshots: yes"
+			}
 		}
 		if m.includeUnstable {
 			content += "\nInclude unstable: yes"
 		}
-		content += fmt.Sprintf("\nRAM: %s MB", m.ramInput.Value())
+		if m.selectedLoader == "bedrock" {
+			content += "\nMemory: managed automatically by Bedrock"
+		} else {
+			content += fmt.Sprintf("\nRAM: %s MB", m.ramInput.Value())
+		}
 		content = content + "\n" + confirmHint()
 	}
 
@@ -693,7 +712,7 @@ func setupCurrentStepList(m *WizardModel) tea.Cmd {
 		return nil
 	}
 	// step routing
-	if m.selectedLoader == "vanilla" && m.step <= StepMCVersion {
+	if (m.selectedLoader == "vanilla" || m.selectedLoader == "bedrock") && m.step <= StepMCVersion {
 		if m.step != StepIncludeSnapshots && m.step != StepMCVersion {
 			m.step = StepIncludeSnapshots
 		} else if m.step == StepIncludeSnapshots {
@@ -745,6 +764,8 @@ func nextStepAfterSelection(m WizardModel) WizardStep {
 		if m.step <= StepMCVersion {
 			return StepLoaderVersion
 		}
+	case "bedrock":
+		return StepConfirm
 	}
 	return StepRAM
 }

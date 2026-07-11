@@ -90,6 +90,15 @@ export interface ServerSettings {
   maxPlayers: number;
   viewDistance: number;
   simulationDistance: number;
+  tickDistance: number;
+  forceGamemode: boolean;
+  allowCheats: boolean;
+  allowList: boolean;
+  levelName: string;
+  defaultPlayerPermissionLevel: 'visitor' | 'member' | 'operator';
+  texturepackRequired: boolean;
+  playerIdleTimeout: number;
+  maxThreads: number;
 }
 
 export type AddonSource = 'modrinth' | 'curseforge' | 'manual';

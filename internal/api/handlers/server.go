@@ -82,6 +82,10 @@ func (h *ServerHandler) HandleCreateServer(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+	if _, err := loader.GetLoader(req.Loader); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 
 	progressChan := make(chan domain.ProgressEvent)
 	hubID := "progress"

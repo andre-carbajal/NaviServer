@@ -113,9 +113,18 @@ func (m *Manager) CreateServer(name string, loaderType string, options loader.Lo
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Configuring server..."}
 	}
-	os.WriteFile(filepath.Join(serverDir, "eula.txt"), []byte("eula=true"), 0644)
+	if loaderType != "bedrock" {
+		if err := os.WriteFile(filepath.Join(serverDir, "eula.txt"), []byte("eula=true"), 0644); err != nil {
+			_ = os.RemoveAll(serverDir)
+			return nil, fmt.Errorf("could not accept Minecraft EULA: %w", err)
+		}
+	}
 
-	if err := UpdateServerProperties(serverDir, assignedPort); err != nil {
+	if err := UpdateServerPropertiesForLoader(serverDir, assignedPort, loaderType); err != nil {
+		if loaderType == "bedrock" {
+			_ = os.RemoveAll(serverDir)
+			return nil, fmt.Errorf("could not configure Bedrock server properties: %w", err)
+		}
 		fmt.Printf("Warning: Could not write server.properties: %v\n", err)
 	}
 

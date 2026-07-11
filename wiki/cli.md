@@ -21,6 +21,15 @@ naviserver-cli server stop <id>
 naviserver-cli server delete <id>
 ```
 
+Bedrock Dedicated Server is available on Windows and Linux amd64. Use
+`--loader bedrock`; `--include-snapshots` also exposes Bedrock preview builds,
+and the RAM value is retained only for compatibility because Bedrock manages
+its own memory.
+
+```bash
+naviserver-cli server create --name MyBedrock --loader bedrock --mc-version 1.26.33
+```
+
 `server create` runs in synchronous mode by default: it waits for completion using the progress WebSocket.
 Use `--async` to return immediately after the create request is accepted.
 

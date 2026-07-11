@@ -12,6 +12,7 @@ const loaderLogoMap: Record<string, string> = {
   fabric: '/loaders/fabric.webp',
   forge: '/loaders/forge.webp',
   neoforge: '/loaders/neoforge.webp',
+  bedrock: '/loaders/bedrock.svg',
 };
 
 interface CreateModalProps {
@@ -120,13 +121,15 @@ const CreateModal: React.FC<CreateModalProps> = ({
     [loader],
   );
 
+  const showPreviewToggle = loader === 'vanilla' || loader === 'bedrock';
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newRequestId = uuidv4();
     onCreate({
       name,
       loader,
-      ram,
+      ram: loader === 'bedrock' ? 4096 : ram,
       requestId: newRequestId,
       loaderOptions: {
         mcVersion,
@@ -166,7 +169,7 @@ const CreateModal: React.FC<CreateModalProps> = ({
             >
               {loaders.map((l) => (
                 <option key={l} value={l}>
-                  {l}
+                  {l === 'bedrock' ? 'Minecraft Bedrock' : l}
                 </option>
               ))}
             </select>
@@ -192,14 +195,14 @@ const CreateModal: React.FC<CreateModalProps> = ({
             ))}
           </select>
         </div>
-        {loader === 'vanilla' && (
+        {showPreviewToggle && (
           <label className="checkbox-row">
             <input
               type="checkbox"
               checked={includeSnapshots}
               onChange={(e) => setIncludeSnapshots(e.target.checked)}
             />{' '}
-            Show snapshots
+            {loader === 'bedrock' ? 'Show previews' : 'Show snapshots'}
           </label>
         )}
         {showUnstableToggle && (
@@ -246,18 +249,25 @@ const CreateModal: React.FC<CreateModalProps> = ({
             </select>
           </div>
         )}
-        <div className="form-group">
-          <label htmlFor="create-server-ram">RAM (MB)</label>
-          <input
-            id="create-server-ram"
-            type="number"
-            className="form-input"
-            value={ram}
-            onChange={(e) => setRam(Number(e.target.value))}
-            min="1024"
-            step="512"
-          />
-        </div>
+        {loader === 'bedrock' ? (
+          <p className="form-hint">
+            Bedrock Dedicated Server manages memory automatically and does not
+            accept a JVM RAM limit.
+          </p>
+        ) : (
+          <div className="form-group">
+            <label htmlFor="create-server-ram">RAM (MB)</label>
+            <input
+              id="create-server-ram"
+              type="number"
+              className="form-input"
+              value={ram}
+              onChange={(e) => setRam(Number(e.target.value))}
+              min="1024"
+              step="512"
+            />
+          </div>
+        )}
         <div className="modal-actions">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

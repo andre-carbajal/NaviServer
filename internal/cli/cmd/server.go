@@ -56,7 +56,8 @@ var serverCreateCmd = &cobra.Command{
 	Short: "Create a server",
 	Long:  "Create a server with loader-specific options using structured loader fields.",
 	Example: "  naviserver-cli server create --name MyServer --loader vanilla --mc-version 1.21.6 --ram 4096\n" +
-		"  naviserver-cli server create --name MyPaper --loader paper --mc-version 1.21.6 --build-version 224 --ram 4096",
+		"  naviserver-cli server create --name MyPaper --loader paper --mc-version 1.21.6 --build-version 224 --ram 4096\n" +
+		"  naviserver-cli server create --name MyBedrock --loader bedrock --mc-version 1.26.33",
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if strings.TrimSpace(createName) == "" {
@@ -68,7 +69,11 @@ var serverCreateCmd = &cobra.Command{
 		if err := validateCreateLoaderFlags(); err != nil {
 			return err
 		}
-		return handleCreateServer(createName, createLoader, createRAM, createAsync)
+		ram := createRAM
+		if createLoader == "bedrock" {
+			ram = 4096
+		}
+		return handleCreateServer(createName, createLoader, ram, createAsync)
 	},
 }
 
@@ -96,7 +101,7 @@ func init() {
 	serverCreateCmd.Flags().IntVar(&createRAM, "ram", 2048, "Server RAM in MB")
 	serverCreateCmd.Flags().BoolVar(&createAsync, "async", false, "Run create request asynchronously")
 	serverCreateCmd.Flags().StringVar(&createMCVersion, "mc-version", "", "Minecraft version (default: latest stable)")
-	serverCreateCmd.Flags().BoolVar(&createIncludeSnapshots, "include-snapshots", false, "Include snapshots (vanilla)")
+	serverCreateCmd.Flags().BoolVar(&createIncludeSnapshots, "include-snapshots", false, "Include snapshots/previews (vanilla/bedrock)")
 	serverCreateCmd.Flags().BoolVar(&createIncludeUnstable, "include-unstable", false, "Include unstable versions (fabric/neoforge)")
 	serverCreateCmd.Flags().StringVar(&createBuildVersion, "build-version", "", "Build version (paper)")
 	serverCreateCmd.Flags().StringVar(&createLoaderVersion, "loader-version", "", "Loader version (fabric/forge/neoforge)")
@@ -117,8 +122,8 @@ func validateCreateLoaderFlags() error {
 	if createBuildVersion != "" && createLoader != "paper" {
 		return newValidationError("--build-version only applies to --loader paper")
 	}
-	if createIncludeSnapshots && createLoader != "vanilla" {
-		return newValidationError("--include-snapshots only applies to --loader vanilla")
+	if createIncludeSnapshots && !is(createLoader, "vanilla", "bedrock") {
+		return newValidationError("--include-snapshots only applies to --loader vanilla|bedrock")
 	}
 	if createIncludeUnstable && !is(createLoader, "fabric", "neoforge") {
 		return newValidationError("--include-unstable only applies to --loader fabric|neoforge")

@@ -61,8 +61,13 @@ apiInstance.interceptors.response.use(
 
 export const api = {
   getLoaders: () => apiInstance.get<string[]>('/loaders'),
-  getLoaderVersions: (loader: string) =>
-    apiInstance.get<string[]>(`/loaders/${loader}/versions`),
+  getLoaderVersions: (
+    loader: string,
+    options?: { includeSnapshots?: boolean },
+  ) =>
+    apiInstance.get<string[]>(`/loaders/${loader}/versions`, {
+      params: options,
+    }),
   getLoaderMetadata: (
     loader: string,
     options?: {

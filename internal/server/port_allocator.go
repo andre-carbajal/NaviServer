@@ -36,10 +36,16 @@ func AllocatePort(store *storage.GormStore) (int, error) {
 }
 
 func isPortAvailable(port int) bool {
-	conn, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	tcpListener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	defer tcpListener.Close()
+
+	udpListener, err := net.ListenPacket("udp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	udpListener.Close()
 	return true
 }

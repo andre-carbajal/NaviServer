@@ -268,6 +268,7 @@ const ServerDetail: React.FC = () => {
     server?.status === 'RUNNING',
   );
   const { copy } = useCopy(1500);
+  const isBedrock = server?.loader === 'bedrock';
 
   useEffect(() => {
     const fetchPublicIP = async () => {
@@ -373,6 +374,12 @@ const ServerDetail: React.FC = () => {
   );
 
   const refreshPlayerLists = useCallback(async () => {
+    if (isBedrock) {
+      setOperators([]);
+      setBannedPlayers([]);
+      setBannedIps([]);
+      return;
+    }
     const [nextOps, nextBannedPlayers, nextBannedIps] = await Promise.all([
       readJsonList<OperatorEntry>('/ops.json'),
       readJsonList<BannedPlayerEntry>('/banned-players.json'),
@@ -381,7 +388,7 @@ const ServerDetail: React.FC = () => {
     setOperators(nextOps);
     setBannedPlayers(nextBannedPlayers);
     setBannedIps(nextBannedIps);
-  }, [readJsonList]);
+  }, [isBedrock, readJsonList]);
 
   useEffect(() => {
     if (!id || activeTab !== 'players') return;
@@ -529,8 +536,9 @@ const ServerDetail: React.FC = () => {
         maxRamMb,
       );
       if (
-        !Number.isFinite(settingsRes.data.spawnProtection) ||
-        (settingsRes.data.spawnProtection ?? -1) < 0
+        !isBedrock &&
+        (!Number.isFinite(settingsRes.data.spawnProtection) ||
+          (settingsRes.data.spawnProtection ?? -1) < 0)
       ) {
         try {
           const fileRes = await api.getFileContent(id, '/server.properties');
@@ -565,7 +573,7 @@ const ServerDetail: React.FC = () => {
     } finally {
       setIsLoadingSettings(false);
     }
-  }, [id, user?.role]);
+  }, [id, isBedrock, user?.role]);
 
   useEffect(() => {
     if (activeTab !== 'settings' || user?.role !== 'admin') return;
@@ -584,32 +592,38 @@ const ServerDetail: React.FC = () => {
       const expectedSpawnProtection = settingsDraft.spawnProtection;
       await api.updateServerSettings(server.id, settingsDraft);
 
-      try {
-        const refreshed = await api.getServerSettings(server.id);
-        const normalized = normalizeServerSettings(
-          refreshed.data,
-          systemMemoryMb ?? undefined,
-        );
-        if (normalized.spawnProtection !== expectedSpawnProtection) {
-          const fileRes = await api.getFileContent(
-            server.id,
-            '/server.properties',
+      if (!isBedrock) {
+        try {
+          const refreshed = await api.getServerSettings(server.id);
+          const normalized = normalizeServerSettings(
+            refreshed.data,
+            systemMemoryMb ?? undefined,
           );
-          const rawContent = String(fileRes.data ?? '');
-          const patched = upsertPropertyLine(
-            rawContent,
-            'spawn-protection',
-            String(expectedSpawnProtection),
-          );
-          if (patched !== rawContent) {
-            await api.saveFileContent(server.id, '/server.properties', patched);
+          if (normalized.spawnProtection !== expectedSpawnProtection) {
+            const fileRes = await api.getFileContent(
+              server.id,
+              '/server.properties',
+            );
+            const rawContent = String(fileRes.data ?? '');
+            const patched = upsertPropertyLine(
+              rawContent,
+              'spawn-protection',
+              String(expectedSpawnProtection),
+            );
+            if (patched !== rawContent) {
+              await api.saveFileContent(
+                server.id,
+                '/server.properties',
+                patched,
+              );
+            }
           }
+        } catch (err) {
+          console.warn(
+            'Unable to verify spawn-protection via settings API, skipping fallback patch:',
+            err,
+          );
         }
-      } catch (err) {
-        console.warn(
-          'Unable to verify spawn-protection via settings API, skipping fallback patch:',
-          err,
-        );
       }
 
       await Promise.all([fetchServer(), fetchSettingsData()]);
@@ -803,8 +817,9 @@ const ServerDetail: React.FC = () => {
       (acc, point) => Math.max(acc, point.ramMb),
       0,
     );
-    return Math.max(server?.ram || 0, dataMax, 1);
-  }, [server?.ram, visibleHistory]);
+    const configuredLimit = isBedrock ? 0 : server?.ram || 0;
+    return Math.max(configuredLimit, dataMax * 1.1, 1);
+  }, [isBedrock, server?.ram, visibleHistory]);
 
   const formatTimeTick = useCallback(
     (timestamp: number) => {
@@ -1286,7 +1301,9 @@ const ServerDetail: React.FC = () => {
                 </div>
                 <div className="server-v2-card-value">
                   {server.status === 'RUNNING'
-                    ? `${(stats.ram / 1024 / 1024).toFixed(0)} MB / ${server.ram} MB`
+                    ? isBedrock
+                      ? `${(stats.ram / 1024 / 1024).toFixed(0)} MB`
+                      : `${(stats.ram / 1024 / 1024).toFixed(0)} MB / ${server.ram} MB`
                     : 'Offline'}
                 </div>
               </div>
@@ -1460,183 +1477,197 @@ const ServerDetail: React.FC = () => {
                 </span>
               </div>
 
-              <div className="server-v2-players-controls">
-                <label className="server-v2-players-search">
-                  <Search size={16} />
-                  <input
-                    type="text"
-                    value={playersSearch}
-                    onChange={(e) => setPlayersSearch(e.target.value)}
-                    placeholder="Search players..."
-                  />
-                </label>
-
-                <div className="server-v2-players-filters">
-                  <button
-                    type="button"
-                    className={playerFilter === 'all' ? 'active' : ''}
-                    onClick={() => setPlayerFilter('all')}
-                  >
-                    All ({onlineItems.length})
-                  </button>
-                  <button
-                    type="button"
-                    className={playerFilter === 'admins' ? 'active' : ''}
-                    onClick={() => setPlayerFilter('admins')}
-                  >
-                    Admins ({operatorItems.length})
-                  </button>
-                  <button
-                    type="button"
-                    className={playerFilter === 'banned' ? 'active' : ''}
-                    onClick={() => setPlayerFilter('banned')}
-                  >
-                    Banned ({bannedItems.length})
-                  </button>
+              {isBedrock ? (
+                <div className="server-v2-empty-players">
+                  Bedrock status reports player counts but not player names or
+                  XUIDs. Use the Console tab for allow-list and operator
+                  commands.
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="server-v2-players-controls">
+                    <label className="server-v2-players-search">
+                      <Search size={16} />
+                      <input
+                        type="text"
+                        value={playersSearch}
+                        onChange={(e) => setPlayersSearch(e.target.value)}
+                        placeholder="Search players..."
+                      />
+                    </label>
 
-              {playerFilter === 'all' &&
-                (filteredOnlineItems.length === 0 ? (
-                  <div className="server-v2-empty-players">
-                    No players found
+                    <div className="server-v2-players-filters">
+                      <button
+                        type="button"
+                        className={playerFilter === 'all' ? 'active' : ''}
+                        onClick={() => setPlayerFilter('all')}
+                      >
+                        All ({onlineItems.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={playerFilter === 'admins' ? 'active' : ''}
+                        onClick={() => setPlayerFilter('admins')}
+                      >
+                        Admins ({operatorItems.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={playerFilter === 'banned' ? 'active' : ''}
+                        onClick={() => setPlayerFilter('banned')}
+                      >
+                        Banned ({bannedItems.length})
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <ul className="server-v2-player-list">
-                    {filteredOnlineItems.map((player) => (
-                      <li key={player.key}>
-                        <button
-                          type="button"
-                          className={canModeratePlayers ? 'clickable' : ''}
-                          disabled={!canModeratePlayers}
-                          onClick={() => {
-                            if (!canModeratePlayers) return;
-                            const normalizedName = player.name.toLowerCase();
-                            const normalizedUuid = player.uuid?.toLowerCase();
-                            const isOperator = Boolean(
-                              operatorNameSet.has(normalizedName) ||
-                              (normalizedUuid &&
-                                operatorUuidSet.has(normalizedUuid)),
-                            );
-                            setSelectedPlayer({
-                              name: player.name,
-                              id: player.uuid || '',
-                              isOnline: true,
-                              isOperator,
-                            });
-                            setIsPlayerActionsOpen(true);
-                          }}
-                        >
-                          <PlayerAvatar
-                            player={{
-                              name: player.name,
-                              id: player.uuid || '',
-                            }}
-                          />
-                          <div>
-                            <strong>{player.name}</strong>
-                            <small>{player.uuid || 'No UUID available'}</small>
-                          </div>
-                          <span className="server-v2-player-badge online">
-                            Online
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
 
-              {playerFilter === 'admins' &&
-                (filteredOperatorItems.length === 0 ? (
-                  <div className="server-v2-empty-players">
-                    No operators found
-                  </div>
-                ) : (
-                  <ul className="server-v2-player-list">
-                    {filteredOperatorItems.map((operator) => (
-                      <li key={operator.key}>
-                        <button
-                          type="button"
-                          className={canModeratePlayers ? 'clickable' : ''}
-                          disabled={!canModeratePlayers}
-                          onClick={() => {
-                            if (!canModeratePlayers) return;
-                            setSelectedPlayer({
-                              name: operator.name,
-                              id: operator.uuid || '',
-                              isOnline: operator.isOnline,
-                              isOperator: true,
-                            });
-                            setIsPlayerActionsOpen(true);
-                          }}
-                        >
-                          <PlayerAvatar
-                            player={{
-                              name: operator.name,
-                              id: operator.uuid || '',
-                            }}
-                          />
-                          <div>
-                            <strong>{operator.name}</strong>
-                            <small>
-                              {operator.uuid || 'No UUID available'}
-                            </small>
-                          </div>
-                          <span
-                            className={`server-v2-player-badge ${operator.isOnline ? 'online' : 'offline'}`}
-                          >
-                            {operator.isOnline ? 'Online' : 'Offline'}
-                          </span>
-                        </button>
-                      </li>
+                  {playerFilter === 'all' &&
+                    (filteredOnlineItems.length === 0 ? (
+                      <div className="server-v2-empty-players">
+                        No players found
+                      </div>
+                    ) : (
+                      <ul className="server-v2-player-list">
+                        {filteredOnlineItems.map((player) => (
+                          <li key={player.key}>
+                            <button
+                              type="button"
+                              className={canModeratePlayers ? 'clickable' : ''}
+                              disabled={!canModeratePlayers}
+                              onClick={() => {
+                                if (!canModeratePlayers) return;
+                                const normalizedName =
+                                  player.name.toLowerCase();
+                                const normalizedUuid =
+                                  player.uuid?.toLowerCase();
+                                const isOperator = Boolean(
+                                  operatorNameSet.has(normalizedName) ||
+                                  (normalizedUuid &&
+                                    operatorUuidSet.has(normalizedUuid)),
+                                );
+                                setSelectedPlayer({
+                                  name: player.name,
+                                  id: player.uuid || '',
+                                  isOnline: true,
+                                  isOperator,
+                                });
+                                setIsPlayerActionsOpen(true);
+                              }}
+                            >
+                              <PlayerAvatar
+                                player={{
+                                  name: player.name,
+                                  id: player.uuid || '',
+                                }}
+                              />
+                              <div>
+                                <strong>{player.name}</strong>
+                                <small>
+                                  {player.uuid || 'No UUID available'}
+                                </small>
+                              </div>
+                              <span className="server-v2-player-badge online">
+                                Online
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     ))}
-                  </ul>
-                ))}
 
-              {playerFilter === 'banned' &&
-                (filteredBannedItems.length === 0 ? (
-                  <div className="server-v2-empty-players">
-                    No banned entries
-                  </div>
-                ) : (
-                  <ul className="server-v2-player-list">
-                    {filteredBannedItems.map((item) => (
-                      <li key={item.key}>
-                        <div className="server-v2-player-icon">
-                          {item.type === 'player' ? (
-                            <Ban size={16} />
-                          ) : (
-                            <Globe size={16} />
-                          )}
-                        </div>
-                        <div>
-                          <strong>{item.label}</strong>
-                          <small>
-                            {item.type === 'player'
-                              ? item.uuid || item.detail || 'Banned player'
-                              : item.detail || 'Banned IP'}
-                          </small>
-                        </div>
-                        <button
-                          type="button"
-                          className="server-v2-pardon-btn"
-                          onClick={() => handlePardon(item)}
-                          disabled={
-                            !canModeratePlayers || isPlayerActionLoading
-                          }
-                        >
-                          Pardon
-                        </button>
-                      </li>
+                  {playerFilter === 'admins' &&
+                    (filteredOperatorItems.length === 0 ? (
+                      <div className="server-v2-empty-players">
+                        No operators found
+                      </div>
+                    ) : (
+                      <ul className="server-v2-player-list">
+                        {filteredOperatorItems.map((operator) => (
+                          <li key={operator.key}>
+                            <button
+                              type="button"
+                              className={canModeratePlayers ? 'clickable' : ''}
+                              disabled={!canModeratePlayers}
+                              onClick={() => {
+                                if (!canModeratePlayers) return;
+                                setSelectedPlayer({
+                                  name: operator.name,
+                                  id: operator.uuid || '',
+                                  isOnline: operator.isOnline,
+                                  isOperator: true,
+                                });
+                                setIsPlayerActionsOpen(true);
+                              }}
+                            >
+                              <PlayerAvatar
+                                player={{
+                                  name: operator.name,
+                                  id: operator.uuid || '',
+                                }}
+                              />
+                              <div>
+                                <strong>{operator.name}</strong>
+                                <small>
+                                  {operator.uuid || 'No UUID available'}
+                                </small>
+                              </div>
+                              <span
+                                className={`server-v2-player-badge ${operator.isOnline ? 'online' : 'offline'}`}
+                              >
+                                {operator.isOnline ? 'Online' : 'Offline'}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     ))}
-                  </ul>
-                ))}
 
-              {!canModeratePlayers && (
-                <p className="server-v2-players-note">
-                  You can view players, but moderation actions require console
-                  permission.
-                </p>
+                  {playerFilter === 'banned' &&
+                    (filteredBannedItems.length === 0 ? (
+                      <div className="server-v2-empty-players">
+                        No banned entries
+                      </div>
+                    ) : (
+                      <ul className="server-v2-player-list">
+                        {filteredBannedItems.map((item) => (
+                          <li key={item.key}>
+                            <div className="server-v2-player-icon">
+                              {item.type === 'player' ? (
+                                <Ban size={16} />
+                              ) : (
+                                <Globe size={16} />
+                              )}
+                            </div>
+                            <div>
+                              <strong>{item.label}</strong>
+                              <small>
+                                {item.type === 'player'
+                                  ? item.uuid || item.detail || 'Banned player'
+                                  : item.detail || 'Banned IP'}
+                              </small>
+                            </div>
+                            <button
+                              type="button"
+                              className="server-v2-pardon-btn"
+                              onClick={() => handlePardon(item)}
+                              disabled={
+                                !canModeratePlayers || isPlayerActionLoading
+                              }
+                            >
+                              Pardon
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+
+                  {!canModeratePlayers && (
+                    <p className="server-v2-players-note">
+                      You can view players, but moderation actions require
+                      console permission.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -1722,7 +1753,9 @@ const ServerDetail: React.FC = () => {
                             <option value="survival">Survival</option>
                             <option value="creative">Creative</option>
                             <option value="adventure">Adventure</option>
-                            <option value="spectator">Spectator</option>
+                            {!isBedrock && (
+                              <option value="spectator">Spectator</option>
+                            )}
                           </select>
                         </label>
 
@@ -1753,7 +1786,9 @@ const ServerDetail: React.FC = () => {
 
                         <label className="server-v2-settings-full">
                           <span>
-                            Server Message (MOTD)
+                            {isBedrock
+                              ? 'Bedrock Server Name'
+                              : 'Server Message (MOTD)'}
                             <span title="Server list message players see.">
                               <CircleHelp size={14} />
                             </span>
@@ -1768,27 +1803,29 @@ const ServerDetail: React.FC = () => {
                           />
                         </label>
 
-                        <label>
-                          <span>
-                            Spawn Protection
-                            <span title="Spawn protection radius in blocks. Set 0 to disable.">
-                              <CircleHelp size={14} />
+                        {!isBedrock && (
+                          <label>
+                            <span>
+                              Spawn Protection
+                              <span title="Spawn protection radius in blocks. Set 0 to disable.">
+                                <CircleHelp size={14} />
+                              </span>
                             </span>
-                          </span>
-                          <input
-                            className="form-input"
-                            type="number"
-                            min={0}
-                            value={settingsDraft.spawnProtection ?? 16}
-                            onChange={(e) =>
-                              updateSettingsField(
-                                'spawnProtection',
-                                Math.max(0, Number(e.target.value)),
-                              )
-                            }
-                            disabled={!canApplySettings}
-                          />
-                        </label>
+                            <input
+                              className="form-input"
+                              type="number"
+                              min={0}
+                              value={settingsDraft.spawnProtection ?? 16}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'spawnProtection',
+                                  Math.max(0, Number(e.target.value)),
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                          </label>
+                        )}
 
                         <label className="server-v2-settings-toggle">
                           <input
@@ -1807,59 +1844,171 @@ const ServerDetail: React.FC = () => {
                           </span>
                         </label>
 
-                        <label className="server-v2-settings-toggle">
-                          <input
-                            type="checkbox"
-                            checked={settingsDraft.pvp}
-                            onChange={(e) =>
-                              updateSettingsField('pvp', e.target.checked)
-                            }
-                            disabled={!canApplySettings}
-                          />
-                          <span>Enable PvP</span>
-                        </label>
+                        {isBedrock && (
+                          <>
+                            <label className="server-v2-settings-toggle">
+                              <input
+                                type="checkbox"
+                                checked={settingsDraft.forceGamemode}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'forceGamemode',
+                                    e.target.checked,
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                              <span>Force Game Mode</span>
+                            </label>
 
-                        <label className="server-v2-settings-toggle">
-                          <input
-                            type="checkbox"
-                            checked={settingsDraft.allowFlight}
-                            onChange={(e) =>
-                              updateSettingsField(
-                                'allowFlight',
-                                e.target.checked,
-                              )
-                            }
-                            disabled={!canApplySettings}
-                          />
-                          <span>Allow Flying</span>
-                        </label>
+                            <label className="server-v2-settings-toggle">
+                              <input
+                                type="checkbox"
+                                checked={settingsDraft.allowCheats}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'allowCheats',
+                                    e.target.checked,
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                              <span>Allow Cheats</span>
+                            </label>
 
-                        <label className="server-v2-settings-toggle">
-                          <input
-                            type="checkbox"
-                            checked={settingsDraft.enableCommandBlock}
-                            onChange={(e) =>
-                              updateSettingsField(
-                                'enableCommandBlock',
-                                e.target.checked,
-                              )
-                            }
-                            disabled={!canApplySettings}
-                          />
-                          <span>Enable Command Blocks</span>
-                        </label>
+                            <label className="server-v2-settings-toggle">
+                              <input
+                                type="checkbox"
+                                checked={settingsDraft.allowList}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'allowList',
+                                    e.target.checked,
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                              <span>Enable Allow List</span>
+                            </label>
 
-                        <label className="server-v2-settings-toggle">
-                          <input
-                            type="checkbox"
-                            checked={settingsDraft.hardcore}
-                            onChange={(e) =>
-                              updateSettingsField('hardcore', e.target.checked)
-                            }
-                            disabled={!canApplySettings}
-                          />
-                          <span>Hardcore Mode</span>
-                        </label>
+                            <label className="server-v2-settings-toggle">
+                              <input
+                                type="checkbox"
+                                checked={settingsDraft.texturepackRequired}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'texturepackRequired',
+                                    e.target.checked,
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                              <span>Require Texture Packs</span>
+                            </label>
+
+                            <label className="server-v2-settings-full">
+                              <span>Level Name</span>
+                              <input
+                                className="form-input"
+                                value={settingsDraft.levelName}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'levelName',
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                            </label>
+
+                            <label>
+                              <span>Default Player Permission</span>
+                              <select
+                                className="form-input"
+                                value={
+                                  settingsDraft.defaultPlayerPermissionLevel
+                                }
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'defaultPlayerPermissionLevel',
+                                    e.target
+                                      .value as ServerSettings['defaultPlayerPermissionLevel'],
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              >
+                                <option value="visitor">Visitor</option>
+                                <option value="member">Member</option>
+                                <option value="operator">Operator</option>
+                              </select>
+                            </label>
+                          </>
+                        )}
+
+                        {!isBedrock && (
+                          <label className="server-v2-settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={settingsDraft.pvp}
+                              onChange={(e) =>
+                                updateSettingsField('pvp', e.target.checked)
+                              }
+                              disabled={!canApplySettings}
+                            />
+                            <span>Enable PvP</span>
+                          </label>
+                        )}
+
+                        {!isBedrock && (
+                          <label className="server-v2-settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={settingsDraft.allowFlight}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'allowFlight',
+                                  e.target.checked,
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                            <span>Allow Flying</span>
+                          </label>
+                        )}
+
+                        {!isBedrock && (
+                          <label className="server-v2-settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={settingsDraft.enableCommandBlock}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'enableCommandBlock',
+                                  e.target.checked,
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                            <span>Enable Command Blocks</span>
+                          </label>
+                        )}
+
+                        {!isBedrock && (
+                          <label className="server-v2-settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={settingsDraft.hardcore}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'hardcore',
+                                  e.target.checked,
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                            <span>Hardcore Mode</span>
+                          </label>
+                        )}
                       </div>
                     </div>
 
@@ -1908,57 +2057,134 @@ const ServerDetail: React.FC = () => {
                           <input
                             className="form-input"
                             type="number"
-                            min={2}
-                            max={32}
+                            min={isBedrock ? 5 : 2}
+                            max={isBedrock ? undefined : 32}
                             value={settingsDraft.viewDistance}
                             onChange={(e) =>
                               updateSettingsField(
                                 'viewDistance',
-                                Math.max(2, Number(e.target.value)),
+                                Math.max(
+                                  isBedrock ? 5 : 2,
+                                  Number(e.target.value),
+                                ),
                               )
                             }
                             disabled={!canApplySettings}
                           />
                         </label>
 
-                        <label>
-                          <span>
-                            Simulation Distance
-                            <span title="Chunks actively simulated.">
-                              <CircleHelp size={14} />
+                        {isBedrock ? (
+                          <label>
+                            <span>
+                              Tick Distance
+                              <span title="Chunks actively simulated by Bedrock (4-12).">
+                                <CircleHelp size={14} />
+                              </span>
                             </span>
-                          </span>
-                          <input
-                            className="form-input"
-                            type="number"
-                            min={2}
-                            max={32}
-                            value={settingsDraft.simulationDistance}
-                            onChange={(e) =>
-                              updateSettingsField(
-                                'simulationDistance',
-                                Math.max(2, Number(e.target.value)),
-                              )
-                            }
-                            disabled={!canApplySettings}
-                          />
-                        </label>
+                            <input
+                              className="form-input"
+                              type="number"
+                              min={4}
+                              max={12}
+                              value={settingsDraft.tickDistance}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'tickDistance',
+                                  Math.min(
+                                    12,
+                                    Math.max(4, Number(e.target.value)),
+                                  ),
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                          </label>
+                        ) : (
+                          <label>
+                            <span>
+                              Simulation Distance
+                              <span title="Chunks actively simulated.">
+                                <CircleHelp size={14} />
+                              </span>
+                            </span>
+                            <input
+                              className="form-input"
+                              type="number"
+                              min={2}
+                              max={32}
+                              value={settingsDraft.simulationDistance}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'simulationDistance',
+                                  Math.max(2, Number(e.target.value)),
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                          </label>
+                        )}
 
-                        <label>
-                          <span>RAM Allocation (MB)</span>
-                          <input
-                            className="form-input"
-                            type="number"
-                            min={RAM_MIN_MB}
-                            max={ramAllocationMaxMb}
-                            step={256}
-                            value={settingsDraft.ram}
-                            onChange={(e) =>
-                              updateSettingsField('ram', Number(e.target.value))
-                            }
-                            disabled={!canApplySettings}
-                          />
-                        </label>
+                        {isBedrock ? (
+                          <>
+                            <label>
+                              <span>Player Idle Timeout (minutes)</span>
+                              <input
+                                className="form-input"
+                                type="number"
+                                min={0}
+                                value={settingsDraft.playerIdleTimeout}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'playerIdleTimeout',
+                                    Math.max(0, Number(e.target.value)),
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                            </label>
+
+                            <label>
+                              <span>Maximum Threads (0 = automatic)</span>
+                              <input
+                                className="form-input"
+                                type="number"
+                                min={0}
+                                value={settingsDraft.maxThreads}
+                                onChange={(e) =>
+                                  updateSettingsField(
+                                    'maxThreads',
+                                    Math.max(0, Number(e.target.value)),
+                                  )
+                                }
+                                disabled={!canApplySettings}
+                              />
+                            </label>
+
+                            <p className="server-v2-settings-hint server-v2-settings-full">
+                              Bedrock manages memory automatically; its RAM use
+                              is monitored but cannot be capped with JVM flags.
+                            </p>
+                          </>
+                        ) : (
+                          <label>
+                            <span>RAM Allocation (MB)</span>
+                            <input
+                              className="form-input"
+                              type="number"
+                              min={RAM_MIN_MB}
+                              max={ramAllocationMaxMb}
+                              step={256}
+                              value={settingsDraft.ram}
+                              onChange={(e) =>
+                                updateSettingsField(
+                                  'ram',
+                                  Number(e.target.value),
+                                )
+                              }
+                              disabled={!canApplySettings}
+                            />
+                          </label>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2202,7 +2428,7 @@ const ServerDetail: React.FC = () => {
       </div>
 
       <Modal
-        isOpen={isPlayerActionsOpen}
+        isOpen={isPlayerActionsOpen && !isBedrock}
         onClose={() => setIsPlayerActionsOpen(false)}
         title="Player Actions"
       >

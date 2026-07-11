@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"naviserver/internal/domain"
+	"naviserver/internal/loader"
 	"net/http"
 )
 
@@ -177,6 +178,12 @@ func (h *BackupHandler) HandleRestoreBackup(w http.ResponseWriter, r *http.Reque
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
+	}
+	if req.TargetServerID == "" {
+		if _, err := loader.GetLoader(req.NewServerLoader); err != nil {
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+			return
+		}
 	}
 
 	userCtx := r.Context().Value(domain.UserContextKey)

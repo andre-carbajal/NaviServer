@@ -811,6 +811,7 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 
 	var targetDir string
 	var targetPort int
+	var targetLoader string
 
 	if targetServerID != "" {
 		srv, err := m.Store.GetServerByID(targetServerID)
@@ -830,6 +831,7 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 		}
 		targetDir = filepath.Join(m.ServersPath, folderName)
 		targetPort = srv.Port
+		targetLoader = srv.Loader
 
 		files, err := os.ReadDir(targetDir)
 		if err != nil {
@@ -859,6 +861,7 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 			return err
 		}
 		targetPort = port
+		targetLoader = newServerLoader
 
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return err
@@ -886,7 +889,7 @@ func (m *Manager) RestoreBackup(backupName string, targetServerID string, newSer
 		return fmt.Errorf("failed to unarchive backup: %w", err)
 	}
 
-	if err := server.UpdateServerProperties(targetDir, targetPort); err != nil {
+	if err := server.UpdateServerPropertiesForLoader(targetDir, targetPort, targetLoader); err != nil {
 		return fmt.Errorf("failed to update server properties: %w", err)
 	}
 

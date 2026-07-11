@@ -145,8 +145,12 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
           <div className="stat-label">Memory</div>
           <div className="stat-value">
             {isRunning && stats
-              ? `${formatBytes(stats.ram)} / ${formatBytes(server.ram * 1024 * 1024)}`
-              : `0 B / ${formatBytes(server.ram * 1024 * 1024)}`}
+              ? server.loader === 'bedrock'
+                ? formatBytes(stats.ram)
+                : `${formatBytes(stats.ram)} / ${formatBytes(server.ram * 1024 * 1024)}`
+              : server.loader === 'bedrock'
+                ? '0 B'
+                : `0 B / ${formatBytes(server.ram * 1024 * 1024)}`}
           </div>
         </div>
 

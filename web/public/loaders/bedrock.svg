@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Minecraft Bedrock">
+  <defs>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8f9b9d"/>
+      <stop offset="1" stop-color="#596467"/>
+    </linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#596467"/>
+      <stop offset="1" stop-color="#343b3d"/>
+    </linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#465052"/>
+      <stop offset="1" stop-color="#252b2d"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#top)" d="M32 3 59 18 32 33 5 18 32 3Z"/>
+  <path fill="url(#left)" d="M5 18 32 33v28L5 46V18Z"/>
+  <path fill="url(#right)" d="m59 18-27 15v28l27-15V18Z"/>
+  <path fill="#aab2b3" opacity=".55" d="m20 12 8 4-7 4-8-4 7-4Zm23 2 8 4-7 4-8-4 7-4Z"/>
+  <path fill="#1b2021" opacity=".6" d="m10 29 8 4v8l-8-4v-8Zm13 13 6 3v9l-6-3v-9Zm26-13 6-3v8l-6 3v-8ZM36 42l8-4v10l-8 4V42Z"/>
+</svg>

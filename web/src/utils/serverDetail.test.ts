@@ -16,6 +16,10 @@ describe('server detail utilities', () => {
     expect(compareMinecraftVersions('1.21.1', '1.21.2')).toBe(-1);
     expect(compareMinecraftVersions('v1.21.2', '1.21.2')).toBe(0);
     expect(compareMinecraftVersions('1.21.10', '1.21.2')).toBe(1);
+    expect(
+      compareMinecraftVersions('1.26.40-preview.30', '1.26.40-preview.29'),
+    ).toBe(1);
+    expect(compareMinecraftVersions('1.26.40', '1.26.40-preview.30')).toBe(1);
     expect(compareMinecraftVersions('latest', '1.21.2')).toBeNull();
   });
 
@@ -56,6 +60,11 @@ describe('server detail utilities', () => {
       ram: 512,
       onlineMode: true,
       spawnProtection: 16,
+      tickDistance: 4,
+      levelName: 'Bedrock level',
+      defaultPlayerPermissionLevel: 'member',
+      playerIdleTimeout: 30,
+      maxThreads: 8,
     });
   });
 

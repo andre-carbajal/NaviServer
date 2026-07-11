@@ -36,6 +36,20 @@ func reserveTCPPort(t *testing.T) (int, func()) {
 	}
 }
 
+func reserveUDPPort(t *testing.T) (int, func()) {
+	t.Helper()
+
+	listener, err := net.ListenPacket("udp", ":0")
+	if err != nil {
+		t.Fatalf("failed to reserve UDP port: %v", err)
+	}
+
+	port := listener.LocalAddr().(*net.UDPAddr).Port
+	return port, func() {
+		_ = listener.Close()
+	}
+}
+
 func findAvailablePort(t *testing.T, start, end int) int {
 	t.Helper()
 
@@ -100,5 +114,20 @@ func TestAllocatePortReturnsErrorWhenRangeIsExhausted(t *testing.T) {
 	allocated, err := AllocatePort(store)
 	if err == nil {
 		t.Fatalf("expected exhaustion error, got port %d", allocated)
+	}
+}
+
+func TestAllocatePortSkipsUDPPorts(t *testing.T) {
+	store := newPortAllocatorStore(t)
+	occupiedPort, release := reserveUDPPort(t)
+	defer release()
+
+	if err := store.SetPortRange(occupiedPort, occupiedPort); err != nil {
+		t.Fatalf("failed to set port range: %v", err)
+	}
+
+	allocated, err := AllocatePort(store)
+	if err == nil {
+		t.Fatalf("expected UDP exhaustion error, got port %d", allocated)
 	}
 }

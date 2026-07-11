@@ -24,23 +24,32 @@ var validDifficulties = map[string]bool{
 }
 
 type ServerSettings struct {
-	Name               string `json:"name"`
-	RAM                int    `json:"ram"`
-	CustomArgs         string `json:"customArgs"`
-	Loader             string `json:"loader"`
-	Version            string `json:"version"`
-	Gamemode           string `json:"gamemode"`
-	Difficulty         string `json:"difficulty"`
-	MOTD               string `json:"motd"`
-	OnlineMode         bool   `json:"onlineMode"`
-	SpawnProtection    int    `json:"spawnProtection"`
-	PvP                bool   `json:"pvp"`
-	AllowFlight        bool   `json:"allowFlight"`
-	EnableCommandBlock bool   `json:"enableCommandBlock"`
-	Hardcore           bool   `json:"hardcore"`
-	MaxPlayers         int    `json:"maxPlayers"`
-	ViewDistance       int    `json:"viewDistance"`
-	SimulationDistance int    `json:"simulationDistance"`
+	Name                         string `json:"name"`
+	RAM                          int    `json:"ram"`
+	CustomArgs                   string `json:"customArgs"`
+	Loader                       string `json:"loader"`
+	Version                      string `json:"version"`
+	Gamemode                     string `json:"gamemode"`
+	Difficulty                   string `json:"difficulty"`
+	MOTD                         string `json:"motd"`
+	OnlineMode                   bool   `json:"onlineMode"`
+	SpawnProtection              int    `json:"spawnProtection"`
+	PvP                          bool   `json:"pvp"`
+	AllowFlight                  bool   `json:"allowFlight"`
+	EnableCommandBlock           bool   `json:"enableCommandBlock"`
+	Hardcore                     bool   `json:"hardcore"`
+	MaxPlayers                   int    `json:"maxPlayers"`
+	ViewDistance                 int    `json:"viewDistance"`
+	SimulationDistance           int    `json:"simulationDistance"`
+	TickDistance                 int    `json:"tickDistance"`
+	ForceGamemode                bool   `json:"forceGamemode"`
+	AllowCheats                  bool   `json:"allowCheats"`
+	AllowList                    bool   `json:"allowList"`
+	LevelName                    string `json:"levelName"`
+	DefaultPlayerPermissionLevel string `json:"defaultPlayerPermissionLevel"`
+	TexturepackRequired          bool   `json:"texturepackRequired"`
+	PlayerIdleTimeout            int    `json:"playerIdleTimeout"`
+	MaxThreads                   int    `json:"maxThreads"`
 }
 
 func (m *Manager) serverRootByID(id string) (string, error) {
@@ -79,23 +88,33 @@ func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
 	}
 
 	settings := &ServerSettings{
-		Name:               srv.Name,
-		RAM:                srv.RAM,
-		CustomArgs:         srv.CustomArgs,
-		Loader:             srv.Loader,
-		Version:            srv.Version,
-		Gamemode:           "survival",
-		Difficulty:         "easy",
-		MOTD:               "A Minecraft Server",
-		OnlineMode:         true,
-		SpawnProtection:    16,
-		PvP:                true,
-		AllowFlight:        false,
-		EnableCommandBlock: false,
-		Hardcore:           false,
-		MaxPlayers:         20,
-		ViewDistance:       10,
-		SimulationDistance: 10,
+		Name:                         srv.Name,
+		RAM:                          srv.RAM,
+		CustomArgs:                   srv.CustomArgs,
+		Loader:                       srv.Loader,
+		Version:                      srv.Version,
+		Gamemode:                     "survival",
+		Difficulty:                   "easy",
+		MOTD:                         "A Minecraft Server",
+		OnlineMode:                   true,
+		SpawnProtection:              16,
+		PvP:                          true,
+		AllowFlight:                  false,
+		EnableCommandBlock:           false,
+		Hardcore:                     false,
+		MaxPlayers:                   20,
+		ViewDistance:                 10,
+		SimulationDistance:           10,
+		TickDistance:                 4,
+		LevelName:                    "Bedrock level",
+		DefaultPlayerPermissionLevel: "member",
+		PlayerIdleTimeout:            30,
+		MaxThreads:                   8,
+	}
+	if srv.Loader == "bedrock" {
+		settings.MOTD = "Dedicated Server"
+		settings.MaxPlayers = 10
+		settings.ViewDistance = 32
 	}
 
 	if val, ok := props.Get("gamemode"); ok && val != "" {
@@ -104,7 +123,11 @@ func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
 	if val, ok := props.Get("difficulty"); ok && val != "" {
 		settings.Difficulty = strings.ToLower(val)
 	}
-	if val, ok := props.Get("motd"); ok {
+	messageKey := "motd"
+	if srv.Loader == "bedrock" {
+		messageKey = "server-name"
+	}
+	if val, ok := props.Get(messageKey); ok {
 		settings.MOTD = val
 	}
 	if val, ok := props.Get("online-mode"); ok {
@@ -140,6 +163,35 @@ func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
 			settings.SimulationDistance,
 		)
 	}
+	if srv.Loader == "bedrock" {
+		if val, ok := props.Get("tick-distance"); ok {
+			settings.TickDistance = parseIntOrDefault(val, settings.TickDistance)
+		}
+		if val, ok := props.Get("force-gamemode"); ok {
+			settings.ForceGamemode = parseBoolOrDefault(val, settings.ForceGamemode)
+		}
+		if val, ok := props.Get("allow-cheats"); ok {
+			settings.AllowCheats = parseBoolOrDefault(val, settings.AllowCheats)
+		}
+		if val, ok := props.Get("allow-list"); ok {
+			settings.AllowList = parseBoolOrDefault(val, settings.AllowList)
+		}
+		if val, ok := props.Get("level-name"); ok && strings.TrimSpace(val) != "" {
+			settings.LevelName = val
+		}
+		if val, ok := props.Get("default-player-permission-level"); ok && strings.TrimSpace(val) != "" {
+			settings.DefaultPlayerPermissionLevel = strings.ToLower(val)
+		}
+		if val, ok := props.Get("texturepack-required"); ok {
+			settings.TexturepackRequired = parseBoolOrDefault(val, settings.TexturepackRequired)
+		}
+		if val, ok := props.Get("player-idle-timeout"); ok {
+			settings.PlayerIdleTimeout = parseIntOrDefault(val, settings.PlayerIdleTimeout)
+		}
+		if val, ok := props.Get("max-threads"); ok {
+			settings.MaxThreads = parseIntOrDefault(val, settings.MaxThreads)
+		}
+	}
 
 	return settings, nil
 }
@@ -156,7 +208,7 @@ func (m *Manager) UpdateServerSettings(id string, next ServerSettings) error {
 		return fmt.Errorf("server must be stopped to update settings")
 	}
 
-	if err := validateSettings(next); err != nil {
+	if err := validateSettingsForLoader(next, srv.Loader); err != nil {
 		return err
 	}
 
@@ -171,20 +223,34 @@ func (m *Manager) UpdateServerSettings(id string, next ServerSettings) error {
 		return fmt.Errorf("failed to parse server.properties: %w", err)
 	}
 
-	props.SetMany(map[string]string{
-		"gamemode":             strings.ToLower(next.Gamemode),
-		"difficulty":           strings.ToLower(next.Difficulty),
-		"motd":                 next.MOTD,
-		"online-mode":          formatBool(next.OnlineMode),
-		"spawn-protection":     strconv.Itoa(next.SpawnProtection),
-		"pvp":                  formatBool(next.PvP),
-		"allow-flight":         formatBool(next.AllowFlight),
-		"enable-command-block": formatBool(next.EnableCommandBlock),
-		"hardcore":             formatBool(next.Hardcore),
-		"max-players":          strconv.Itoa(next.MaxPlayers),
-		"view-distance":        strconv.Itoa(next.ViewDistance),
-		"simulation-distance":  strconv.Itoa(next.SimulationDistance),
-	})
+	values := map[string]string{
+		"gamemode":      strings.ToLower(next.Gamemode),
+		"difficulty":    strings.ToLower(next.Difficulty),
+		"online-mode":   formatBool(next.OnlineMode),
+		"max-players":   strconv.Itoa(next.MaxPlayers),
+		"view-distance": strconv.Itoa(next.ViewDistance),
+	}
+	if srv.Loader == "bedrock" {
+		values["server-name"] = next.MOTD
+		values["force-gamemode"] = formatBool(next.ForceGamemode)
+		values["allow-cheats"] = formatBool(next.AllowCheats)
+		values["allow-list"] = formatBool(next.AllowList)
+		values["level-name"] = strings.TrimSpace(next.LevelName)
+		values["default-player-permission-level"] = strings.ToLower(strings.TrimSpace(next.DefaultPlayerPermissionLevel))
+		values["texturepack-required"] = formatBool(next.TexturepackRequired)
+		values["player-idle-timeout"] = strconv.Itoa(next.PlayerIdleTimeout)
+		values["max-threads"] = strconv.Itoa(next.MaxThreads)
+		values["tick-distance"] = strconv.Itoa(next.TickDistance)
+	} else {
+		values["motd"] = next.MOTD
+		values["spawn-protection"] = strconv.Itoa(next.SpawnProtection)
+		values["pvp"] = formatBool(next.PvP)
+		values["allow-flight"] = formatBool(next.AllowFlight)
+		values["enable-command-block"] = formatBool(next.EnableCommandBlock)
+		values["hardcore"] = formatBool(next.Hardcore)
+		values["simulation-distance"] = strconv.Itoa(next.SimulationDistance)
+	}
+	props.SetMany(values)
 
 	if err := props.Write(path); err != nil {
 		return fmt.Errorf("failed to write server.properties: %w", err)
@@ -209,7 +275,7 @@ func (m *Manager) GetVersionOptions(id string) ([]string, error) {
 	}
 
 	versions, err := loader.GetLoaderVersions(srv.Loader, loader.LoaderOptions{
-		IncludeSnapshots: false,
+		IncludeSnapshots: srv.Loader == "bedrock" && strings.Contains(strings.ToLower(srv.Version), "-preview."),
 		IncludeUnstable:  false,
 	})
 	if err != nil {
@@ -287,6 +353,9 @@ func (m *Manager) ApplyServerVersionUpdate(id string, version string) (string, e
 	if err != nil {
 		return "", fmt.Errorf("version update failed: %w", err)
 	}
+	if err := UpdateServerPropertiesForLoader(root, srv.Port, srv.Loader); err != nil {
+		return "", fmt.Errorf("version update configuration failed: %w", err)
+	}
 
 	if strings.TrimSpace(resolvedVersion) == "" {
 		resolvedVersion = version
@@ -298,6 +367,10 @@ func (m *Manager) ApplyServerVersionUpdate(id string, version string) (string, e
 }
 
 func validateSettings(next ServerSettings) error {
+	return validateSettingsForLoader(next, "vanilla")
+}
+
+func validateSettingsForLoader(next ServerSettings, loaderType string) error {
 	name := strings.TrimSpace(next.Name)
 	if name == "" {
 		return fmt.Errorf("name is required")
@@ -310,22 +383,51 @@ func validateSettings(next ServerSettings) error {
 	if !validGameModes[gamemode] {
 		return fmt.Errorf("invalid gamemode")
 	}
+	if loaderType == "bedrock" && gamemode == "spectator" {
+		return fmt.Errorf("spectator gamemode is not supported by Bedrock Dedicated Server")
+	}
 	difficulty := strings.ToLower(strings.TrimSpace(next.Difficulty))
 	if !validDifficulties[difficulty] {
 		return fmt.Errorf("invalid difficulty")
 	}
-	if next.SpawnProtection < 0 {
+	if loaderType != "bedrock" && next.SpawnProtection < 0 {
 		return fmt.Errorf("spawn-protection must be greater than or equal to 0")
 	}
 
 	if next.MaxPlayers < 1 || next.MaxPlayers > 1000 {
 		return fmt.Errorf("max-players must be between 1 and 1000")
 	}
-	if next.ViewDistance < 2 || next.ViewDistance > 32 {
-		return fmt.Errorf("view-distance must be between 2 and 32")
-	}
-	if next.SimulationDistance < 2 || next.SimulationDistance > 32 {
-		return fmt.Errorf("simulation-distance must be between 2 and 32")
+	if loaderType == "bedrock" {
+		if next.ViewDistance < 5 {
+			return fmt.Errorf("view-distance must be at least 5 for Bedrock")
+		}
+		if next.TickDistance < 4 || next.TickDistance > 12 {
+			return fmt.Errorf("tick-distance must be between 4 and 12 for Bedrock")
+		}
+		if strings.Contains(next.MOTD, ";") {
+			return fmt.Errorf("Bedrock server name cannot contain semicolons")
+		}
+		levelName := strings.TrimSpace(next.LevelName)
+		if levelName == "" || levelName == "." || levelName == ".." || filepath.Base(levelName) != levelName || strings.ContainsAny(levelName, "\\/:*?\"<>|") {
+			return fmt.Errorf("invalid Bedrock level name")
+		}
+		permission := strings.ToLower(strings.TrimSpace(next.DefaultPlayerPermissionLevel))
+		if permission != "visitor" && permission != "member" && permission != "operator" {
+			return fmt.Errorf("invalid default Bedrock player permission level")
+		}
+		if next.PlayerIdleTimeout < 0 {
+			return fmt.Errorf("player-idle-timeout must be greater than or equal to 0")
+		}
+		if next.MaxThreads < 0 {
+			return fmt.Errorf("max-threads must be greater than or equal to 0")
+		}
+	} else {
+		if next.ViewDistance < 2 || next.ViewDistance > 32 {
+			return fmt.Errorf("view-distance must be between 2 and 32")
+		}
+		if next.SimulationDistance < 2 || next.SimulationDistance > 32 {
+			return fmt.Errorf("simulation-distance must be between 2 and 32")
+		}
 	}
 	return nil
 }
@@ -356,11 +458,29 @@ func parseIntOrDefault(value string, fallback int) int {
 	return parsed
 }
 
-func parseVersionParts(value string) ([]int, bool) {
+type parsedMinecraftVersion struct {
+	parts        []int
+	isPreview    bool
+	previewBuild int
+}
+
+func parseMinecraftVersion(value string) (parsedMinecraftVersion, bool) {
 	normalized := strings.TrimSpace(strings.ToLower(value))
 	normalized = strings.TrimPrefix(normalized, "v")
 	if normalized == "" {
-		return nil, false
+		return parsedMinecraftVersion{}, false
+	}
+
+	result := parsedMinecraftVersion{}
+	if previewIndex := strings.Index(normalized, "-preview."); previewIndex >= 0 {
+		build := strings.TrimSpace(normalized[previewIndex+len("-preview."):])
+		parsedBuild, err := strconv.Atoi(build)
+		if err != nil {
+			return parsedMinecraftVersion{}, false
+		}
+		result.isPreview = true
+		result.previewBuild = parsedBuild
+		normalized = normalized[:previewIndex]
 	}
 
 	parts := strings.Split(normalized, ".")
@@ -368,15 +488,16 @@ func parseVersionParts(value string) ([]int, bool) {
 	for _, part := range parts {
 		digits := leadingDigits(part)
 		if digits == "" {
-			return nil, false
+			return parsedMinecraftVersion{}, false
 		}
 		num, err := strconv.Atoi(digits)
 		if err != nil {
-			return nil, false
+			return parsedMinecraftVersion{}, false
 		}
 		parsed = append(parsed, num)
 	}
-	return parsed, true
+	result.parts = parsed
+	return result, true
 }
 
 func leadingDigits(value string) string {
@@ -389,33 +510,47 @@ func leadingDigits(value string) string {
 }
 
 func compareVersions(left string, right string) (int, bool) {
-	lv, ok := parseVersionParts(left)
+	lv, ok := parseMinecraftVersion(left)
 	if !ok {
 		return 0, false
 	}
-	rv, ok := parseVersionParts(right)
+	rv, ok := parseMinecraftVersion(right)
 	if !ok {
 		return 0, false
 	}
 
-	maxLen := len(lv)
-	if len(rv) > maxLen {
-		maxLen = len(rv)
+	maxLen := len(lv.parts)
+	if len(rv.parts) > maxLen {
+		maxLen = len(rv.parts)
 	}
 
 	for i := 0; i < maxLen; i++ {
 		l := 0
 		r := 0
-		if i < len(lv) {
-			l = lv[i]
+		if i < len(lv.parts) {
+			l = lv.parts[i]
 		}
-		if i < len(rv) {
-			r = rv[i]
+		if i < len(rv.parts) {
+			r = rv.parts[i]
 		}
 		if l > r {
 			return 1, true
 		}
 		if l < r {
+			return -1, true
+		}
+	}
+	if lv.isPreview != rv.isPreview {
+		if lv.isPreview {
+			return -1, true
+		}
+		return 1, true
+	}
+	if lv.isPreview {
+		if lv.previewBuild > rv.previewBuild {
+			return 1, true
+		}
+		if lv.previewBuild < rv.previewBuild {
 			return -1, true
 		}
 	}
