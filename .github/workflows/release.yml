@@ -1,4 +1,4 @@
-name: Release Native
+name: Release NaviServer
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  run-tests-before-release:
-    name: Run tests before release
+  validate:
+    name: Validate source
     runs-on: ubuntu-latest
 
     steps:
@@ -49,7 +49,7 @@ jobs:
 
   build-binaries:
     name: Build on ${{ matrix.os }}
-    needs: run-tests-before-release
+    needs: validate
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -170,9 +170,72 @@ jobs:
           name: ${{ matrix.name }}-build
           path: build/NaviServer-*.*
 
+  publish-docker:
+    name: Build and publish Docker image
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GHCR_IMAGE: ghcr.io/andre-carbajal/naviserver
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME || 'andre-carbajal' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            andre-carbajal/naviserver
+            ${{ env.GHCR_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+            type=sha
+          labels: |
+            org.opencontainers.image.title=NaviServer
+            org.opencontainers.image.description=Modern Minecraft server manager
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   publish-release:
     name: Publish package manager and release artifacts
-    needs: build-binaries
+    needs: [ build-binaries, publish-docker ]
     runs-on: ubuntu-latest
     permissions:
       contents: write

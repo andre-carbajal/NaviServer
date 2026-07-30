@@ -1,0 +1,17 @@
+.git
+.github
+.idea
+.codex
+.agents
+node_modules
+web/node_modules
+web/dist
+dist
+build
+*.db
+*.sqlite
+*.log
+.env
+.env.*
+README.md
+wiki

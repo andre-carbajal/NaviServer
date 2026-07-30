@@ -2,6 +2,29 @@
 
 NaviServer publishes installers for Windows, macOS and Linux. Choose the method for your operating system below.
 
+## Docker
+
+The official image supports `linux/amd64` and `linux/arm64` and is published to Docker Hub and GHCR for every `v*`
+release tag. The container runs headless and stores all application data under `/data`.
+
+```bash
+docker run -d --name naviserver --restart unless-stopped \
+  -p 23008:23008 -v naviserver-data:/data \
+  andre-carbajal/naviserver:latest
+```
+
+The API, Web UI and WebSocket use TCP `23008`. Minecraft ports are separate: publish each required port explicitly and
+configure the server port range away from `23008`; the default range is `25565-25600`. The repository's `compose.yml`
+provides the equivalent Compose setup. Set `NAVISERVER_SECRET_KEY` and `NAVISERVER_CLI_TOKEN` when stable secrets are
+required across container replacements.
+
+Back up the volume before upgrades or migrations:
+
+```bash
+docker run --rm -v naviserver-data:/data -v "$PWD:/backup" debian:bookworm-slim \
+  tar czf /backup/naviserver-data.tgz -C /data .
+```
+
 > Always download releases from the official [GitHub Releases](https://github.com/andre-carbajal/NaviServer/releases)
 > page. The examples below use the latest release.
 

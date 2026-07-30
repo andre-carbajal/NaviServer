@@ -1,97 +1,115 @@
-# ⛏️ NaviServer: A Modern Minecraft Server Manager
+# ⛏️ NaviServer
 
 ![GitHub release](https://img.shields.io/github/v/release/andre-carbajal/NaviServer?style=flat-square)
+![License](https://img.shields.io/github/license/andre-carbajal/NaviServer?style=flat-square)
 
-NaviServer is a modern, lightweight, and cross-platform Minecraft server manager designed to make managing multiple server
-instances easy through an intuitive web interface, a powerful CLI, and clean operating system integration.
+NaviServer is a control panel and daemon for running Minecraft servers. It lets you create, configure, start, stop and
+monitor multiple server instances from one place, without manually managing Java installations, server files or backups.
 
----
+It is designed for both personal servers and small self-hosted environments. Use the browser dashboard for everyday
+operations, the CLI for automation, or the interactive TUI when working directly from a terminal.
 
-## 📦 Supported Loaders
+## What NaviServer does
 
-- Vanilla
-- Paper
-- Fabric
-- Forge
-- NeoForge
+NaviServer manages the complete lifecycle of each Minecraft server:
 
----
+- Create instances for Vanilla, Paper, Fabric, Forge or NeoForge.
+- Download and manage the required loader versions and Java runtimes.
+- Start, stop, restart and monitor servers from the Web UI, CLI or TUI.
+- Follow live server output and send console commands through WebSockets.
+- Edit server files, upload/download files and manage icons.
+- Install and synchronize addons from supported providers.
+- Create, restore, upload and download backups, including automatic backups.
+- Track CPU, memory and server status through the dashboard.
+- Manage users, passwords and per-server permissions.
+- Share selected servers through public links.
 
-## ✨ Features
+The application has two parts: a background daemon that owns the servers and data, and clients that connect to it. The
+Web UI is served by the daemon, so a normal installation does not require a separate web server.
 
-- Dual Interface:
-    - Web UI: Modern control panel developed in React and Vite.
-    - CLI + TUI: Script-friendly CLI plus interactive terminal interface based on Bubble Tea.
-- Backup Management: Complete system for creating, listing, and restoring backups.
-- Real-Time Console: Communication via WebSockets for monitoring and live commands.
-- Daemon with System Integration: Background application with icon in the system tray (systray) for quick access and
-  status control.
-- Automatic Runtime Management (JVM): Downloads and organizes the necessary Java versions for each server automatically.
-- Performance Statistics: Monitoring of CPU and RAM usage per server.
-- Cross-Platform: Runs on Windows, macOS, and Linux.
+## Choose how to run it
 
-## 🧩 CLI Quick Commands
+| Use case                     | Recommended option                                |
+|------------------------------|---------------------------------------------------|
+| Local desktop use            | Native installer with the system tray application |
+| Headless Linux or macOS host | Native headless service                           |
+| Docker host, NAS or homelab  | Docker image or Compose                           |
+| Automation and scripts       | `naviserver-cli`                                  |
+| Terminal-only administration | `naviserver-cli tui`                              |
 
-Assuming `naviserver-cli` is installed and available in your `PATH`.
-For local development, you can run the same commands with `go run ./cmd/cli`.
+Start with the [installation guide](wiki/installation.md). It covers native installers, headless services, Docker,
+volumes, ports, upgrades and uninstallation. The [wiki home](wiki/home.md) links to configuration, CLI, TUI and
+migration documentation.
+
+## Quick start with Docker
+
+Docker is the quickest way to run NaviServer on a server. The image supports `linux/amd64` and `linux/arm64`.
 
 ```bash
-# Open interactive TUI
-naviserver-cli tui
-
-# Servers
-naviserver-cli server list
-naviserver-cli server create --name <server-name> --loader <loader> --version <version> --ram <mb>
-naviserver-cli server create --name <server-name> --async
-naviserver-cli server start <server-id>
-naviserver-cli server stop <server-id>
-naviserver-cli server delete <server-id>
-
-# Completion
-naviserver-cli completion bash > /etc/bash_completion.d/naviserver-cli
-naviserver-cli completion zsh > ~/.zfunc/_naviserver-cli
-naviserver-cli completion fish > ~/.config/fish/completions/naviserver-cli.fish
-naviserver-cli completion powershell > naviserver-cli.ps1
-
-# Settings
-naviserver-cli settings port-range get
-naviserver-cli settings port-range set --start 23008 --end 23108
-naviserver-cli settings public-ip get
-naviserver-cli settings public-ip set --value localhost
-naviserver-cli settings interfaces list
-naviserver-cli settings log-buffer get
-naviserver-cli settings log-buffer set --lines 1200
-
-# Users
-naviserver-cli user list
-naviserver-cli user create --username dev --password 'change-me'
-naviserver-cli user password set <user-id> --password 'new-password'
-naviserver-cli user permissions get <user-id>
-naviserver-cli user permissions set <user-id> --server <server-id> --power true --console false
-
+docker run -d --name naviserver --restart unless-stopped \
+  -p 23008:23008 \
+  -v naviserver-data:/data \
+  andre-carbajal/naviserver:latest
 ```
 
-`server create` is synchronous by default (waits for progress completion over WebSocket).
-Use `--async` for fire-and-return behavior.
+Open `http://localhost:23008` after the container starts. The `/data` volume contains the database, configuration,
+secrets, server instances, backups and downloaded runtimes; keep it when replacing or upgrading the container.
 
-## 🖥️ TUI Highlights
+For a Compose deployment, use the repository's [`compose.yml`](compose.yml):
 
-- Settings and Users dashboards with full management flows.
-- Contextual help popups and improved key hints across views.
-- Logs improvements: autoscroll toggle and in-buffer search.
-- Explicit status feedback for long-running operations.
+```bash
+docker compose up -d
+```
 
-## 🐞 Bugs & Feedback
+The Web UI, API and WebSocket use TCP port `23008`. Minecraft server ports are separate and must be published explicitly
+in Compose or with `docker run`. Keep the Minecraft port range away from `23008`; the default range is `25565-25600`.
+See the [Docker installation documentation](wiki/installation.md#docker) for secrets, backups, port mappings and
+version-pinned deployments.
 
-If you encounter any issues or have suggestions for improvements, please visit
-our [GitHub Issues](https://github.com/andre-carbajal/NaviServer/issues) page to report bugs or provide feedback.
-We appreciate your input to help us enhance NaviServer!
+## Native quick start
 
-## 📋 Contributing
+Download the appropriate asset from [GitHub Releases](https://github.com/andre-carbajal/NaviServer/releases), or use the
+installation script on Linux/macOS:
 
-Contributions are welcome! If you'd like to contribute to NaviServer, please fork the repository and create a pull request
-with your changes.
+```bash
+curl -sSL https://raw.githubusercontent.com/andre-carbajal/NaviServer/main/install.sh | sh
+```
 
-## 📄 License
+For detailed native installation, headless service setup, data locations and migration from version 1.x, see the
+[installation guide](wiki/installation.md).
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## CLI administration
+
+NaviServer can also be administered through `naviserver-cli`, which is useful for scripts, automation, remote
+administration and terminal-only environments. The CLI covers server lifecycle operations, settings, backups, users,
+permissions and shell completion. It also includes an interactive TUI for managing the application directly from a
+terminal.
+
+The [CLI documentation](wiki/cli.md) contains the complete command reference, authentication details, port
+configuration, shell completion and TUI information.
+
+## Supported platforms and loaders
+
+- Native desktop/headless builds: Windows, macOS and Linux.
+- Docker images: `linux/amd64` and `linux/arm64`.
+- Minecraft loaders: Vanilla, Paper, Fabric, Forge and NeoForge.
+
+## Documentation
+
+- [Installation and Docker](wiki/installation.md)
+- [Configuration and environment variables](wiki/configuration.md)
+- [CLI reference](wiki/cli.md)
+- [TUI guide](wiki/tui.md)
+- [Migration from 1.x](wiki/migration-from-1x.md)
+- [Project wiki home](wiki/home.md)
+
+## Contributing and support
+
+Bug reports and feature requests are welcome
+through [GitHub Issues](https://github.com/andre-carbajal/NaviServer/issues).
+Contributions can be submitted through pull requests. Before reporting an issue, include the NaviServer version, the
+installation method, relevant logs and the operating system or container architecture.
+
+## License
+
+NaviServer is released under the [MIT License](LICENSE).

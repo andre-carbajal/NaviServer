@@ -1,0 +1,23 @@
+services:
+  naviserver:
+    image: ${NAVISERVER_IMAGE:-andre-carbajal/naviserver:latest}
+    container_name: naviserver
+    restart: unless-stopped
+    ports:
+      - "${NAVISERVER_HTTP_PORT:-23008}:23008"
+      # Minecraft server port examples (default allocation range: 25565-25600):
+      - "25565-25600:25565-25600"       # Publish the entire default range
+      # - "25565:25565"                 # First Minecraft server
+      # - "25566:25566"                 # Second Minecraft server
+    environment:
+      NAVISERVER_HOST: 0.0.0.0
+      NAVISERVER_PORT: 23008
+      NAVISERVER_ALLOWED_ORIGINS: ${NAVISERVER_ALLOWED_ORIGINS:-}
+      NAVISERVER_SECRET_KEY: ${NAVISERVER_SECRET_KEY:-}
+      NAVISERVER_CLI_TOKEN: ${NAVISERVER_CLI_TOKEN:-}
+      CURSEFORGE_API_KEY: ${CURSEFORGE_API_KEY:-}
+    volumes:
+      - naviserver-data:/data
+
+volumes:
+  naviserver-data:
