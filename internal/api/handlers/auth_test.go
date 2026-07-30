@@ -23,6 +23,7 @@ func newTestAuthHandler(t *testing.T) (*AuthHandler, *storage.GormStore) {
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	handler := &AuthHandler{
 		BaseHandler: &BaseHandler{

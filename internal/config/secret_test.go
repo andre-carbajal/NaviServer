@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -83,7 +84,7 @@ func TestLoadOrGenerateCLIToken(t *testing.T) {
 	tokenPath := filepath.Join(tempDir, ".naviserver_cli_token")
 	if info, err := os.Stat(tokenPath); err != nil {
 		t.Fatalf("CLI token file was not created: %v", err)
-	} else if info.Mode().Perm() != 0600 {
+	} else if runtime.GOOS != "windows" && info.Mode().Perm() != 0600 {
 		t.Fatalf("expected CLI token file mode 0600, got %v", info.Mode().Perm())
 	}
 

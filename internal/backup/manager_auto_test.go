@@ -22,6 +22,7 @@ func newTestBackupManager(t *testing.T) (*Manager, *storage.GormStore, string, s
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	if err := os.MkdirAll(serversPath, 0o755); err != nil {
 		t.Fatalf("failed to create servers path: %v", err)

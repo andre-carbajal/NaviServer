@@ -24,6 +24,7 @@ func newTestServerHandler(t *testing.T) (*ServerHandler, *storage.GormStore, str
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	manager := server.NewManager(serversPath, store)
 	handler := &ServerHandler{

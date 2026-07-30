@@ -52,6 +52,7 @@ func newVersionUpdateHandler(t *testing.T, failLoader bool) (*ServerHandler, *st
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	restore := loader.RegisterLoaderForTest("test-loader", func() loader.ServerLoader {
 		return fakeVersionLoader{fail: failLoader}

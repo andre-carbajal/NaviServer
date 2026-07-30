@@ -74,6 +74,14 @@ type GormStore struct {
 	db *gorm.DB
 }
 
+func (s *GormStore) Close() error {
+	db, err := s.db.DB()
+	if err != nil {
+		return err
+	}
+	return db.Close()
+}
+
 const (
 	defaultAutoBackupIntervalValue = 24
 	defaultAutoBackupIntervalUnit  = "hour"

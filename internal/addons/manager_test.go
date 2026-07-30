@@ -39,6 +39,7 @@ func newTestAddonManager(t *testing.T) (*Manager, *domain.Server, string) {
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	srv := &domain.Server{
 		ID:         "srv-1",
 		Name:       "Fabric",
@@ -308,6 +309,7 @@ func TestUpdateAddonsForServerVersionNoopsForVanilla(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	srv := &domain.Server{
 		ID:         "srv-1",
 		Name:       "Vanilla",

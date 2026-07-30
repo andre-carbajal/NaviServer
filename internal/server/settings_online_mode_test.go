@@ -21,6 +21,7 @@ func newSettingsManagerForTest(t *testing.T) (*Manager, string) {
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	manager := NewManager(serversPath, store)
 	srv := &domain.Server{

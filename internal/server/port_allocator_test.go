@@ -18,6 +18,7 @@ func newPortAllocatorStore(t *testing.T) *storage.GormStore {
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	return store
 }

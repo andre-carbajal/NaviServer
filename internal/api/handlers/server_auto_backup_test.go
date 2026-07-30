@@ -26,6 +26,7 @@ func newServerHandlerWithBackupManager(t *testing.T) (*ServerHandler, *storage.G
 	if err != nil {
 		t.Fatalf("failed to create store: %v", err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 
 	manager := server.NewManager(serversPath, store)
 	backupManager := backup.NewManager(serversPath, backupsPath, store)
