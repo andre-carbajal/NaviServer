@@ -50,6 +50,11 @@ func NewAPIServer(
 
 func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
 
 	ex, err := os.Executable()
 	var webDistPath string
@@ -72,11 +77,14 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	}
 
 	fileServer := http.FileServer(http.Dir(webDistPath))
+	serveWebApp := func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(webDistPath, "index.html"))
+	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		path := filepath.Join(webDistPath, r.URL.Path)
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
-			http.ServeFile(w, r, filepath.Join(webDistPath, "index.html"))
+			serveWebApp(w, r)
 			return
 		}
 		fileServer.ServeHTTP(w, r)
@@ -119,7 +127,15 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("GET /servers-stats", protect(serverHandler.HandleGetAllServerStats, ""))
 	mux.Handle("POST /servers", protect(serverHandler.HandleCreateServer, "admin"))
 
-	mux.Handle("GET /servers/{id}", protect(serverHandler.HandleGetServer, ""))
+	getServerAPI := protect(serverHandler.HandleGetServer, "")
+	mux.HandleFunc("GET /servers/{id}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Vary", "Accept")
+		if wantsHTMLDocument(r) {
+			serveWebApp(w, r)
+			return
+		}
+		getServerAPI.ServeHTTP(w, r)
+	})
 	mux.Handle("GET /servers/{id}/stats", protect(serverHandler.HandleGetServerStats, ""))
 	mux.Handle("GET /servers/{id}/settings", protect(serverHandler.HandleGetServerSettings, "admin"))
 	mux.Handle("PUT /servers/{id}/settings", protect(serverHandler.HandleUpdateServerSettings, "admin"))
@@ -198,6 +214,10 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 		Addr:    listenAddr,
 		Handler: handler,
 	}
+}
+
+func wantsHTMLDocument(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "text/html")
 }
 
 func (api *Server) Start(listenAddr string) error {
