@@ -1,6 +1,8 @@
 services:
   naviserver:
-    image: ${NAVISERVER_IMAGE:-andre-carbajal/naviserver:latest}
+    # GHCR is the repository default. To use Docker Hub instead, set:
+    # NAVISERVER_IMAGE=anvian/naviserver:latest
+    image: ${NAVISERVER_IMAGE:-ghcr.io/andre-carbajal/naviserver:latest}
     container_name: naviserver
     restart: unless-stopped
     ports:

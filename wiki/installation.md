@@ -5,12 +5,15 @@ NaviServer publishes installers for Windows, macOS and Linux. Choose the method 
 ## Docker
 
 The official image supports `linux/amd64` and `linux/arm64` and is published to Docker Hub and GHCR for every `v*`
-release tag. The container runs headless and stores all application data under `/data`.
+release tag. The examples use GitHub Container Registry (`ghcr.io/andre-carbajal/naviserver`), which is the primary
+image referenced by this repository. You can use the equivalent Docker Hub image, `anvian/naviserver`, by replacing
+the image name in any command or in `compose.yml`. The container runs headless and stores all application data under
+`/data`.
 
 ```bash
 docker run -d --name naviserver --restart unless-stopped \
   -p 23008:23008 -v naviserver-data:/data \
-  andre-carbajal/naviserver:latest
+  ghcr.io/andre-carbajal/naviserver:latest
 ```
 
 The API, Web UI and WebSocket use TCP `23008`. Minecraft ports are separate: publish each required port explicitly and

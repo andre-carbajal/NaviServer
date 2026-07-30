@@ -44,12 +44,15 @@ migration documentation.
 ## Quick start with Docker
 
 Docker is the quickest way to run NaviServer on a server. The image supports `linux/amd64` and `linux/arm64`.
+The examples use the image published in GitHub Container Registry:
+`ghcr.io/andre-carbajal/naviserver`. The equivalent image is also available from Docker Hub as
+`anvian/naviserver`.
 
 ```bash
 docker run -d --name naviserver --restart unless-stopped \
   -p 23008:23008 \
   -v naviserver-data:/data \
-  andre-carbajal/naviserver:latest
+  ghcr.io/andre-carbajal/naviserver:latest
 ```
 
 Open `http://localhost:23008` after the container starts. The `/data` volume contains the database, configuration,
