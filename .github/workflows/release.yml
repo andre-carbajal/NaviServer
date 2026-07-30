@@ -213,7 +213,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            andre-carbajal/naviserver
+            ${{ secrets.DOCKERHUB_USERNAME }}/naviserver
             ${{ env.GHCR_IMAGE }}
           tags: |
             type=semver,pattern={{version}}
