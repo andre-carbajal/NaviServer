@@ -104,16 +104,17 @@ func onReady() {
 		mStartLogin.Disable()
 	}
 
-	var ctx context.Context
 	var cancel context.CancelFunc
 	var wg sync.WaitGroup
 
 	startService := func() {
-		ctx, cancel = context.WithCancel(context.Background())
+		serviceCtx, serviceCancel := context.WithCancel(context.Background())
+		cancel = serviceCancel
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			startDaemonService(ctx)
+			defer serviceCancel()
+			startDaemonService(serviceCtx)
 		}()
 		mStatus.SetTitle("Status: Running")
 	}
@@ -252,7 +253,9 @@ func startDaemonService(ctx context.Context) {
 
 	log.Println("Shutting down HTTP server...")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// ctx is already canceled here; detach cancellation so the HTTP server gets
+	// the full graceful-shutdown timeout while retaining context values.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer shutdownCancel()
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
