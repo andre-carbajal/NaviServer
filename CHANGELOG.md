@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Addon installation:
+    - Fixed CurseForge loader and server-environment filtering, including
+      server and client/server files.
+    - Preserved the source of installed addons and required dependencies,
+      including nested dependencies, without cross-source fallback.
+    - Added an installation preview that lists missing required dependencies
+      with their source, version, filename, and project icon.
+
 - Web UI polish:
     - Replaced native browser `alert` and `confirm` dialogs with in-app modals
       across files, backups, settings, users, and server player actions.
