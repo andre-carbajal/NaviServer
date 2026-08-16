@@ -578,12 +578,12 @@ dialog.modal-overlay::backdrop {
   text-transform: uppercase;
 }
 
-.status-running {
+.status-badge.status-running {
   background-color: #16a34a;
   color: white;
 }
 
-.status-stopped {
+.status-badge.status-stopped {
   background-color: #ef4444;
   color: white;
 }
@@ -598,15 +598,9 @@ dialog.modal-overlay::backdrop {
   color: white;
 }
 
-.status-creating {
+.status-badge.status-creating {
   background-color: #3b82f6;
   color: white;
-}
-
-.server-icon-img {
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
 }
 
 .console-view {
@@ -779,6 +773,8 @@ dialog.modal-overlay::backdrop {
   .modal-content {
     padding: 20px;
     margin: 20px;
+    max-width: calc(100% - 40px);
+    border-radius: 12px;
   }
 
   .servers-grid {
@@ -892,11 +888,6 @@ dialog.modal-overlay::backdrop {
   input[type='number'] {
     font-size: 16px;
     padding: 10px 12px;
-  }
-
-  .modal-content {
-    max-width: calc(100% - 40px);
-    border-radius: 12px;
   }
 
   .modal-header h1,
@@ -1019,6 +1010,7 @@ dialog.modal-overlay::backdrop {
 
   .card-header {
     margin-bottom: 8px;
+    gap: 8px;
   }
 
   .card-title {
@@ -1066,17 +1058,6 @@ dialog.modal-overlay::backdrop {
     font-size: 16px;
   }
 
-  .login-card {
-    padding: 24px 16px;
-    max-width: calc(100% - 32px);
-    border-radius: 16px;
-  }
-
-  .login-card h2 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
   .modal-header h1,
   .modal-header h2 {
     margin: 0;
@@ -1093,10 +1074,6 @@ dialog.modal-overlay::backdrop {
   .dashboard {
     display: flex;
     flex-direction: column;
-  }
-
-  .card-header {
-    gap: 8px;
   }
 
   .card-header .btn,
@@ -1203,19 +1180,6 @@ dialog.modal-overlay::backdrop {
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.stat-value {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: white;
 }
 
 @keyframes spin {
@@ -2289,7 +2253,6 @@ dialog.modal-overlay::backdrop {
     width: 100%;
     text-align: center;
     overflow-wrap: anywhere;
-    word-break: break-word;
   }
 }
 

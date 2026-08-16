@@ -35,6 +35,8 @@
       alphabetical sorting.
     - Moved file-row click handling onto the action buttons so file operations
       remain keyboard-accessible.
+    - Consolidated duplicate responsive CSS selectors and replaced the obsolete
+      `word-break: break-word` declaration with the existing overflow wrapping.
 
 - Reliability:
     - Updated Bash conditionals in the build, installation, migration, and
