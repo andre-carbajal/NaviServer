@@ -12,6 +12,8 @@ export const useCopy = (timeout: number = 2000) => {
     ta.focus();
     ta.select();
     try {
+      // Keep this deprecated fallback for browsers or HTTP contexts without
+      // access to the modern Clipboard API.
       document.execCommand('copy');
       ta.remove();
       return true;

@@ -90,7 +90,6 @@ const App = () => {
 };
 
 const styleSheet = document.createElement('style');
-styleSheet.type = 'text/css';
 styleSheet.innerText = `
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-20px); }
