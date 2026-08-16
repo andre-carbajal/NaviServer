@@ -16,7 +16,7 @@ const parseMinecraftVersionParts = (value: string): number[] | null => {
   const parsed: number[] = [];
 
   for (const part of parts) {
-    const digits = part.match(/^\d+/)?.[0];
+    const digits = /^\d+/.exec(part)?.[0];
     if (!digits) return null;
     parsed.push(Number(digits));
   }
@@ -95,7 +95,7 @@ export const upsertPropertyLine = (
   });
 
   if (!updated) {
-    if (nextLines.length > 0 && nextLines[nextLines.length - 1] !== '') {
+    if (nextLines.length > 0 && nextLines.at(-1) !== '') {
       nextLines.push('');
     }
     nextLines.push(`${key}=${value}`);

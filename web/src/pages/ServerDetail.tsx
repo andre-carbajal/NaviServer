@@ -1096,7 +1096,7 @@ const ServerDetail: React.FC = () => {
   };
 
   const handleDeletePlayerData = async () => {
-    if (!id || !selectedPlayer || !selectedPlayer.id || !canModeratePlayers) {
+    if (!id || !selectedPlayer?.id || !canModeratePlayers) {
       return;
     }
 
@@ -2221,7 +2221,7 @@ const ServerDetail: React.FC = () => {
                 !selectedPlayer.isOnline
               }
               title={
-                selectedPlayer && !selectedPlayer.isOnline
+                selectedPlayer?.isOnline === false
                   ? 'Player is offline, cannot be kicked.'
                   : undefined
               }

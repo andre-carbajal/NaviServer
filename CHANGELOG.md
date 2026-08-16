@@ -41,5 +41,7 @@
       uninstallation scripts to use Bash's safer `[[ ... ]]` syntax.
     - Made JSX spacing explicit around inline controls and standardized numeric
       parsing and newline normalization in the web frontend.
+    - Simplified frontend iteration, DOM cleanup, optional access, and progress
+      state handling without changing upload or console behavior.
     - Released service context resources when daemon goroutines finish and
       preserved the full graceful-shutdown timeout during cancellation.

@@ -208,9 +208,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
     // Check if we are uploading a folder (using button)
     const foldersToUpload = new Set<string>();
-    for (let i = 0; i < filesToUpload.length; i++) {
-      const relativePath = (filesToUpload[i] as ExtendedFile)
-        .webkitRelativePath;
+    for (const file of filesToUpload) {
+      const relativePath = (file as ExtendedFile).webkitRelativePath;
       if (relativePath) {
         const rootFolder = relativePath.split('/')[0];
         if (rootFolder) foldersToUpload.add(rootFolder);
@@ -243,8 +242,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
     setUploading(true);
     try {
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i];
+      for (const file of filesToUpload) {
         const relativePath = (file as ExtendedFile).webkitRelativePath;
         await api.uploadFile(serverId, currentPath, file, relativePath);
       }
@@ -310,9 +308,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     if (!items) return;
 
     // Check for existing folders before processing
-    for (let i = 0; i < items.length; i++) {
-      const entry = items[i].webkitGetAsEntry() as FileSystemEntry | null;
-      if (entry && entry.isDirectory) {
+    for (const item of items) {
+      const entry = item.webkitGetAsEntry() as FileSystemEntry | null;
+      if (entry?.isDirectory) {
         if (files.some((f) => f.name === entry.name && f.isDirectory)) {
           await showAlert({
             title: 'Folder Already Exists',
@@ -363,8 +361,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     };
 
     const promises = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+    for (const item of items) {
       if (item.kind === 'file') {
         const entry = item.webkitGetAsEntry() as FileSystemEntry | null;
         if (entry) {
@@ -439,7 +436,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     );
   }
 
-  const pathParts = currentPath.split('/').filter((p) => p);
+  const pathParts = currentPath.split('/').filter(Boolean);
 
   return (
     <div

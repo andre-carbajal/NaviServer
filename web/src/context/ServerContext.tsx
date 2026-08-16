@@ -143,33 +143,26 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
                   const newSteps = [...currentSteps];
                   const msg = msgData.message;
                   const progress = msgData.progress;
+                  const lastStep = newSteps.at(-1);
 
-                  if (
-                    newSteps.length === 0 ||
-                    newSteps[newSteps.length - 1].label !== msg
-                  ) {
-                    if (
-                      newSteps.length > 0 &&
-                      newSteps[newSteps.length - 1].state === 'running'
-                    ) {
-                      newSteps[newSteps.length - 1].state = 'done';
-                      newSteps[newSteps.length - 1].progress = undefined;
+                  if (!lastStep || lastStep.label !== msg) {
+                    if (lastStep?.state === 'running') {
+                      lastStep.state = 'done';
+                      lastStep.progress = undefined;
                     }
                     newSteps.push({
                       label: msg,
                       state: 'running',
                       progress: progress > 0 ? progress : undefined,
                     });
-                  } else {
-                    if (newSteps.length > 0) {
-                      newSteps[newSteps.length - 1].progress =
-                        progress > 0 ? progress : undefined;
-                    }
+                  } else if (lastStep) {
+                    lastStep.progress = progress > 0 ? progress : undefined;
                   }
 
                   if (progress === -1) {
-                    if (newSteps.length > 0) {
-                      newSteps[newSteps.length - 1].state = 'failed';
+                    const latestStep = newSteps.at(-1);
+                    if (latestStep) {
+                      latestStep.state = 'failed';
                     }
                   }
 
@@ -196,8 +189,9 @@ export const ServerProvider: React.FC<{ children: ReactNode }> = ({
             if (s.id === requestId) {
               const currentSteps = s.steps || [];
               const newSteps = [...currentSteps];
-              if (newSteps.length > 0) {
-                newSteps[newSteps.length - 1].state = 'failed';
+              const lastStep = newSteps.at(-1);
+              if (lastStep) {
+                lastStep.state = 'failed';
               } else {
                 newSteps.push({ label: 'Connection Error', state: 'failed' });
               }

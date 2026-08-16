@@ -324,8 +324,7 @@ const Backups: React.FC = () => {
   const uploadFiles = async (files: FileList | File[], serverId?: string) => {
     if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    for (const file of files) {
       const ext = file.name.split('.').pop()?.toLowerCase();
 
       if (ext !== 'zip' && ext !== 'rar') {

@@ -99,7 +99,7 @@ export const useConsole = (serverId: string) => {
   }, [serverId, token]);
 
   const sendCommand = (cmd: string) => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+    if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(cmd + '\n');
     } else {
       console.warn('WebSocket not connected, cannot send command');

@@ -13,10 +13,10 @@ export const useCopy = (timeout: number = 2000) => {
     ta.select();
     try {
       document.execCommand('copy');
-      document.body.removeChild(ta);
+      ta.remove();
       return true;
     } catch (e) {
-      document.body.removeChild(ta);
+      ta.remove();
       console.error('Fallback copy failed', e);
       return false;
     }
@@ -26,7 +26,7 @@ export const useCopy = (timeout: number = 2000) => {
     async (text: string) => {
       let success: boolean;
       try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
+        if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(text);
           success = true;
         } else {
