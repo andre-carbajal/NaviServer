@@ -22,6 +22,7 @@ type curseMod struct {
 	Logo  struct {
 		URL string `json:"url"`
 	} `json:"logo"`
+	LogoURL string `json:"logoUrl"`
 }
 
 type curseFileHash struct {
@@ -31,7 +32,14 @@ type curseFileHash struct {
 
 type curseFileDependency struct {
 	ModID        int64 `json:"modId"`
+	FileID       int64 `json:"fileId"`
 	RelationType int   `json:"relationType"`
+}
+
+type curseFileIndex struct {
+	GameVersion string `json:"gameVersion"`
+	FileID      int64  `json:"fileId"`
+	ModLoader   int    `json:"modLoader"`
 }
 
 type curseFile struct {
@@ -58,7 +66,13 @@ type curseMatch struct {
 type curseFingerprintResponse struct {
 	Data struct {
 		ExactMatches []curseMatch `json:"exactMatches"`
+		LatestFiles  []curseFile  `json:"latestFiles"`
 	} `json:"data"`
+	LatestFiles []curseFile `json:"latestFiles"`
+}
+
+type curseModsResponse struct {
+	Data []curseMod `json:"data"`
 }
 
 type curseSearchResponse struct {
@@ -78,8 +92,9 @@ type curseSearchResponse struct {
 		Logo struct {
 			URL string `json:"url"`
 		} `json:"logo"`
-		Links       curseLinks  `json:"links"`
-		LatestFiles []curseFile `json:"latestFiles"`
+		Links              curseLinks       `json:"links"`
+		LatestFiles        []curseFile      `json:"latestFiles"`
+		LatestFilesIndexes []curseFileIndex `json:"latestFilesIndexes"`
 	} `json:"data"`
 	Pagination struct {
 		Index       int `json:"index"`
@@ -126,11 +141,117 @@ func (m *Manager) curseForgeByFingerprints(ctx context.Context, items []scannedA
 	}, map[string]string{"x-api-key": m.resolveCurseForgeAPIKey()}, &response); err != nil {
 		return nil, err
 	}
-	matches := make(map[uint32]curseMatch, len(response.Data.ExactMatches))
+	matches := make(map[uint32]curseMatch, len(response.Data.ExactMatches)+len(response.LatestFiles)+len(response.Data.LatestFiles))
 	for _, match := range response.Data.ExactMatches {
 		matches[match.File.Fingerprint] = match
 	}
+	for _, file := range append(response.Data.LatestFiles, response.LatestFiles...) {
+		if file.Fingerprint == 0 || file.ModID == 0 {
+			continue
+		}
+		if _, exists := matches[file.Fingerprint]; !exists {
+			matches[file.Fingerprint] = curseMatch{
+				File: file,
+				Mod:  curseMod{ID: file.ModID},
+			}
+		}
+	}
 	return matches, nil
+}
+
+func (mod curseMod) iconURL() string {
+	if iconURL := strings.TrimSpace(mod.Logo.URL); iconURL != "" {
+		return iconURL
+	}
+	return strings.TrimSpace(mod.LogoURL)
+}
+
+func (m *Manager) enrichCurseForgeMatches(ctx context.Context, matches map[uint32]curseMatch) error {
+	modIDs := make(map[int64]struct{})
+	for fingerprint, match := range matches {
+		modID := match.File.ModID
+		if modID == 0 {
+			modID = match.Mod.ID
+		}
+		if modID == 0 {
+			continue
+		}
+		if strings.TrimSpace(match.Mod.Name) != "" && match.Mod.iconURL() != "" {
+			continue
+		}
+		modIDs[modID] = struct{}{}
+		if match.Mod.ID == 0 {
+			match.Mod.ID = modID
+			matches[fingerprint] = match
+		}
+	}
+	if len(modIDs) == 0 {
+		return nil
+	}
+
+	ids := make([]int64, 0, len(modIDs))
+	for modID := range modIDs {
+		ids = append(ids, modID)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+
+	mods, err := m.fetchCurseForgeMods(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	for fingerprint, match := range matches {
+		modID := match.File.ModID
+		if modID == 0 {
+			modID = match.Mod.ID
+		}
+		mod, ok := mods[strconv.FormatInt(modID, 10)]
+		if !ok {
+			continue
+		}
+		if strings.TrimSpace(mod.Name) == "" {
+			mod.Name = match.Mod.Name
+		}
+		if strings.TrimSpace(mod.Slug) == "" {
+			mod.Slug = match.Mod.Slug
+		}
+		if strings.TrimSpace(mod.Links.WebsiteURL) == "" {
+			mod.Links = match.Mod.Links
+		}
+		if mod.iconURL() == "" {
+			mod.Logo = match.Mod.Logo
+			mod.LogoURL = match.Mod.LogoURL
+		}
+		matches[fingerprint] = curseMatch{ID: match.ID, File: match.File, Mod: mod}
+	}
+	return nil
+}
+
+func (m *Manager) fetchCurseForgeMods(ctx context.Context, ids []int64) (map[string]curseMod, error) {
+	mods := make(map[string]curseMod)
+	if len(ids) == 0 {
+		return mods, nil
+	}
+
+	const batchSize = 50
+	for start := 0; start < len(ids); start += batchSize {
+		end := start + batchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		var response curseModsResponse
+		if err := m.doJSON(ctx, http.MethodPost, curseForgeBaseURL+"/mods", map[string]any{
+			"modIds": ids[start:end],
+		}, map[string]string{"x-api-key": m.resolveCurseForgeAPIKey()}, &response); err != nil {
+			return nil, err
+		}
+		for _, mod := range response.Data {
+			if mod.ID != 0 {
+				mods[strconv.FormatInt(mod.ID, 10)] = mod
+			}
+		}
+	}
+	return mods, nil
 }
 
 func (m *Manager) searchCurseForge(
@@ -164,11 +285,21 @@ func (m *Manager) searchCurseForge(
 		if isLikelyClientOnlyCurseProject(item.Name, item.Summary, item.Categories) {
 			continue
 		}
-		latest := chooseLatestCurseFile(item.LatestFiles, mcVersion, loader)
-		compatible := listCompatibleCurseFiles(item.LatestFiles, mcVersion, loader)
+		compatible, err := m.compatibleCurseSearchFiles(
+			ctx,
+			item.ID,
+			item.LatestFiles,
+			item.LatestFilesIndexes,
+			mcVersion,
+			loader,
+		)
+		if err != nil {
+			return nil, false, err
+		}
 		if len(compatible) == 0 {
 			continue
 		}
+		latest := chooseLatestCurseFile(compatible, mcVersion, loader)
 		result := SearchResult{
 			Source:      AddonSourceCurseForge,
 			ProjectID:   strconv.FormatInt(item.ID, 10),
@@ -205,6 +336,30 @@ func (m *Manager) searchCurseForge(
 	return results, hasMore, nil
 }
 
+func (m *Manager) compatibleCurseSearchFiles(
+	ctx context.Context,
+	modID int64,
+	latestFiles []curseFile,
+	latestFilesIndexes []curseFileIndex,
+	mcVersion,
+	loader string,
+) ([]curseFile, error) {
+	candidateFiles := filterCurseSearchFiles(latestFiles, latestFilesIndexes, mcVersion, loader)
+	compatible := listCompatibleCurseFiles(candidateFiles, mcVersion, loader)
+	if len(compatible) > 0 {
+		return compatible, nil
+	}
+
+	// The search response only contains a project's latest files. A compatible
+	// server file can be omitted even when the project has one, so use the full
+	// files endpoint as the authoritative fallback before hiding the project.
+	files, err := m.listCurseFiles(ctx, modID, mcVersion, loader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CurseForge files for mod %d: %w", modID, err)
+	}
+	return listCompatibleCurseFiles(files, mcVersion, loader), nil
+}
+
 func curseForgeSearchEndpoint(
 	query,
 	mcVersion,
@@ -217,13 +372,16 @@ func curseForgeSearchEndpoint(
 	values.Set("gameVersion", mcVersion)
 	values.Set("pageSize", strconv.Itoa(limit))
 	values.Set("index", strconv.Itoa(offset))
-	switch strings.ToLower(loader) {
+	switch strings.ToLower(strings.TrimSpace(loader)) {
 	case "paper":
 		// Minecraft Bukkit/Spigot plugins class.
 		values.Set("classId", "5")
 	case "fabric", "forge", "neoforge":
 		// Minecraft Mods class; excludes shader packs/resource packs/datapacks.
 		values.Set("classId", "6")
+		if modLoaderType, ok := curseForgeModLoaderType(loader); ok {
+			values.Set("modLoaderType", strconv.Itoa(modLoaderType))
+		}
 	}
 
 	trimmed := strings.TrimSpace(query)
@@ -236,6 +394,19 @@ func curseForgeSearchEndpoint(
 	}
 
 	return fmt.Sprintf("%s/mods/search?%s", curseForgeBaseURL, values.Encode())
+}
+
+func curseForgeModLoaderType(loader string) (int, bool) {
+	switch strings.ToLower(strings.TrimSpace(loader)) {
+	case "forge":
+		return 1, true
+	case "fabric":
+		return 4, true
+	case "neoforge":
+		return 6, true
+	default:
+		return 0, false
+	}
 }
 
 func curseSearchRelevanceScore(query, name, slug string) int {
@@ -270,7 +441,7 @@ func curseSearchRelevanceScore(query, name, slug string) int {
 }
 
 func (m *Manager) findLatestCurseFile(ctx context.Context, modID int64, mcVersion, loader string) (*curseFile, []Dependency) {
-	files, err := m.listCurseFiles(ctx, modID, mcVersion)
+	files, err := m.listCurseFiles(ctx, modID, mcVersion, loader)
 	if err != nil {
 		return nil, nil
 	}
@@ -283,6 +454,7 @@ func (m *Manager) findLatestCurseFile(ctx context.Context, modID int64, mcVersio
 		required := dep.RelationType == 3
 		deps = append(deps, Dependency{
 			ProjectID: strconv.FormatInt(dep.ModID, 10),
+			FileID:    dep.FileID,
 			Required:  required,
 			Source:    string(AddonSourceCurseForge),
 		})
@@ -295,29 +467,36 @@ func (m *Manager) resolveCurseForgeFile(ctx context.Context, projectID string, f
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid curseforge project id")
 	}
-	files, err := m.listCurseFiles(ctx, modID, mcVersion)
+	files, err := m.listCurseFiles(ctx, modID, mcVersion, loader)
 	if err != nil {
 		return nil, nil, err
 	}
+	compatible := listCompatibleCurseFiles(files, mcVersion, loader)
 	var selected *curseFile
 	if fileID > 0 {
-		for i := range files {
-			if files[i].ID == fileID {
-				selected = &files[i]
+		for i := range compatible {
+			if compatible[i].ID == fileID {
+				selected = &compatible[i]
 				break
 			}
 		}
 	} else {
-		selected = chooseLatestCurseFile(files, mcVersion, loader)
+		if len(compatible) > 0 {
+			selected = &compatible[0]
+		}
 	}
 	if selected == nil {
 		return nil, nil, nil
+	}
+	if selected.ModID == 0 {
+		selected.ModID = modID
 	}
 	deps := make([]Dependency, 0)
 	for _, dep := range selected.Dependencies {
 		required := dep.RelationType == 3
 		deps = append(deps, Dependency{
 			ProjectID: strconv.FormatInt(dep.ModID, 10),
+			FileID:    dep.FileID,
 			Required:  required,
 			Source:    string(AddonSourceCurseForge),
 		})
@@ -336,18 +515,18 @@ func (m *Manager) getCurseFileDownloadURL(ctx context.Context, modID int64, file
 	return response.Data, nil
 }
 
-func (m *Manager) listCurseFiles(ctx context.Context, modID int64, mcVersion string) ([]curseFile, error) {
+func (m *Manager) listCurseFiles(ctx context.Context, modID int64, mcVersion, loader string) ([]curseFile, error) {
 	const pageSize = 50
 	files := make([]curseFile, 0)
 	for index := 0; ; index += pageSize {
-		endpoint := fmt.Sprintf(
-			"%s/mods/%d/files?gameVersion=%s&pageSize=%d&index=%d",
-			curseForgeBaseURL,
-			modID,
-			encodeQuery(mcVersion),
-			pageSize,
-			index,
-		)
+		values := url.Values{}
+		values.Set("gameVersion", mcVersion)
+		values.Set("pageSize", strconv.Itoa(pageSize))
+		values.Set("index", strconv.Itoa(index))
+		if modLoaderType, ok := curseForgeModLoaderType(loader); ok {
+			values.Set("modLoaderType", strconv.Itoa(modLoaderType))
+		}
+		endpoint := fmt.Sprintf("%s/mods/%d/files?%s", curseForgeBaseURL, modID, values.Encode())
 		var response curseFilesResponse
 		if err := m.doJSON(ctx, http.MethodGet, endpoint, nil, map[string]string{"x-api-key": m.resolveCurseForgeAPIKey()}, &response); err != nil {
 			return nil, err
@@ -400,9 +579,6 @@ func listCompatibleCurseFiles(files []curseFile, mcVersion, loader string) []cur
 		if !containsString(file.GameVersions, mcVersion) {
 			continue
 		}
-		if !isCurseFileCompatibleWithLoader(file, loader) {
-			continue
-		}
 		if !isCurseFileServerCompatible(file, loader) {
 			continue
 		}
@@ -417,31 +593,8 @@ func listCompatibleCurseFiles(files []curseFile, mcVersion, loader string) []cur
 	return compatible
 }
 
-func isCurseFileCompatibleWithLoader(file curseFile, loader string) bool {
-	loader = strings.ToLower(loader)
-	synonyms := map[string][]string{
-		"paper":    {"paper", "spigot", "bukkit", "purpur"},
-		"fabric":   {"fabric"},
-		"forge":    {"forge"},
-		"neoforge": {"neoforge"},
-	}
-	tags := synonyms[loader]
-	if len(tags) == 0 {
-		return true
-	}
-	for _, gameVersion := range file.GameVersions {
-		lower := strings.ToLower(gameVersion)
-		for _, tag := range tags {
-			if strings.Contains(lower, tag) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func isCurseFileServerCompatible(file curseFile, loader string) bool {
-	loader = strings.ToLower(loader)
+	loader = strings.ToLower(strings.TrimSpace(loader))
 	if loader == "paper" {
 		// Paper plugins are server-side by nature.
 		return true
@@ -449,13 +602,9 @@ func isCurseFileServerCompatible(file curseFile, loader string) bool {
 	hasServer := false
 	hasClient := false
 	for _, gameVersion := range file.GameVersions {
-		lower := strings.ToLower(gameVersion)
-		if strings.Contains(lower, "server") {
-			hasServer = true
-		}
-		if strings.Contains(lower, "client") {
-			hasClient = true
-		}
+		client, server := curseFileSideTags(gameVersion)
+		hasClient = hasClient || client
+		hasServer = hasServer || server
 	}
 	if hasServer {
 		return true
@@ -466,6 +615,68 @@ func isCurseFileServerCompatible(file curseFile, loader string) bool {
 	}
 	// Most CurseForge files don't tag side explicitly; keep them.
 	return true
+}
+
+func curseFileSideTags(value string) (hasClient, hasServer bool) {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "" {
+		return false, false
+	}
+
+	parts := strings.FieldsFunc(normalized, func(r rune) bool {
+		return r == '&' || r == '/' || r == ','
+	})
+	if len(parts) == 0 {
+		parts = []string{normalized}
+	}
+	for _, part := range parts {
+		switch strings.TrimSpace(part) {
+		case "client":
+			hasClient = true
+		case "server":
+			hasServer = true
+		}
+	}
+	return hasClient, hasServer
+}
+
+func filterCurseSearchFiles(files []curseFile, indexes []curseFileIndex, mcVersion, loader string) []curseFile {
+	modLoaderType, ok := curseForgeModLoaderType(loader)
+	if !ok || len(indexes) == 0 {
+		return files
+	}
+
+	allowedFileIDs := make(map[int64]struct{})
+	hasVersionIndex := false
+	for _, index := range indexes {
+		if index.GameVersion != mcVersion {
+			continue
+		}
+		hasVersionIndex = true
+		if index.ModLoader != 0 && index.ModLoader != modLoaderType {
+			continue
+		}
+		allowedFileIDs[index.FileID] = struct{}{}
+	}
+
+	if !hasVersionIndex {
+		return files
+	}
+	if len(allowedFileIDs) == 0 {
+		return files
+	}
+	filtered := make([]curseFile, 0, len(allowedFileIDs))
+	for _, file := range files {
+		if _, ok := allowedFileIDs[file.ID]; ok {
+			filtered = append(filtered, file)
+		}
+	}
+	if len(filtered) == 0 {
+		// latestFilesIndexes can reference a file that is not included in the
+		// abbreviated latestFiles payload. Let the full files endpoint decide.
+		return files
+	}
+	return filtered
 }
 
 func isLikelyClientOnlyCurseProject(

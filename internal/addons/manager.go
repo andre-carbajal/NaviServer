@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -170,6 +171,7 @@ type Manager struct {
 	userAgent     string
 	addonCacheMu  sync.Mutex
 	addonCache    map[string]addonCacheEntry
+	provenanceMu  sync.Mutex
 }
 
 type addonCacheEntry struct {
@@ -192,6 +194,23 @@ type persistentAddonEntry struct {
 	Size           int64 `json:"size"`
 	ModifiedAtUnix int64 `json:"modifiedAtUnix"`
 	Addon          Addon `json:"addon"`
+}
+
+const addonProvenanceSchemaVersion = 1
+
+type addonProvenanceStore struct {
+	SchemaVersion int                             `json:"schemaVersion"`
+	UpdatedAt     string                          `json:"updatedAt"`
+	Entries       map[string]addonProvenanceEntry `json:"entries"`
+}
+
+type addonProvenanceEntry struct {
+	Source         AddonSource `json:"source"`
+	ProjectID      string      `json:"projectId,omitempty"`
+	VersionID      string      `json:"versionId,omitempty"`
+	FileID         int64       `json:"fileId,omitempty"`
+	Size           int64       `json:"size"`
+	ModifiedAtUnix int64       `json:"modifiedAtUnix"`
 }
 
 // BuildCurseForgeAPIKey is injected at build time via ldflags in CI.
@@ -281,6 +300,148 @@ func addonCacheFilePath(addonDir string) string {
 	return filepath.Join(addonDir, ".cache", "naviserver-addons.json")
 }
 
+func addonProvenanceFilePath(addonDir string) string {
+	return filepath.Join(addonDir, ".cache", "naviserver-addon-provenance.json")
+}
+
+func readAddonProvenance(addonDir string) (*addonProvenanceStore, error) {
+	content, err := os.ReadFile(addonProvenanceFilePath(addonDir))
+	if err != nil {
+		return nil, err
+	}
+	var store addonProvenanceStore
+	if err := json.Unmarshal(content, &store); err != nil {
+		return nil, err
+	}
+	if store.SchemaVersion != addonProvenanceSchemaVersion {
+		return nil, fmt.Errorf("addon provenance schema mismatch")
+	}
+	if store.Entries == nil {
+		store.Entries = map[string]addonProvenanceEntry{}
+	}
+	return &store, nil
+}
+
+func writeAddonProvenance(addonDir string, store *addonProvenanceStore) error {
+	if store == nil {
+		return fmt.Errorf("addon provenance store is nil")
+	}
+	if store.Entries == nil {
+		store.Entries = map[string]addonProvenanceEntry{}
+	}
+	store.SchemaVersion = addonProvenanceSchemaVersion
+	store.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
+	cacheDir := filepath.Dir(addonProvenanceFilePath(addonDir))
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return err
+	}
+	payload, err := json.MarshalIndent(store, "", "  ")
+	if err != nil {
+		return err
+	}
+	target := addonProvenanceFilePath(addonDir)
+	tmp := target + ".tmp"
+	if err := os.WriteFile(tmp, payload, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, target)
+}
+
+func validAddonProvenanceSource(source AddonSource) bool {
+	return source == AddonSourceModrinth || source == AddonSourceCurseForge
+}
+
+func (store *addonProvenanceStore) entryForItem(item scannedAddonFile) (addonProvenanceEntry, bool) {
+	if store == nil {
+		return addonProvenanceEntry{}, false
+	}
+	entry, ok := store.Entries[item.fileName]
+	if !ok || !validAddonProvenanceSource(entry.Source) {
+		return addonProvenanceEntry{}, false
+	}
+	if entry.Size != item.size || entry.ModifiedAtUnix != item.modifiedAt.UnixNano() {
+		return addonProvenanceEntry{}, false
+	}
+	return entry, true
+}
+
+func addonProvenanceRevision(store *addonProvenanceStore) string {
+	if store == nil {
+		return ""
+	}
+	if strings.TrimSpace(store.UpdatedAt) != "" {
+		return store.UpdatedAt
+	}
+	return strconv.Itoa(len(store.Entries))
+}
+
+func (m *Manager) recordAddonProvenance(addonDir, fileName string, entry addonProvenanceEntry) error {
+	if !validAddonProvenanceSource(entry.Source) {
+		return fmt.Errorf("invalid addon provenance source %q", entry.Source)
+	}
+	info, err := os.Stat(filepath.Join(addonDir, fileName))
+	if err != nil {
+		return err
+	}
+	entry.Size = info.Size()
+	entry.ModifiedAtUnix = info.ModTime().UnixNano()
+
+	m.provenanceMu.Lock()
+	defer m.provenanceMu.Unlock()
+	store, err := readAddonProvenance(addonDir)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("failed to read addon provenance: %w", err)
+		}
+		store = &addonProvenanceStore{Entries: map[string]addonProvenanceEntry{}}
+	}
+	store.Entries[filepath.Base(fileName)] = entry
+	return writeAddonProvenance(addonDir, store)
+}
+
+func (m *Manager) removeAddonProvenance(addonDir, fileName string) error {
+	m.provenanceMu.Lock()
+	defer m.provenanceMu.Unlock()
+	store, err := readAddonProvenance(addonDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("failed to read addon provenance: %w", err)
+	}
+	key := filepath.Base(fileName)
+	if _, ok := store.Entries[key]; !ok {
+		return nil
+	}
+	delete(store.Entries, key)
+	return writeAddonProvenance(addonDir, store)
+}
+
+func (m *Manager) renameAddonProvenance(addonDir, oldFileName, newFileName string) error {
+	m.provenanceMu.Lock()
+	defer m.provenanceMu.Unlock()
+	store, err := readAddonProvenance(addonDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("failed to read addon provenance: %w", err)
+	}
+	oldKey := filepath.Base(oldFileName)
+	entry, ok := store.Entries[oldKey]
+	if !ok {
+		return nil
+	}
+	newKey := filepath.Base(newFileName)
+	if info, statErr := os.Stat(filepath.Join(addonDir, newKey)); statErr == nil {
+		entry.Size = info.Size()
+		entry.ModifiedAtUnix = info.ModTime().UnixNano()
+	}
+	delete(store.Entries, oldKey)
+	store.Entries[newKey] = entry
+	return writeAddonProvenance(addonDir, store)
+}
+
 func readPersistentAddonCache(addonDir string, srv *domain.Server, addonType AddonType) (*persistentAddonCache, error) {
 	content, err := os.ReadFile(addonCacheFilePath(addonDir))
 	if err != nil {
@@ -341,6 +502,15 @@ func addonModifiedUnix(value string) int64 {
 }
 
 func cachedAddonForItem(cache *persistentAddonCache, item scannedAddonFile, addonType AddonType) (Addon, bool) {
+	return cachedAddonForItemWithProvenance(cache, nil, item, addonType)
+}
+
+func cachedAddonForItemWithProvenance(
+	cache *persistentAddonCache,
+	provenance *addonProvenanceStore,
+	item scannedAddonFile,
+	addonType AddonType,
+) (Addon, bool) {
 	if cache == nil {
 		return Addon{}, false
 	}
@@ -349,6 +519,23 @@ func cachedAddonForItem(cache *persistentAddonCache, item scannedAddonFile, addo
 		return Addon{}, false
 	}
 	addon := entry.Addon
+	if source, ok := provenance.entryForItem(item); ok {
+		if addon.Source != source.Source ||
+			(source.ProjectID != "" && addon.ProjectID != source.ProjectID) ||
+			(source.VersionID != "" && addon.VersionID != source.VersionID) {
+			// The persistent metadata predates a source-aware installation, or
+			// was produced by an older version of the same artifact. Re-resolve
+			// this file so its recorded provenance wins.
+			return Addon{}, false
+		}
+	}
+	if addon.Source == AddonSourceCurseForge &&
+		strings.TrimSpace(addon.ProjectID) != "" &&
+		strings.TrimSpace(addon.IconURL) == "" {
+		// Older caches were created before CurseForge mod metadata was loaded.
+		// Re-resolve these entries so the logo can be populated and persisted.
+		return Addon{}, false
+	}
 	addon.ID = item.fileName
 	addon.FileName = item.fileName
 	addon.Path = item.relPath
@@ -359,13 +546,15 @@ func cachedAddonForItem(cache *persistentAddonCache, item scannedAddonFile, addo
 	return addon, true
 }
 
-func addonListCacheKey(serverID string, srv *domain.Server, items []scannedAddonFile) string {
+func addonListCacheKey(serverID string, srv *domain.Server, items []scannedAddonFile, provenance *addonProvenanceStore) string {
 	var builder strings.Builder
 	builder.WriteString(serverID)
 	builder.WriteString("|")
 	builder.WriteString(srv.Loader)
 	builder.WriteString("|")
 	builder.WriteString(srv.Version)
+	builder.WriteString("|")
+	builder.WriteString(addonProvenanceRevision(provenance))
 	for _, item := range items {
 		builder.WriteString("|")
 		builder.WriteString(item.fileName)
@@ -412,6 +601,14 @@ func (m *Manager) storeCachedAddonList(serverID, key string, response *ListRespo
 		key:       key,
 		expiresAt: time.Now().Add(addonListCacheDuration),
 		response:  cloneAddonListResponse(response),
+	}
+}
+
+func (m *Manager) invalidateAddonListCache(serverID string) {
+	m.addonCacheMu.Lock()
+	defer m.addonCacheMu.Unlock()
+	if m.addonCache != nil {
+		delete(m.addonCache, serverID)
 	}
 }
 
@@ -468,7 +665,21 @@ func (m *Manager) SyncAddons(ctx context.Context, serverID string) (*ListRespons
 }
 
 func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh bool) (*ListResponse, error) {
-	srv, root, addonType, addonDir, loaders, err := m.resolveServerAddonContext(serverID)
+	return m.listAddonsWithOptions(ctx, serverID, forceRefresh, true, true)
+}
+
+func (m *Manager) listAddonsReadOnly(ctx context.Context, serverID string) (*ListResponse, error) {
+	return m.listAddonsWithOptions(ctx, serverID, false, false, false)
+}
+
+func (m *Manager) listAddonsWithOptions(
+	ctx context.Context,
+	serverID string,
+	forceRefresh,
+	createAddonDir,
+	persist bool,
+) (*ListResponse, error) {
+	srv, root, addonType, addonDir, loaders, err := m.resolveServerAddonContextWithOptions(serverID, createAddonDir)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +717,15 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 		})
 	}
 
-	cacheKey := addonListCacheKey(serverID, srv, scannedItems)
+	provenance, provenanceErr := readAddonProvenance(addonDir)
+	if provenanceErr != nil && !errors.Is(provenanceErr, os.ErrNotExist) {
+		// A damaged or unknown provenance file must not hide installed addons.
+		// Fall back to the catalog matchers, which preserve legacy behavior.
+		slog.Warn("failed to read addon provenance", "error", provenanceErr)
+		provenance = nil
+	}
+
+	cacheKey := addonListCacheKey(serverID, srv, scannedItems, provenance)
 	if !forceRefresh {
 		if cached, ok := m.getCachedAddonList(serverID, cacheKey); ok {
 			return cached, nil
@@ -522,7 +741,7 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 	itemsToRefresh := make([]scannedAddonFile, 0, len(scannedItems))
 	for _, item := range scannedItems {
 		if !forceRefresh {
-			if addon, ok := cachedAddonForItem(persistentCache, item, addonType); ok {
+			if addon, ok := cachedAddonForItemWithProvenance(persistentCache, provenance, item, addonType); ok {
 				cachedAddons = append(cachedAddons, addon)
 				continue
 			}
@@ -539,16 +758,20 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 
 	if len(scannedItems) == 0 {
 		response := &ListResponse{AddonType: addonType, Items: []Addon{}}
-		m.storeCachedAddonList(serverID, cacheKey, response)
-		_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+		if persist {
+			m.storeCachedAddonList(serverID, cacheKey, response)
+			_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+		}
 		return response, nil
 	}
 
 	if len(itemsToRefresh) == 0 {
 		response := &ListResponse{AddonType: addonType, Items: cachedAddons}
 		sortAddons(response.Items)
-		m.storeCachedAddonList(serverID, cacheKey, response)
-		_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+		if persist {
+			m.storeCachedAddonList(serverID, cacheKey, response)
+			_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+		}
 		return response, nil
 	}
 
@@ -577,6 +800,12 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 		}
 	}()
 	metadataWG.Wait()
+	if len(curseMatches) > 0 {
+		if err := m.enrichCurseForgeMatches(ctx, curseMatches); err != nil {
+			// Metadata enrichment must not hide an otherwise valid installed mod.
+			slog.Warn("failed to load CurseForge mod metadata", "error", err)
+		}
+	}
 
 	modrinthIconCache := m.preloadModrinthIcons(ctx, modrinthCurrent)
 
@@ -600,7 +829,18 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 			Disabled:         item.disabled,
 		}
 
-		if current, ok := modrinthCurrent[item.sha1]; ok {
+		provenanceEntry, hasProvenance := provenance.entryForItem(item)
+		_, hasModrinthMatch := modrinthCurrent[item.sha1]
+		_, hasCurseForgeMatch := curseMatches[item.fingerprint]
+		useModrinth := hasModrinthMatch
+		useCurseForge := !useModrinth && hasCurseForgeMatch
+		if hasProvenance {
+			useModrinth = provenanceEntry.Source == AddonSourceModrinth
+			useCurseForge = provenanceEntry.Source == AddonSourceCurseForge
+		}
+
+		if useModrinth && hasModrinthMatch {
+			current := modrinthCurrent[item.sha1]
 			addon.Source = AddonSourceModrinth
 			addon.Status = AddonStatusInstalled
 			addon.ProjectID = current.ProjectID
@@ -630,20 +870,25 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 					}
 				}
 			}
-		} else if match, ok := curseMatches[item.fingerprint]; ok {
+		} else if useCurseForge && hasCurseForgeMatch {
+			match := curseMatches[item.fingerprint]
+			modID := match.File.ModID
+			if modID == 0 {
+				modID = match.Mod.ID
+			}
 			addon.Source = AddonSourceCurseForge
 			addon.Status = AddonStatusInstalled
-			addon.ProjectID = strconv.FormatInt(match.File.ModID, 10)
+			addon.ProjectID = strconv.FormatInt(modID, 10)
 			addon.ProjectName = match.Mod.Name
 			addon.ProjectSlug = match.Mod.Slug
 			addon.ProjectURL = match.Mod.Links.WebsiteURL
-			addon.IconURL = match.Mod.Logo.URL
+			addon.IconURL = match.Mod.iconURL()
 			addon.VersionID = strconv.FormatInt(match.File.ID, 10)
 			addon.VersionName = match.File.DisplayName
 			addon.VersionLabel = match.File.FileName
 			addon.ReleaseType = mapCurseReleaseType(match.File.ReleaseType)
 
-			latest, deps := m.findLatestCurseFile(ctx, match.File.ModID, srv.Version, srv.Loader)
+			latest, deps := m.findLatestCurseFile(ctx, modID, srv.Version, srv.Loader)
 			if latest != nil && latest.ID != match.File.ID && !item.disabled {
 				addon.Status = AddonStatusUpdateAvailable
 				addon.Latest = &AddonVersion{
@@ -659,6 +904,11 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 				}
 			}
 			addon.MissingDependencies = deps
+		} else if hasProvenance {
+			// Keep the recorded source even when the corresponding catalog is
+			// temporarily unavailable. Never silently switch to the other
+			// catalog for an explicitly installed artifact.
+			applyAddonProvenanceFallback(&addon, provenanceEntry)
 		}
 
 		addons = append(addons, addon)
@@ -667,9 +917,21 @@ func (m *Manager) listAddons(ctx context.Context, serverID string, forceRefresh 
 	sortAddons(addons)
 
 	response := &ListResponse{AddonType: addonType, Items: addons}
-	m.storeCachedAddonList(serverID, cacheKey, response)
-	_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+	if persist {
+		m.storeCachedAddonList(serverID, cacheKey, response)
+		_ = writePersistentAddonCache(addonDir, srv, addonType, response)
+	}
 	return response, nil
+}
+
+func applyAddonProvenanceFallback(addon *Addon, entry addonProvenanceEntry) {
+	addon.Source = entry.Source
+	addon.Status = AddonStatusInstalled
+	addon.ProjectID = entry.ProjectID
+	addon.VersionID = entry.VersionID
+	if entry.Source == AddonSourceCurseForge && entry.FileID > 0 {
+		addon.VersionID = strconv.FormatInt(entry.FileID, 10)
+	}
 }
 
 func sortAddons(addons []Addon) {
@@ -738,6 +1000,12 @@ func (m *Manager) SearchAddons(
 				// Keep Modrinth results working even when CurseForge is not configured.
 			} else if errors.Is(err, errCurseForgeKeyMissing) {
 				return nil, err
+			} else if source == string(AddonSourceCurseForge) {
+				return nil, err
+			} else {
+				// Mixed searches may still return results from Modrinth, but do not
+				// hide CurseForge API/query failures from server logs.
+				slog.Warn("CurseForge addon search failed", "query", query, "error", err)
 			}
 		} else {
 			results = append(results, items...)
@@ -782,7 +1050,7 @@ func (m *Manager) ListAddonVersions(
 		if err != nil {
 			return nil, fmt.Errorf("invalid curseforge project id")
 		}
-		files, err := m.listCurseFiles(ctx, modID, srv.Version)
+		files, err := m.listCurseFiles(ctx, modID, srv.Version, srv.Loader)
 		if err != nil {
 			return nil, err
 		}
@@ -812,40 +1080,35 @@ func (m *Manager) InstallAddon(ctx context.Context, serverID string, req Install
 	if source == "" {
 		source = AddonSourceModrinth
 	}
+	defer m.invalidateAddonListCache(serverID)
 
 	switch source {
 	case AddonSourceModrinth:
-		version, err := m.resolveModrinthVersion(ctx, req.ProjectID, req.VersionID, loaders, srv.Version)
+		root, dependencies, err := m.resolveModrinthAddonGraph(
+			ctx,
+			req.ProjectID,
+			req.VersionID,
+			loaders,
+			srv.Version,
+			req.IncludeDependencies,
+		)
 		if err != nil {
 			return err
 		}
-		if version == nil {
-			return fmt.Errorf("no compatible version found")
+		if root.modrinth == nil {
+			return fmt.Errorf("resolved Modrinth version is missing catalog data")
 		}
-		primaryURL := version.PrimaryFileURL()
-		primaryName := version.PrimaryFilename()
-		if primaryURL == "" || primaryName == "" {
-			return fmt.Errorf("version does not provide a downloadable file")
-		}
-		targetPath := filepath.Join(addonDir, primaryName)
-		if err := m.downloadToFile(ctx, primaryURL, targetPath, nil); err != nil {
+		if err := m.downloadModrinthFile(ctx, addonDir, *root.modrinth, root.ProjectID); err != nil {
 			return err
 		}
 		if req.IncludeDependencies {
-			for _, dep := range version.Dependencies {
-				if dep.DependencyType != "required" || dep.ProjectID == "" {
-					continue
+			for _, dependency := range dependencies {
+				if dependency.modrinth == nil {
+					return fmt.Errorf("resolved Modrinth dependency %s is missing catalog data", dependency.ProjectID)
 				}
-				depVersion, err := m.resolveModrinthVersion(ctx, dep.ProjectID, dep.VersionID, loaders, srv.Version)
-				if err != nil || depVersion == nil {
-					continue
+				if err := m.downloadModrinthFile(ctx, addonDir, *dependency.modrinth, dependency.ProjectID); err != nil {
+					return fmt.Errorf("failed to download Modrinth dependency %s: %w", dependency.ProjectID, err)
 				}
-				depURL := depVersion.PrimaryFileURL()
-				depName := depVersion.PrimaryFilename()
-				if depURL == "" || depName == "" {
-					continue
-				}
-				_ = m.downloadToFile(ctx, depURL, filepath.Join(addonDir, depName), nil)
 			}
 		}
 		return nil
@@ -853,49 +1116,89 @@ func (m *Manager) InstallAddon(ctx context.Context, serverID string, req Install
 		if strings.TrimSpace(m.resolveCurseForgeAPIKey()) == "" {
 			return errCurseForgeKeyMissing
 		}
-		file, deps, err := m.resolveCurseForgeFile(ctx, req.ProjectID, req.FileID, srv.Version, srv.Loader)
+		root, dependencies, err := m.resolveCurseForgeAddonGraph(
+			ctx,
+			req.ProjectID,
+			req.FileID,
+			srv.Version,
+			srv.Loader,
+			req.IncludeDependencies,
+		)
 		if err != nil {
 			return err
 		}
-		if file == nil {
-			return fmt.Errorf("no compatible file found")
+		if root.curseForge == nil {
+			return fmt.Errorf("resolved CurseForge file is missing catalog data")
 		}
-		downloadURL := file.DownloadURL
-		if downloadURL == "" {
-			downloadURL, err = m.getCurseFileDownloadURL(ctx, file.ModID, file.ID)
-			if err != nil {
-				return err
-			}
-		}
-		if downloadURL == "" {
-			return fmt.Errorf("file has no download url")
-		}
-		if err := m.downloadToFile(ctx, downloadURL, filepath.Join(addonDir, file.FileName), map[string]string{"x-api-key": m.resolveCurseForgeAPIKey()}); err != nil {
+		if err := m.downloadCurseForgeFile(ctx, addonDir, *root.curseForge); err != nil {
 			return err
 		}
 		if req.IncludeDependencies {
-			for _, dep := range deps {
-				if !dep.Required || dep.ProjectID == "" {
-					continue
+			for _, dependency := range dependencies {
+				if dependency.curseForge == nil {
+					return fmt.Errorf("resolved CurseForge dependency %s is missing catalog data", dependency.ProjectID)
 				}
-				depFile, _, err := m.resolveCurseForgeFile(ctx, dep.ProjectID, dep.FileID, srv.Version, srv.Loader)
-				if err != nil || depFile == nil {
-					continue
+				if err := m.downloadCurseForgeFile(ctx, addonDir, *dependency.curseForge); err != nil {
+					return fmt.Errorf("failed to download CurseForge dependency %s: %w", dependency.ProjectID, err)
 				}
-				depURL := depFile.DownloadURL
-				if depURL == "" {
-					depURL, _ = m.getCurseFileDownloadURL(ctx, depFile.ModID, depFile.ID)
-				}
-				if depURL == "" {
-					continue
-				}
-				_ = m.downloadToFile(ctx, depURL, filepath.Join(addonDir, depFile.FileName), map[string]string{"x-api-key": m.resolveCurseForgeAPIKey()})
 			}
 		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported source: %s", source)
 	}
+}
+
+func (m *Manager) downloadModrinthFile(ctx context.Context, addonDir string, version modrinthVersion, fallbackProjectID string) error {
+	fileURL := version.PrimaryFileURL()
+	fileName := version.PrimaryFilename()
+	if fileURL == "" || fileName == "" {
+		return fmt.Errorf("Modrinth version does not provide a downloadable file")
+	}
+	if err := m.downloadToFile(ctx, fileURL, filepath.Join(addonDir, fileName), nil); err != nil {
+		return err
+	}
+	projectID := strings.TrimSpace(version.ProjectID)
+	if projectID == "" {
+		projectID = strings.TrimSpace(fallbackProjectID)
+	}
+	if err := m.recordAddonProvenance(addonDir, fileName, addonProvenanceEntry{
+		Source:    AddonSourceModrinth,
+		ProjectID: projectID,
+		VersionID: version.VersionID,
+	}); err != nil {
+		return fmt.Errorf("failed to record Modrinth provenance for %s: %w", fileName, err)
+	}
+	return nil
+}
+
+func (m *Manager) downloadCurseForgeFile(ctx context.Context, addonDir string, file curseFile) error {
+	if strings.TrimSpace(file.FileName) == "" {
+		return fmt.Errorf("CurseForge file has no filename")
+	}
+	downloadURL := file.DownloadURL
+	if downloadURL == "" {
+		var err error
+		downloadURL, err = m.getCurseFileDownloadURL(ctx, file.ModID, file.ID)
+		if err != nil {
+			return err
+		}
+	}
+	if strings.TrimSpace(downloadURL) == "" {
+		return fmt.Errorf("CurseForge file has no download url")
+	}
+	if err := m.downloadToFile(ctx, downloadURL, filepath.Join(addonDir, file.FileName), map[string]string{"x-api-key": m.resolveCurseForgeAPIKey()}); err != nil {
+		return err
+	}
+	if err := m.recordAddonProvenance(addonDir, file.FileName, addonProvenanceEntry{
+		Source:    AddonSourceCurseForge,
+		ProjectID: strconv.FormatInt(file.ModID, 10),
+		VersionID: strconv.FormatInt(file.ID, 10),
+		FileID:    file.ID,
+	}); err != nil {
+		return fmt.Errorf("failed to record CurseForge provenance for %s: %w", file.FileName, err)
+	}
+	return nil
 }
 
 func (m *Manager) DeleteAddon(serverID, addonID string) error {
@@ -918,6 +1221,10 @@ func (m *Manager) DeleteAddon(serverID, addonID string) error {
 		}
 		return err
 	}
+	if err := m.removeAddonProvenance(addonDir, base); err != nil {
+		return err
+	}
+	m.invalidateAddonListCache(serverID)
 	return nil
 }
 
@@ -956,6 +1263,10 @@ func (m *Manager) SetAddonDisabled(serverID, addonID string, disabled bool) erro
 		}
 		return err
 	}
+	if err := m.renameAddonProvenance(addonDir, base, targetName); err != nil {
+		return err
+	}
+	m.invalidateAddonListCache(serverID)
 	return nil
 }
 
@@ -1035,6 +1346,10 @@ func (m *Manager) UpdateAllAddons(ctx context.Context, serverID string, includeD
 }
 
 func (m *Manager) resolveServerAddonContext(serverID string) (*domain.Server, string, AddonType, string, []string, error) {
+	return m.resolveServerAddonContextWithOptions(serverID, true)
+}
+
+func (m *Manager) resolveServerAddonContextWithOptions(serverID string, createAddonDir bool) (*domain.Server, string, AddonType, string, []string, error) {
 	srv, err := m.serverManager.GetServer(serverID)
 	if err != nil {
 		return nil, "", "", "", nil, err
@@ -1053,8 +1368,10 @@ func (m *Manager) resolveServerAddonContext(serverID string) (*domain.Server, st
 		return nil, "", "", "", nil, fmt.Errorf("addon management is only supported for paper, fabric, forge and neoforge servers")
 	}
 	addonDir := filepath.Join(root, relativePath)
-	if err := os.MkdirAll(addonDir, 0755); err != nil {
-		return nil, "", "", "", nil, fmt.Errorf("failed to create addon directory: %w", err)
+	if createAddonDir {
+		if err := os.MkdirAll(addonDir, 0755); err != nil {
+			return nil, "", "", "", nil, fmt.Errorf("failed to create addon directory: %w", err)
+		}
 	}
 	return srv, root, addonType, addonDir, loaders, nil
 }

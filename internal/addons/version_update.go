@@ -117,7 +117,7 @@ func (m *Manager) updateCurseForgeAddonForServerVersion(
 		m.disableAddonAfterVersionUpdateFailure(serverID, addon, "invalid CurseForge project id", result)
 		return
 	}
-	files, err := m.listCurseFiles(ctx, modID, mcVersion)
+	files, err := m.listCurseFiles(ctx, modID, mcVersion, loader)
 	if err != nil {
 		m.disableAddonAfterVersionUpdateFailure(serverID, addon, fmt.Sprintf("failed checking compatible CurseForge files: %v", err), result)
 		return

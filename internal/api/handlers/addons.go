@@ -170,6 +170,35 @@ func (h *AddonsHandler) HandleInstallAddon(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusCreated)
 }
 
+func (h *AddonsHandler) HandleInstallPreview(w http.ResponseWriter, r *http.Request) {
+	if !h.ensureManager(w) {
+		return
+	}
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing server id", http.StatusBadRequest)
+		return
+	}
+	if !h.canManageAddons(r, id) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	var req addons.InstallPreviewRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.AddonsManager.PreviewInstallAddon(r.Context(), id, req)
+	if err != nil {
+		h.writeAddonError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
 func (h *AddonsHandler) HandleDeleteAddon(w http.ResponseWriter, r *http.Request) {
 	if !h.ensureManager(w) {
 		return
