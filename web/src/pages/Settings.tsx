@@ -80,7 +80,7 @@ const Settings: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const newPortRange = { ...portRange, [name]: parseInt(value, 10) };
+    const newPortRange = { ...portRange, [name]: Number.parseInt(value, 10) };
     setPortRange(newPortRange);
     setHasChanges(
       JSON.stringify(newPortRange) !== JSON.stringify(initialPortRange),
@@ -89,13 +89,13 @@ const Settings: React.FC = () => {
 
   const handleLogBufferChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const parsed = parseInt(raw, 10);
+    const parsed = Number.parseInt(raw, 10);
     if (raw === '') {
       setLogBufferSize(0);
       setLogBufferError(null);
       return;
     }
-    if (isNaN(parsed)) {
+    if (Number.isNaN(parsed)) {
       setLogBufferSize(0);
       setLogBufferError('The value must be an integer >= 0');
       return;
@@ -125,7 +125,7 @@ const Settings: React.FC = () => {
   };
 
   const handleSaveLogBuffer = async () => {
-    if (isNaN(logBufferSize) || logBufferSize < 0) {
+    if (Number.isNaN(logBufferSize) || logBufferSize < 0) {
       setLogBufferError('The value must be an integer >= 0');
       return;
     }

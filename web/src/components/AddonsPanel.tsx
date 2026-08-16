@@ -585,6 +585,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
               checked={includeDependencies}
               onChange={(e) => setIncludeDependencies(e.target.checked)}
             />
+            {' '}
             Include dependencies
           </label>
           <Button

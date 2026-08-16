@@ -160,7 +160,7 @@ const formatBytes = (bytes: number) => {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 const formatDuration = (seconds: number) => {
@@ -1685,7 +1685,7 @@ const ServerDetail: React.FC = () => {
                       <div className="server-v2-settings-form-grid">
                         <label className="server-v2-settings-full">
                           <span>
-                            Server Name
+                            Server Name{' '}
                             <span title="Display name used across NaviServer.">
                               <CircleHelp size={14} />
                             </span>
@@ -1703,7 +1703,7 @@ const ServerDetail: React.FC = () => {
 
                         <label>
                           <span>
-                            Game Mode
+                            Game Mode{' '}
                             <span title="Default game mode for new players.">
                               <CircleHelp size={14} />
                             </span>
@@ -1728,7 +1728,7 @@ const ServerDetail: React.FC = () => {
 
                         <label>
                           <span>
-                            Difficulty
+                            Difficulty{' '}
                             <span title="World difficulty level.">
                               <CircleHelp size={14} />
                             </span>
@@ -1753,7 +1753,7 @@ const ServerDetail: React.FC = () => {
 
                         <label className="server-v2-settings-full">
                           <span>
-                            Server Message (MOTD)
+                            Server Message (MOTD){' '}
                             <span title="Server list message players see.">
                               <CircleHelp size={14} />
                             </span>
@@ -1770,7 +1770,7 @@ const ServerDetail: React.FC = () => {
 
                         <label>
                           <span>
-                            Spawn Protection
+                            Spawn Protection{' '}
                             <span title="Spawn protection radius in blocks. Set 0 to disable.">
                               <CircleHelp size={14} />
                             </span>
@@ -1877,7 +1877,7 @@ const ServerDetail: React.FC = () => {
                       <div className="server-v2-settings-form-grid">
                         <label>
                           <span>
-                            Max Players
+                            Max Players{' '}
                             <span title="Maximum connected players.">
                               <CircleHelp size={14} />
                             </span>
@@ -1900,7 +1900,7 @@ const ServerDetail: React.FC = () => {
 
                         <label>
                           <span>
-                            View Distance
+                            View Distance{' '}
                             <span title="Chunks sent to players.">
                               <CircleHelp size={14} />
                             </span>
@@ -1923,7 +1923,7 @@ const ServerDetail: React.FC = () => {
 
                         <label>
                           <span>
-                            Simulation Distance
+                            Simulation Distance{' '}
                             <span title="Chunks actively simulated.">
                               <CircleHelp size={14} />
                             </span>
@@ -2068,7 +2068,7 @@ const ServerDetail: React.FC = () => {
                     <div className="server-v2-settings-form-grid">
                       <label>
                         <span>
-                          Select New Version
+                          Select New Version{' '}
                           <span title="Only versions available for the current loader are shown.">
                             <CircleHelp size={14} />
                           </span>

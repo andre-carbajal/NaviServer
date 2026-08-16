@@ -76,7 +76,7 @@ export const upsertPropertyLine = (
   key: string,
   value: string,
 ) => {
-  const normalized = content.replace(/\r\n/g, '\n');
+  const normalized = content.replaceAll('\r\n', '\n');
   const lines = normalized.split('\n');
   let updated = false;
   const nextLines = lines.map((line) => {
@@ -108,7 +108,7 @@ export const readIntPropertyFromContent = (
   content: string,
   key: string,
 ): number | null => {
-  const normalized = content.replace(/\r\n/g, '\n');
+  const normalized = content.replaceAll('\r\n', '\n');
   const lines = normalized.split('\n');
   for (const line of lines) {
     const trimmed = line.trim();

@@ -39,3 +39,5 @@
 - Reliability:
     - Updated Bash conditionals in the build, installation, migration, and
       uninstallation scripts to use Bash's safer `[[ ... ]]` syntax.
+    - Made JSX spacing explicit around inline controls and standardized numeric
+      parsing and newline normalization in the web frontend.
