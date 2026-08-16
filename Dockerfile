@@ -10,9 +10,9 @@ FROM golang:1.26.4-bookworm AS backend
 WORKDIR /src
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    pkg-config \
-    libgtk-3-dev \
     libayatana-appindicator3-dev \
+    libgtk-3-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 COPY go.mod go.sum ./
 RUN go mod download
@@ -27,14 +27,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     gzip \
+    libayatana-appindicator3-1 \
+    libgtk-3-0 \
     tar \
     unzip \
-    libgtk-3-0 \
-    libayatana-appindicator3-1 \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --gid ${GID} naviserver \
-    && useradd --uid ${UID} --gid ${GID} --create-home --shell /usr/sbin/nologin naviserver \
-    && mkdir -p /data && chown -R ${UID}:${GID} /data
+    && groupadd --gid "${GID}" naviserver \
+    && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /usr/sbin/nologin naviserver \
+    && mkdir -p /data && chown -R "${UID}:${GID}" /data
 WORKDIR /app
 COPY --from=backend /out/naviserver-server /app/naviserver-server
 COPY --from=frontend /src/web/dist /app/web_dist

@@ -45,3 +45,7 @@
       state handling without changing upload or console behavior.
     - Released service context resources when daemon goroutines finish and
       preserved the full graceful-shutdown timeout during cancellation.
+
+- Build and installer maintenance:
+    - Sorted Docker package lists, quoted runtime UID/GID arguments, routed
+      installer errors to stderr, and clarified blank-import registration.

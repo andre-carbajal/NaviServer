@@ -12,10 +12,10 @@ SERVICE_FILE="/etc/systemd/system/naviserver.service"
 PLIST_NAME="com.naviserver.server.plist"
 
 # Color output
-color_info()    { echo "ℹ️  $1"; }
-color_success() { echo "✓ $1"; }
-color_warning() { echo "⚠️  $1"; }
-color_error()   { echo "✗ $1"; }
+color_info()    { local message="$1"; echo "ℹ️  $message"; }
+color_success() { local message="$1"; echo "✓ $message"; }
+color_warning() { local message="$1"; echo "⚠️  $message"; }
+color_error()   { local message="$1"; echo "✗ $message"; }
 
 usage() {
   cat <<EOF
@@ -257,12 +257,10 @@ else
 fi
 
 # Remove data directory if not keeping it
-if [[ "$KEEP_DATA" != "yes" ]]; then
-    if [[ -d "$DATA_DIR" ]]; then
-        echo "Removing data directory ${DATA_DIR}..."
-        rm -rf "$DATA_DIR" || true
-        echo "Removed ${DATA_DIR}"
-    fi
+if [[ "$KEEP_DATA" != "yes" && -d "$DATA_DIR" ]]; then
+    echo "Removing data directory ${DATA_DIR}..."
+    rm -rf "$DATA_DIR" || true
+    echo "Removed ${DATA_DIR}"
 fi
 
 # Additional cleanup: logs in /tmp (user-owned, no sudo needed)

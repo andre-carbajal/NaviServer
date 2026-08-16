@@ -93,7 +93,7 @@ VERSION=$(basename "$LATEST_URL")
 CLEAN_VERSION="${VERSION#v}"
 
 if [[ -z "$VERSION" ]] || [[ "$VERSION" = "latest" ]]; then
-    echo "Error: Could not determine latest version."
+    echo "Error: Could not determine latest version." >&2
     exit 1
 fi
 
@@ -109,7 +109,7 @@ echo "Downloading ${ASSET_NAME} from ${DOWNLOAD_URL}..."
 if curl --proto '=https' --tlsv1.2 -L -o "${TMP_DIR}/${ASSET_NAME}" "${DOWNLOAD_URL}" --fail; then
     echo "Download successful."
 else
-    echo "Error: Failed to download release. Please check if the asset exists for your platform."
+    echo "Error: Failed to download release. Please check if the asset exists for your platform." >&2
     rm -rf "${TMP_DIR}"
     exit 1
 fi
@@ -190,7 +190,7 @@ EOF
         if systemctl is-active --quiet naviserver; then
             echo "✓ NaviServer service installed and started (Headless)."
         else
-            echo "✗ Error: NaviServer service failed to start"
+            echo "✗ Error: NaviServer service failed to start" >&2
             exit 1
         fi
 
@@ -265,7 +265,7 @@ else
             run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app" "/Applications/"
             echo "NaviServer.app installed to /Applications."
         else
-            echo "Error: NaviServer.app not found in the downloaded package."
+            echo "Error: NaviServer.app not found in the downloaded package." >&2
         fi
 
     elif [[ "$OS_TYPE" = "linux" ]]; then

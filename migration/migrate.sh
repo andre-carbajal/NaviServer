@@ -6,10 +6,10 @@
 set -e
 
 # Color output
-color_info()    { echo "ℹ️  $1"; }
-color_success() { echo "✓ $1"; }
-color_warning() { echo "⚠️  $1"; }
-color_error()   { echo "✗ $1"; }
+color_info()    { local message="$1"; echo "ℹ️  $message"; }
+color_success() { local message="$1"; echo "✓ $message"; }
+color_warning() { local message="$1"; echo "⚠️  $message"; }
+color_error()   { local message="$1"; echo "✗ $message"; }
 
 prompt_update_config_path() {
   local key="$1"

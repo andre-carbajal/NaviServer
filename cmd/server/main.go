@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	// Required by the go:embed directives for the tray icons below.
 	_ "embed"
 	"errors"
 	"flag"
