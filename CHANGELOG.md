@@ -31,3 +31,5 @@
     - Reset native `<dialog>` styling for app modals to remove the unwanted
       browser overlay/border effect.
     - Fixed console inputs on mobile
+    - Made addon selection signatures use locale-aware ordering for reliable
+      alphabetical sorting.

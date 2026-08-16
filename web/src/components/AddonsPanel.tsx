@@ -308,7 +308,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
   const selectedInstallCount = selectedInstallEntries.length;
   const selectedInstallKey = selectedInstallEntries
     .map(([key]) => key)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join('|');
   const installedProjectKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -335,7 +335,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
       ([key, result]) =>
         `${key}:${selectedVersionByKey[key] || result.latest?.versionId || ''}`,
     )
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join('|');
   const summaryVersionsReady = selectedInstallEntries.every(
     ([key]) => hydratedVersionKeyState[key] === true,
