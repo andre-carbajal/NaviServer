@@ -234,7 +234,7 @@ func (s *GormStore) UpdateServerAutoBackupLastRun(id string, lastRunAt time.Time
 	return s.db.Model(&Server{}).Where("id = ?", id).Update("auto_backup_last_run_at", &lastRunAt).Error
 }
 
-func (s *GormStore) UpdateServerVersion(id string, version string) error {
+func (s *GormStore) UpdateServerVersion(id, version string) error {
 	return s.db.Model(&Server{}).Where("id = ?", id).Update("version", version).Error
 }
 
@@ -314,7 +314,7 @@ func (s *GormStore) DeleteServer(id string) error {
 	return s.db.Delete(&Server{}, "id = ?", id).Error
 }
 
-func (s *GormStore) UpdateStatus(id string, status string) error {
+func (s *GormStore) UpdateStatus(id, status string) error {
 	return s.db.Model(&Server{}).Where("id = ?", id).Update("status", status).Error
 }
 
@@ -330,7 +330,7 @@ func (s *GormStore) GetSetting(key string) (string, error) {
 	return setting.Value, nil
 }
 
-func (s *GormStore) SetSetting(key string, value string) error {
+func (s *GormStore) SetSetting(key, value string) error {
 	var setting Setting
 	result := s.db.First(&setting, "key = ?", key)
 	if result.Error != nil {
@@ -367,7 +367,7 @@ func (s *GormStore) GetPortRange() (int, int, error) {
 	return start, end, nil
 }
 
-func (s *GormStore) SetPortRange(start int, end int) error {
+func (s *GormStore) SetPortRange(start, end int) error {
 	if start <= 0 || end <= 0 || start > end {
 		return fmt.Errorf("invalid port range: %d-%d", start, end)
 	}
@@ -455,7 +455,7 @@ func (s *GormStore) DeleteUser(id string) error {
 	})
 }
 
-func (s *GormStore) UpdatePassword(userID string, hashedPassword string) error {
+func (s *GormStore) UpdatePassword(userID, hashedPassword string) error {
 	return s.db.Model(&User{}).Where("id = ?", userID).Update("password", hashedPassword).Error
 }
 
@@ -563,11 +563,11 @@ func (s *GormStore) SaveBackup(backup *domain.Backup) error {
 	return s.db.Save(gormBackup).Error
 }
 
-func (s *GormStore) UpdateBackup(name string, serverID string) error {
+func (s *GormStore) UpdateBackup(name, serverID string) error {
 	return s.db.Model(&Backup{}).Where("name = ?", name).Update("server_id", serverID).Error
 }
 
-func (s *GormStore) ListBackups(serverID string, userID string, role string) ([]domain.Backup, error) {
+func (s *GormStore) ListBackups(serverID, userID, role string) ([]domain.Backup, error) {
 	var gormBackups []Backup
 	query := s.db.Model(&Backup{}).
 		Select("backups.*, servers.name as server_name").

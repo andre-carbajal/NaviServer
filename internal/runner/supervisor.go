@@ -301,7 +301,7 @@ func (s *Supervisor) KillServer(serverID string) error {
 	return nil
 }
 
-func (s *Supervisor) SendCommand(serverID string, cmd string) error {
+func (s *Supervisor) SendCommand(serverID, cmd string) error {
 	s.mu.Lock()
 	proc, exists := s.processes[serverID]
 	s.mu.Unlock()

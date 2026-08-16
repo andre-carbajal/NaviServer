@@ -53,3 +53,5 @@
 - CLI and API maintenance:
     - Reused the WebSocket handler for console and progress routes, merged
       duplicate CLI key branches, and removed an empty dashboard branch.
+    - Grouped consecutive same-typed Go parameters across repository,
+      backup, server, JVM, storage, and supervisor APIs.

@@ -11,7 +11,7 @@ type ServerRepository interface {
 	ListServers() ([]Server, error)
 	GetServerByID(id string) (*Server, error)
 	DeleteServer(id string) error
-	UpdateStatus(id string, status string) error
+	UpdateStatus(id, status string) error
 }
 
 type UserRepository interface {
@@ -22,14 +22,14 @@ type UserRepository interface {
 	DeleteUser(id string) error
 	SetPermissions(permissions []Permission) error
 	GetPermissions(userID string) ([]Permission, error)
-	UpdatePassword(userID string, hashedPassword string) error
+	UpdatePassword(userID, hashedPassword string) error
 }
 
 type SettingRepository interface {
 	GetSetting(key string) (string, error)
-	SetSetting(key string, value string) error
+	SetSetting(key, value string) error
 	GetPortRange() (int, int, error)
-	SetPortRange(start int, end int) error
+	SetPortRange(start, end int) error
 }
 
 type PublicLinkRepository interface {
@@ -41,8 +41,8 @@ type PublicLinkRepository interface {
 
 type BackupRepository interface {
 	SaveBackup(backup *Backup) error
-	UpdateBackup(name string, serverID string) error
-	ListBackups(serverID string, userID string, role string) ([]Backup, error)
+	UpdateBackup(name, serverID string) error
+	ListBackups(serverID, userID, role string) ([]Backup, error)
 	ListBackupsByServerID(serverID string) ([]Backup, error)
 	GetBackupByName(name string) (*Backup, error)
 	DeleteBackup(name string) error

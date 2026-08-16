@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func Unzip(src string, dest string) error {
+func Unzip(src, dest string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
 		return err

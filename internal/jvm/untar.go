@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func Untar(src string, dest string) error {
+func Untar(src, dest string) error {
 	file, err := os.Open(src)
 	if err != nil {
 		return err

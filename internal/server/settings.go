@@ -219,7 +219,7 @@ func (m *Manager) GetVersionOptions(id string) ([]string, error) {
 	return versions, nil
 }
 
-func (m *Manager) ValidateServerVersionUpdate(id string, targetVersion string) (*domain.Server, string, error) {
+func (m *Manager) ValidateServerVersionUpdate(id, targetVersion string) (*domain.Server, string, error) {
 	srv, err := m.GetServer(id)
 	if err != nil {
 		return nil, "", err
@@ -262,7 +262,7 @@ func (m *Manager) ValidateServerVersionUpdate(id string, targetVersion string) (
 	return srv, version, nil
 }
 
-func (m *Manager) ApplyServerVersionUpdate(id string, version string) (string, error) {
+func (m *Manager) ApplyServerVersionUpdate(id, version string) (string, error) {
 	srv, err := m.GetServer(id)
 	if err != nil {
 		return "", err
@@ -393,7 +393,7 @@ func leadingDigits(value string) string {
 	return value
 }
 
-func compareVersions(left string, right string) (int, bool) {
+func compareVersions(left, right string) (int, bool) {
 	lv, ok := parseVersionParts(left)
 	if !ok {
 		return 0, false
@@ -428,7 +428,7 @@ func compareVersions(left string, right string) (int, bool) {
 	return 0, true
 }
 
-func isFutureVersion(candidate string, current string) (bool, bool) {
+func isFutureVersion(candidate, current string) (bool, bool) {
 	cmp, ok := compareVersions(candidate, current)
 	if !ok {
 		return false, false

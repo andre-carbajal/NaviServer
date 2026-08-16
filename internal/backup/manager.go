@@ -517,11 +517,11 @@ func (m *Manager) GetBackupFilePath(name string) (string, error) {
 	return backupPath, nil
 }
 
-func (m *Manager) ListAllBackups(userID string, role string) ([]domain.Backup, error) {
+func (m *Manager) ListAllBackups(userID, role string) ([]domain.Backup, error) {
 	return m.Store.ListBackups("", userID, role)
 }
 
-func (m *Manager) ListBackups(serverID string, userID string, role string) ([]domain.Backup, error) {
+func (m *Manager) ListBackups(serverID, userID, role string) ([]domain.Backup, error) {
 	return m.Store.ListBackups(serverID, userID, role)
 }
 
@@ -1003,7 +1003,7 @@ func unarchiveZip(src, dest string) error {
 	return nil
 }
 
-func (m *Manager) UpdateBackup(name string, serverID string) error {
+func (m *Manager) UpdateBackup(name, serverID string) error {
 	if err := m.Store.UpdateBackup(name, serverID); err != nil {
 		return err
 	}
