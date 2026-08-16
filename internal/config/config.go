@@ -31,6 +31,7 @@ const (
 	envServerPort      = "NAVISERVER_PORT"
 	envAllowedOrigins  = "NAVISERVER_ALLOWED_ORIGINS"
 	envAllowedOrigins2 = "NAVISERVER_CORS_ALLOWED_ORIGINS"
+	envTrustProxy      = "NAVISERVER_TRUST_PROXY"
 	envCurseForgeKey   = "CURSEFORGE_API_KEY"
 	envCLIToken        = "NAVISERVER_CLI_TOKEN"
 )
@@ -39,6 +40,7 @@ type APIConfig struct {
 	Host           string   `json:"host"`
 	Port           int      `json:"port"`
 	AllowedOrigins []string `json:"allowed_origins"`
+	TrustProxy     bool     `json:"trust_proxy"`
 }
 
 type Config struct {
@@ -164,6 +166,9 @@ func migrateConfigFileIfNeeded(configPath string, file []byte, cfg Config) error
 				return err
 			}
 			if err := setAPIIfMissing("allowed_origins", cfg.API.AllowedOrigins); err != nil {
+				return err
+			}
+			if err := setAPIIfMissing("trust_proxy", cfg.API.TrustProxy); err != nil {
 				return err
 			}
 
@@ -308,6 +313,7 @@ func defaultConfig(configDir string) Config {
 			Host:           defaultAPIHost,
 			Port:           GetPort(),
 			AllowedOrigins: []string{},
+			TrustProxy:     false,
 		},
 	}
 }
@@ -344,6 +350,12 @@ func (cfg *Config) applyEnvOverrides() {
 	if portRaw := strings.TrimSpace(os.Getenv(envServerPort)); portRaw != "" {
 		if port, err := strconv.Atoi(portRaw); err == nil && port > 0 {
 			cfg.API.Port = port
+		}
+	}
+
+	if trustProxyRaw := strings.TrimSpace(os.Getenv(envTrustProxy)); trustProxyRaw != "" {
+		if trustProxy, err := strconv.ParseBool(trustProxyRaw); err == nil {
+			cfg.API.TrustProxy = trustProxy
 		}
 	}
 

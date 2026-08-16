@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"naviserver/internal/config"
 	"naviserver/internal/domain"
@@ -94,6 +95,60 @@ func TestHandleLoginSetsCookieAndReturnsUser(t *testing.T) {
 	if response.Token != "" {
 		t.Fatalf("expected empty token field, got %q", response.Token)
 	}
+	if cookies[0].Secure {
+		t.Fatal("expected HTTP login cookie to remain compatible with local HTTP installations")
+	}
+}
+
+func TestAuthCookiesUseHTTPSAndExplicitlyTrustedProxySignals(t *testing.T) {
+	tests := []struct {
+		name         string
+		configure    func(*http.Request, *config.Config)
+		expectSecure bool
+	}{
+		{
+			name: "direct HTTPS",
+			configure: func(req *http.Request, _ *config.Config) {
+				req.TLS = &tls.ConnectionState{}
+			},
+			expectSecure: true,
+		},
+		{
+			name: "trusted HTTPS proxy",
+			configure: func(req *http.Request, cfg *config.Config) {
+				cfg.API.TrustProxy = true
+				req.Header.Set("X-Forwarded-Proto", "https")
+			},
+			expectSecure: true,
+		},
+		{
+			name: "untrusted HTTPS proxy",
+			configure: func(req *http.Request, _ *config.Config) {
+				req.Header.Set("X-Forwarded-Proto", "https")
+			},
+			expectSecure: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler, store := newTestAuthHandler(t)
+			seedAuthUser(t, store, "andre", "secret123")
+			body, _ := json.Marshal(LoginRequest{Username: "andre", Password: "secret123"})
+			req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(body))
+			tt.configure(req, handler.Config)
+			rec := httptest.NewRecorder()
+
+			handler.HandleLogin(rec, req)
+			cookies := rec.Result().Cookies()
+			if len(cookies) != 1 {
+				t.Fatalf("expected one auth cookie, got %#v", cookies)
+			}
+			if cookies[0].Secure != tt.expectSecure {
+				t.Fatalf("expected Secure=%v, got %v", tt.expectSecure, cookies[0].Secure)
+			}
+		})
+	}
 }
 
 func TestHandleLoginRejectsInvalidPassword(t *testing.T) {
@@ -144,6 +199,22 @@ func TestHandleSetupCreatesAdminUserAndCookie(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	if len(cookies) == 0 || cookies[0].Name != "token" {
 		t.Fatalf("expected setup to set auth cookie, got %#v", cookies)
+	}
+	if cookies[0].Secure {
+		t.Fatal("expected HTTP setup cookie to remain compatible with local HTTP installations")
+	}
+}
+
+func TestHandleLogoutUsesSecureCookieForHTTPS(t *testing.T) {
+	handler, _ := newTestAuthHandler(t)
+	req := httptest.NewRequest(http.MethodPost, "https://example.test/auth/logout", nil)
+	req.TLS = &tls.ConnectionState{}
+	rec := httptest.NewRecorder()
+
+	handler.HandleLogout(rec, req)
+	cookies := rec.Result().Cookies()
+	if len(cookies) != 1 || !cookies[0].Secure {
+		t.Fatalf("expected secure logout cookie for HTTPS, got %#v", cookies)
 	}
 }
 

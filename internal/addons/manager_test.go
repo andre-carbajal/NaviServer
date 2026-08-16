@@ -55,7 +55,7 @@ func newTestAddonManager(t *testing.T) (*Manager, *domain.Server, string) {
 		t.Fatalf("failed to save server: %v", err)
 	}
 	serversDir := filepath.Join(tempDir, "servers")
-	serverManager := server.NewManager(serversDir, store)
+	serverManager := server.NewManager(serversDir, store, nil)
 	m := NewManager(serverManager, store)
 	addonDir := filepath.Join(serversDir, srv.FolderName, "mods")
 	if err := os.MkdirAll(addonDir, 0755); err != nil {
@@ -1084,7 +1084,7 @@ func TestUpdateAddonsForServerVersionNoopsForVanilla(t *testing.T) {
 		t.Fatalf("failed to save server: %v", err)
 	}
 
-	serverManager := server.NewManager(filepath.Join(tempDir, "servers"), store)
+	serverManager := server.NewManager(filepath.Join(tempDir, "servers"), store, nil)
 	m := NewManager(serverManager, store)
 	result, err := m.UpdateAddonsForServerVersion(nil, srv.ID, true)
 	if err != nil {

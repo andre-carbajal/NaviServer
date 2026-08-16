@@ -8,7 +8,7 @@ if exist dist (
 
 echo "Building web frontend..."
 pushd web
-call npm install
+call npm install --ignore-scripts
 call npm run build
 popd
 

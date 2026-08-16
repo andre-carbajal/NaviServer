@@ -1423,6 +1423,8 @@ func computeJarMetadata(path string) (sha1Hash string, sha512Hash string, finger
 	if err != nil {
 		return "", "", 0, err
 	}
+	// Modrinth requires SHA-1 content identifiers for version-file lookup and
+	// update; this digest is not used for authentication, signatures, or trust.
 	h1 := sha1.Sum(content)
 	h512 := sha512.Sum512(content)
 	return hex.EncodeToString(h1[:]), hex.EncodeToString(h512[:]), curseForgeFingerprint(content), nil

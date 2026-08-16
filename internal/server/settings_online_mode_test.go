@@ -23,7 +23,7 @@ func newSettingsManagerForTest(t *testing.T) (*Manager, string) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	manager := NewManager(serversPath, store)
+	manager := NewManager(serversPath, store, nil)
 	srv := &domain.Server{
 		ID:         "srv-1",
 		Name:       "Test Server",

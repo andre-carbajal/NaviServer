@@ -215,7 +215,7 @@ func startDaemonService(ctx context.Context) {
 	}
 
 	jvmMgr := jvm.NewManager(cfg.RuntimesPath)
-	srvMgr := server.NewManager(cfg.ServersPath, store)
+	srvMgr := server.NewManager(cfg.ServersPath, store, jvmMgr)
 	bufferSize := config.DefaultLogBufferSize
 	if val, err := store.GetSetting("log_buffer_size"); err == nil {
 		if n, err := strconv.Atoi(val); err == nil && n >= 0 {

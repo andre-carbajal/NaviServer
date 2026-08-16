@@ -26,7 +26,7 @@ func newTestServerHandler(t *testing.T) (*ServerHandler, *storage.GormStore, str
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	manager := server.NewManager(serversPath, store)
+	manager := server.NewManager(serversPath, store, nil)
 	handler := &ServerHandler{
 		BaseHandler: &BaseHandler{
 			Manager: manager,

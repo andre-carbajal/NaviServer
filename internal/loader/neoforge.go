@@ -7,7 +7,6 @@ import (
 	"naviserver/internal/domain"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -219,10 +218,10 @@ func (l *NeoForgeLoader) Load(options LoaderOptions, destDir string, progressCha
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Running NeoForge installer..."}
 	}
-	cmd := exec.Command("java", "-jar", "installer.jar", "--installServer")
-	cmd.Dir = destDir
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	cmd, err := installerCommand(options.JavaPath, destDir)
+	if err != nil {
+		return "", fmt.Errorf("cannot prepare NeoForge installer: %w", err)
+	}
 
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("error running NeoForge installer: %w", err)

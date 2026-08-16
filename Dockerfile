@@ -2,7 +2,7 @@
 FROM node:24-bookworm-slim AS frontend
 WORKDIR /src/web
 COPY web/package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 COPY web/ ./
 RUN npm run build
 

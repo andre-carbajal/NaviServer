@@ -32,6 +32,31 @@ type AuthHandler struct {
 	*BaseHandler
 }
 
+func (h *AuthHandler) secureAuthCookie(r *http.Request) bool {
+	if r != nil && r.TLS != nil {
+		return true
+	}
+	if h.Config == nil || !h.Config.API.TrustProxy || r == nil {
+		return false
+	}
+
+	forwardedProto := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0])
+	return strings.EqualFold(forwardedProto, "https")
+}
+
+func (h *AuthHandler) setAuthCookie(w http.ResponseWriter, r *http.Request, cookie *http.Cookie) {
+	cookie.Secure = true
+	if h.secureAuthCookie(r) {
+		http.SetCookie(w, cookie)
+		return
+	}
+
+	// Direct HTTP is retained for local deployments. Serialize the cookie as
+	// secure first, then remove only the Secure attribute for that explicit case.
+	serialized := strings.Replace(cookie.String(), "; Secure", "", 1)
+	w.Header().Add("Set-Cookie", serialized)
+}
+
 func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -66,14 +91,13 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
+	h.setAuthCookie(w, r, &http.Cookie{
 		Name:     "token",
 		Value:    tokenString,
 		Expires:  time.Now().Add(time.Hour * 24 * 7),
 		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false,
 	})
 
 	w.Header().Set("Content-Type", "application/json")
@@ -84,14 +108,13 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
+	h.setAuthCookie(w, r, &http.Cookie{
 		Name:     "token",
 		Value:    "",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false,
 	})
 	w.WriteHeader(http.StatusOK)
 }
@@ -148,7 +171,7 @@ func (h *AuthHandler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 	})
 	tokenString, _ := token.SignedString([]byte(h.Config.JWTSecret))
 
-	http.SetCookie(w, &http.Cookie{
+	h.setAuthCookie(w, r, &http.Cookie{
 		Name:     "token",
 		Value:    tokenString,
 		Expires:  time.Now().Add(time.Hour * 24 * 7),

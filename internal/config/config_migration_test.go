@@ -76,6 +76,9 @@ func TestLoadConfigMigratesMissingFieldsWithoutLosingCustomData(t *testing.T) {
 	if _, ok := apiMap["allowed_origins"]; !ok {
 		t.Fatal("expected api.allowed_origins to be added")
 	}
+	if _, ok := apiMap["trust_proxy"]; !ok {
+		t.Fatal("expected api.trust_proxy to be added")
+	}
 	if _, ok := apiMap["extra"]; !ok {
 		t.Fatal("expected api.extra to be preserved")
 	}
@@ -101,6 +104,7 @@ func TestLoadConfigEnvOverridesDoNotRewriteConfigFile(t *testing.T) {
 	}
 
 	t.Setenv(envServerPort, "24000")
+	t.Setenv(envTrustProxy, "true")
 
 	cfg, err := LoadConfig(tempDir)
 	if err != nil {
@@ -109,6 +113,9 @@ func TestLoadConfigEnvOverridesDoNotRewriteConfigFile(t *testing.T) {
 
 	if cfg.API.Port != 24000 {
 		t.Fatalf("expected env override port 24000, got %d", cfg.API.Port)
+	}
+	if !cfg.API.TrustProxy {
+		t.Fatal("expected NAVISERVER_TRUST_PROXY=true to enable proxy trust")
 	}
 
 	persistedBytes, err := os.ReadFile(configPath)

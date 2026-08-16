@@ -88,7 +88,7 @@ fi
 
 # Fetch latest version
 echo "Fetching latest release info..."
-LATEST_URL=$(curl -Ls -o /dev/null -w %{url_effective} "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")
+LATEST_URL=$(curl --proto '=https' --tlsv1.2 -Ls -o /dev/null -w %{url_effective} "https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest")
 VERSION=$(basename "$LATEST_URL")
 CLEAN_VERSION="${VERSION#v}"
 
@@ -106,7 +106,7 @@ DOWNLOAD_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${
 TMP_DIR=$(mktemp -d)
 echo "Downloading ${ASSET_NAME} from ${DOWNLOAD_URL}..."
 
-if curl -L -o "${TMP_DIR}/${ASSET_NAME}" "${DOWNLOAD_URL}" --fail; then
+if curl --proto '=https' --tlsv1.2 -L -o "${TMP_DIR}/${ASSET_NAME}" "${DOWNLOAD_URL}" --fail; then
     echo "Download successful."
 else
     echo "Error: Failed to download release. Please check if the asset exists for your platform."

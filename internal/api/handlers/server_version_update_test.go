@@ -85,7 +85,7 @@ func newVersionUpdateHandler(t *testing.T, failLoader bool) (*ServerHandler, *st
 		t.Fatalf("failed to write server properties: %v", err)
 	}
 
-	manager := server.NewManager(serversPath, store)
+	manager := server.NewManager(serversPath, store, nil)
 	backupManager := backup.NewManager(serversPath, backupsPath, store)
 	handler := &ServerHandler{
 		BaseHandler: &BaseHandler{

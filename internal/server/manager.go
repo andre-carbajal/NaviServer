@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/png"
 	"naviserver/internal/domain"
+	"naviserver/internal/jvm"
 	"naviserver/internal/loader"
 	"naviserver/internal/storage"
 	"os"
@@ -20,13 +21,55 @@ import (
 type Manager struct {
 	ServersPath string
 	Store       *storage.GormStore
+	Java        JavaEnsurer
 }
 
-func NewManager(serversPath string, store *storage.GormStore) *Manager {
+type JavaEnsurer interface {
+	EnsureJava(version int) (string, error)
+}
+
+func NewManager(serversPath string, store *storage.GormStore, java JavaEnsurer) *Manager {
 	return &Manager{
 		ServersPath: serversPath,
 		Store:       store,
+		Java:        java,
 	}
+}
+
+func (m *Manager) prepareLoaderOptions(loaderType string, downloader loader.ServerLoader, options loader.LoaderOptions, version string) (loader.LoaderOptions, error) {
+	if loaderType != "forge" && loaderType != "neoforge" {
+		return options, nil
+	}
+	if m.Java == nil {
+		return options, fmt.Errorf("managed Java runtime is required for %s installation", loaderType)
+	}
+
+	targetVersion := strings.TrimSpace(options.MCVersion)
+	if targetVersion == "" {
+		targetVersion = strings.TrimSpace(version)
+	}
+	if targetVersion == "" {
+		versions, err := downloader.GetSupportedVersions(options)
+		if err != nil {
+			return options, fmt.Errorf("error getting %s Minecraft versions: %w", loaderType, err)
+		}
+		if len(versions) == 0 {
+			return options, fmt.Errorf("no Minecraft versions available for %s", loaderType)
+		}
+		targetVersion = versions[0]
+	}
+
+	javaPath, err := m.Java.EnsureJava(jvm.GetJavaVersionForMC(targetVersion))
+	if err != nil {
+		return options, fmt.Errorf("error preparing Java for %s: %w", targetVersion, err)
+	}
+	if !filepath.IsAbs(javaPath) {
+		return options, fmt.Errorf("managed Java runtime returned a non-absolute path")
+	}
+
+	options.MCVersion = targetVersion
+	options.JavaPath = javaPath
+	return options, nil
 }
 
 func sanitizeFolderName(name string) string {
@@ -87,6 +130,10 @@ func (m *Manager) CreateServer(name string, loaderType string, options loader.Lo
 	fmt.Printf("Port allocated for '%s': %d\n", name, assignedPort)
 
 	downloader, err := loader.GetLoader(loaderType)
+	if err != nil {
+		return nil, err
+	}
+	options, err = m.prepareLoaderOptions(loaderType, downloader, options, version)
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,7 @@ type LoaderOptions struct {
 	BuildVersion     string `json:"buildVersion,omitempty"`
 	LoaderVersion    string `json:"loaderVersion,omitempty"`
 	InstallerVersion string `json:"installerVersion,omitempty"`
+	JavaPath         string `json:"-"`
 }
 
 type LoaderMetadata struct {

@@ -38,6 +38,9 @@ func (m *Manager) EnsureJava(version int) (string, error) {
 		if found, err := findJavaBin(installDir, javaBinName); err == nil {
 			if isValid(found) {
 				if abs, err := filepath.Abs(found); err == nil {
+					if err := restrictJavaBinary(abs); err != nil {
+						return "", fmt.Errorf("could not restrict Java binary permissions: %w", err)
+					}
 					return abs, nil
 				}
 			}
@@ -61,11 +64,18 @@ func (m *Manager) EnsureJava(version int) (string, error) {
 		return "", fmt.Errorf("could not get absolute path: %w", err)
 	}
 
-	if runtime.GOOS != "windows" {
-		_ = os.Chmod(absPath, 0755)
+	if err := restrictJavaBinary(absPath); err != nil {
+		return "", fmt.Errorf("could not restrict Java binary permissions: %w", err)
 	}
 
 	return absPath, nil
+}
+
+func restrictJavaBinary(path string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	return os.Chmod(path, 0700)
 }
 
 func (m *Manager) downloadAndInstall(version int, destDir string) error {

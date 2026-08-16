@@ -20,7 +20,8 @@ Key files:
   "api": {
     "host": "0.0.0.0",
     "port": 23008,
-    "allowed_origins": []
+    "allowed_origins": [],
+    "trust_proxy": false
   }
 }
 ```
@@ -37,6 +38,15 @@ If `NAVISERVER_DEV=true` or `1`, default API port becomes `23009`.
 - `NAVISERVER_PORT`: overrides `api.port`.
 - `NAVISERVER_ALLOWED_ORIGINS`: comma-separated CORS origins.
 - `NAVISERVER_CORS_ALLOWED_ORIGINS`: fallback CORS origins variable.
+- `NAVISERVER_TRUST_PROXY`: when `true`, trusts `X-Forwarded-Proto` from a reverse proxy when deciding whether auth cookies require `Secure`.
+
+`NAVISERVER_TRUST_PROXY` defaults to `false`. Enable it only when NaviServer is behind a reverse proxy that overwrites or removes client-supplied `X-Forwarded-Proto` headers:
+
+```dotenv
+NAVISERVER_TRUST_PROXY=true
+```
+
+With the setting enabled, an `X-Forwarded-Proto: https` request causes authentication cookies to receive the `Secure` attribute. Direct HTTPS requests receive `Secure` cookies automatically. Direct HTTP remains supported for local deployments; do not enable proxy trust on a server that is reachable directly from untrusted clients.
 
 # CORS origins
 

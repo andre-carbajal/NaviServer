@@ -7,7 +7,7 @@ rm -rf dist
 
 echo "Building web frontend..."
 cd web || exit
-npm install
+npm install --ignore-scripts
 npm run build
 cd ..
 

@@ -7,7 +7,6 @@ import (
 	"naviserver/internal/domain"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -148,10 +147,10 @@ func (l *ForgeLoader) Load(options LoaderOptions, destDir string, progressChan c
 	if progressChan != nil {
 		progressChan <- domain.ProgressEvent{Message: "Running Forge installer..."}
 	}
-	cmd := exec.Command("java", "-jar", "installer.jar", "--installServer")
-	cmd.Dir = destDir
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+	cmd, err := installerCommand(options.JavaPath, destDir)
+	if err != nil {
+		return "", fmt.Errorf("cannot prepare Forge installer: %w", err)
+	}
 
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("error running Forge installer: %w", err)

@@ -281,9 +281,14 @@ func (m *Manager) ApplyServerVersionUpdate(id string, version string) (string, e
 		return "", err
 	}
 
-	resolvedVersion, err := downloader.Load(loader.LoaderOptions{
+	loadOptions, err := m.prepareLoaderOptions(srv.Loader, downloader, loader.LoaderOptions{
 		MCVersion: version,
-	}, root, nil)
+	}, version)
+	if err != nil {
+		return "", fmt.Errorf("version update failed: %w", err)
+	}
+
+	resolvedVersion, err := downloader.Load(loadOptions, root, nil)
 	if err != nil {
 		return "", fmt.Errorf("version update failed: %w", err)
 	}

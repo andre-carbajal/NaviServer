@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Security hardening:
+    - Pinned the release workflow's third-party GitHub Actions to full commit
+      SHAs and disabled npm lifecycle scripts during all supported builds.
+    - Restricted installer downloads to HTTPS with TLS 1.2 or newer.
+    - Added transport-aware authentication cookies and the
+      `NAVISERVER_TRUST_PROXY` setting, including configuration migration and
+      documentation.
+    - Made Forge and NeoForge use an absolute path to a managed Java runtime
+      for server creation and updates; managed Java binaries now use `0700`
+      permissions.
+    - Documented the Modrinth-required SHA-1 content lookup as non-cryptographic
+      and unrelated to authentication or trust decisions.
+
 - Addon installation:
     - Fixed CurseForge loader and server-environment filtering, including
       server and client/server files.

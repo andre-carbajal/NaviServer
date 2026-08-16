@@ -28,7 +28,7 @@ func newServerHandlerWithBackupManager(t *testing.T) (*ServerHandler, *storage.G
 	}
 	t.Cleanup(func() { _ = store.Close() })
 
-	manager := server.NewManager(serversPath, store)
+	manager := server.NewManager(serversPath, store, nil)
 	backupManager := backup.NewManager(serversPath, backupsPath, store)
 	handler := &ServerHandler{
 		BaseHandler: &BaseHandler{
