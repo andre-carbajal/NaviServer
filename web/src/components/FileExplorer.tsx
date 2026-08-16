@@ -739,14 +739,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                     {new Date(file.lastModified).toLocaleString()}
                   </td>
                   <td>
-                    <div
-                      className="row-actions"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="row-actions">
                       {!file.isDirectory && isEditable(file.name) && (
                         <button
                           type="button"
-                          onClick={() => handleFileClick(file)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleFileClick(file);
+                          }}
                           className="file-manage-btn"
                           title="Edit"
                         >
@@ -755,7 +755,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                       )}
                       <button
                         type="button"
-                        onClick={() => handleDownload(file)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDownload(file);
+                        }}
                         className="file-manage-btn"
                         title="Download"
                       >
@@ -763,7 +766,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(file)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(file);
+                        }}
                         className="file-manage-btn delete"
                         title="Delete"
                       >

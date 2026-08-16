@@ -33,3 +33,5 @@
     - Fixed console inputs on mobile
     - Made addon selection signatures use locale-aware ordering for reliable
       alphabetical sorting.
+    - Moved file-row click handling onto the action buttons so file operations
+      remain keyboard-accessible.
