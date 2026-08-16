@@ -124,6 +124,90 @@ const FileEditor: React.FC<FileEditorProps> = ({
   const hasChanges = content !== originalContent;
   const fileName = filePath.split('/').pop();
 
+  const renderEditorContent = () => {
+    if (loading) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            color: '#6b7280',
+          }}
+        >
+          <Loader2 className="spin" size={32} />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            color: '#f87171',
+            padding: '32px',
+            textAlign: 'center',
+            backgroundColor: 'rgba(127, 29, 29, 0.1)',
+          }}
+        >
+          <div>
+            <p style={{ marginBottom: '8px', fontWeight: 600 }}>
+              Error Loading File
+            </p>
+            <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>{error}</p>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                marginTop: '16px',
+                color: '#818cf8',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Go back
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <Suspense
+        fallback={
+          <div className="file-editor-loading">
+            <Loader2 className="spin" size={32} />
+          </div>
+        }
+      >
+        <MonacoEditor
+          height="100%"
+          defaultLanguage={getLanguage(filePath)}
+          language={getLanguage(filePath)}
+          value={content}
+          theme="vs-dark"
+          onChange={(value) => setContent(value || '')}
+          onMount={handleEditorMount}
+          options={{
+            minimap: { enabled: true },
+            fontSize: 14,
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            tabSize: 2,
+            wordWrap: 'on',
+          }}
+        />
+      </Suspense>
+    );
+  };
+
   return (
     <div className="file-explorer-container">
       {modalDialog}
@@ -185,79 +269,7 @@ const FileEditor: React.FC<FileEditorProps> = ({
       </div>
 
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {loading ? (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              color: '#6b7280',
-            }}
-          >
-            <Loader2 className="spin" size={32} />
-          </div>
-        ) : error ? (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              color: '#f87171',
-              padding: '32px',
-              textAlign: 'center',
-              backgroundColor: 'rgba(127, 29, 29, 0.1)',
-            }}
-          >
-            <div>
-              <p style={{ marginBottom: '8px', fontWeight: 600 }}>
-                Error Loading File
-              </p>
-              <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>{error}</p>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  marginTop: '16px',
-                  color: '#818cf8',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                Go back
-              </button>
-            </div>
-          </div>
-        ) : (
-          <Suspense
-            fallback={
-              <div className="file-editor-loading">
-                <Loader2 className="spin" size={32} />
-              </div>
-            }
-          >
-            <MonacoEditor
-              height="100%"
-              defaultLanguage={getLanguage(filePath)}
-              language={getLanguage(filePath)}
-              value={content}
-              theme="vs-dark"
-              onChange={(value) => setContent(value || '')}
-              onMount={handleEditorMount}
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                tabSize: 2,
-                wordWrap: 'on',
-              }}
-            />
-          </Suspense>
-        )}
+        {renderEditorContent()}
       </div>
 
       <div className="editor-footer">

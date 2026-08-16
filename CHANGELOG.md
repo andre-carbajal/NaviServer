@@ -43,6 +43,8 @@
       parsing and newline normalization in the web frontend.
     - Simplified frontend iteration, DOM cleanup, optional access, and progress
       state handling without changing upload or console behavior.
+    - Replaced nested frontend conditional expressions with explicit branches
+      while preserving editor, addon, backup, chart, and server-settings states.
     - Released service context resources when daemon goroutines finish and
       preserved the full graceful-shutdown timeout during cancellation.
 

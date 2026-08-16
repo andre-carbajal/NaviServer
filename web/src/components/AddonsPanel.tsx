@@ -677,29 +677,30 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           }}
         >
           <ul>
-            {searchResults.map((result) => (
-              <li
-                key={`${result.source}-${result.projectId}`}
-                className={
-                  installedProjectKeys.has(
-                    `${result.source}-${result.projectId}`,
-                  )
-                    ? 'installed'
-                    : undefined
-                }
-              >
+            {searchResults.map((result) => {
+              const resultKey = `${result.source}-${result.projectId}`;
+              const isInstalled = installedProjectKeys.has(resultKey);
+              let resultDescription =
+                result.projectSlug || result.description || '';
+              if (isInstalled) {
+                resultDescription = 'Already installed';
+              } else if (result.authorName?.trim()) {
+                resultDescription = `by ${result.authorName}`;
+              }
+
+              return (
+                <li
+                  key={resultKey}
+                  className={isInstalled ? 'installed' : undefined}
+                >
                 <label className="server-v2-install-row">
                   <input
                     type="checkbox"
-                    disabled={installedProjectKeys.has(
-                      `${result.source}-${result.projectId}`,
-                    )}
-                    checked={Boolean(
-                      selectedInstalls[`${result.source}-${result.projectId}`],
-                    )}
+                    disabled={isInstalled}
+                    checked={Boolean(selectedInstalls[resultKey])}
                     onChange={(e) => {
-                      const key = `${result.source}-${result.projectId}`;
-                      if (installedProjectKeys.has(key)) {
+                      const key = resultKey;
+                      if (isInstalled) {
                         return;
                       }
                       if (e.target.checked) {
@@ -742,15 +743,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                   )}
                   <div className="server-v2-install-text">
                     <strong>{result.projectName}</strong>
-                    <small>
-                      {installedProjectKeys.has(
-                        `${result.source}-${result.projectId}`,
-                      )
-                        ? 'Already installed'
-                        : result.authorName?.trim()
-                          ? `by ${result.authorName}`
-                          : result.projectSlug || result.description || ''}
-                    </small>
+                    <small>{resultDescription}</small>
                   </div>
                 </label>
                 {result.projectUrl && (
@@ -764,8 +757,9 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                     <Globe size={14} />
                   </a>
                 )}
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
 
           {searchingMore && (
@@ -806,11 +800,11 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
 
       <div className="server-v2-settings-card">
         <h3>Installed {title}</h3>
-        {loading ? (
-          <p>Loading...</p>
-        ) : items.length === 0 ? (
+        {loading && <p>Loading...</p>}
+        {!loading && items.length === 0 && (
           <p>No {title.toLowerCase()} found.</p>
-        ) : (
+        )}
+        {!loading && items.length > 0 && (
           <ul className="server-v2-addon-list">
             {items.map((addon) => {
               const canUpdate =

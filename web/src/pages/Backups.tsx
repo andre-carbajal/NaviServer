@@ -475,12 +475,12 @@ const Backups: React.FC = () => {
     const value = Number(draft.intervalValue);
     const limit = Number(draft.maxBackups);
 
-    const minutes =
-      draft.intervalUnit === 'minute'
-        ? value
-        : draft.intervalUnit === 'hour'
-          ? value * 60
-          : value * 24 * 60;
+    let minutes = value * 24 * 60;
+    if (draft.intervalUnit === 'minute') {
+      minutes = value;
+    } else if (draft.intervalUnit === 'hour') {
+      minutes = value * 60;
+    }
 
     if (minutes < 5) {
       await showAlert({

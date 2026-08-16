@@ -26,12 +26,12 @@ export const resolveApiBaseUrl = (
   }
 
   const envApiPort = env.VITE_API_PORT;
-  const resolvedEnvApiPort =
-    typeof envApiPort === 'number'
-      ? String(envApiPort)
-      : typeof envApiPort === 'string'
-        ? envApiPort
-        : '';
+  let resolvedEnvApiPort = '';
+  if (typeof envApiPort === 'number') {
+    resolvedEnvApiPort = String(envApiPort);
+  } else if (typeof envApiPort === 'string') {
+    resolvedEnvApiPort = envApiPort;
+  }
 
   if (resolvedEnvApiPort.trim() !== '') {
     return `${location.protocol}//${location.hostname}:${resolvedEnvApiPort.trim()}`;

@@ -895,13 +895,14 @@ const ServerDetail: React.FC = () => {
     deleteConfirmName.trim() === (server?.name || '');
   const isServerOnlineForChart =
     server?.status === 'RUNNING' && !isStatsOffline;
-  const chartOverlayMessage = !isServerOnlineForChart
-    ? null
-    : chartSize.width <= 0 || chartSize.height <= 0
-      ? 'Preparing chart layout...'
-      : visibleHistory.length === 0
-        ? 'Waiting for performance data...'
-        : null;
+  let chartOverlayMessage: string | null = null;
+  if (isServerOnlineForChart) {
+    if (chartSize.width <= 0 || chartSize.height <= 0) {
+      chartOverlayMessage = 'Preparing chart layout...';
+    } else if (visibleHistory.length === 0) {
+      chartOverlayMessage = 'Waiting for performance data...';
+    }
+  }
 
   const ramAllocationMaxMb = Math.max(
     RAM_MIN_MB,
@@ -1659,16 +1660,18 @@ const ServerDetail: React.FC = () => {
 
           {activeTab === 'settings' && (
             <div className="server-v2-settings-layout">
-              {!canEditSettings ? (
+              {!canEditSettings && (
                 <div className="server-v2-settings-card">
                   <h2>Server Settings</h2>
                   <p>Only admins can edit server settings.</p>
                 </div>
-              ) : isLoadingSettings || !settingsDraft ? (
+              )}
+              {canEditSettings && (isLoadingSettings || !settingsDraft) && (
                 <div className="server-v2-settings-card">
                   <p>Loading settings...</p>
                 </div>
-              ) : (
+              )}
+              {canEditSettings && !isLoadingSettings && settingsDraft && (
                 <>
                   <div className="server-v2-settings-dual-grid">
                     <div className="server-v2-settings-panel">
@@ -1998,18 +2001,20 @@ const ServerDetail: React.FC = () => {
                     </div>
                     <div className="server-v2-icon-upload-row">
                       <div className="server-v2-icon-upload-preview">
-                        {settingsIconPreview ? (
+                        {settingsIconPreview && (
                           <img
                             src={settingsIconPreview}
                             alt="Selected server icon"
                           />
-                        ) : !settingsIconError ? (
+                        )}
+                        {!settingsIconPreview && !settingsIconError && (
                           <img
                             src={`${api.getServerIconUrl(server.id)}?v=${serverIconVersion}`}
                             alt="Current server icon"
                             onError={() => setSettingsIconError(true)}
                           />
-                        ) : (
+                        )}
+                        {!settingsIconPreview && settingsIconError && (
                           <span>{server.name.charAt(0).toUpperCase()}</span>
                         )}
                       </div>
