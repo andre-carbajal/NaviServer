@@ -21,6 +21,7 @@ import React, {
 import { api } from '../services/api';
 import type {
   Addon,
+  AddonInstallDependency,
   AddonListResponse,
   AddonSearchResult,
   AddonSource,
@@ -54,16 +55,30 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
   const [isInstallOpen, setIsInstallOpen] = useState(false);
   const [isInstallSummaryOpen, setIsInstallSummaryOpen] = useState(false);
   const [loadingSummaryVersions, setLoadingSummaryVersions] = useState(false);
+  const [loadingInstallPreview, setLoadingInstallPreview] = useState(false);
+  const [installPreviewError, setInstallPreviewError] = useState<string | null>(
+    null,
+  );
+  const [summaryVersionsError, setSummaryVersionsError] = useState<
+    string | null
+  >(null);
+  const [previewDependencies, setPreviewDependencies] = useState<
+    AddonInstallDependency[]
+  >([]);
   const [selectedInstalls, setSelectedInstalls] = useState<
     Record<string, AddonSearchResult>
   >({});
   const [selectedVersionByKey, setSelectedVersionByKey] = useState<
     Record<string, string>
   >({});
+  const [hydratedVersionKeyState, setHydratedVersionKeyState] = useState<
+    Record<string, boolean>
+  >({});
   const searchRequestRef = useRef(0);
   const lastBaseSearchKey = useRef('');
   const searchResultsRef = useRef<HTMLDivElement | null>(null);
   const hydratedVersionKeys = useRef<Set<string>>(null!);
+  const installPreviewRequestRef = useRef(0);
 
   if (hydratedVersionKeys.current === null) {
     hydratedVersionKeys.current = new Set();
@@ -203,6 +218,10 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
     setSearchHasMore(false);
     setSelectedInstalls({});
     setSelectedVersionByKey({});
+    setHydratedVersionKeyState({});
+    setPreviewDependencies([]);
+    setInstallPreviewError(null);
+    setSummaryVersionsError(null);
     hydratedVersionKeys.current.clear();
     setIsInstallOpen(true);
     void handleSearch({ query: '', source: 'modrinth' });
@@ -282,7 +301,10 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
 
   const title = addonType === 'plugin' ? 'Plugins' : 'Mods';
 
-  const selectedInstallEntries = Object.entries(selectedInstalls);
+  const selectedInstallEntries = useMemo(
+    () => Object.entries(selectedInstalls),
+    [selectedInstalls],
+  );
   const selectedInstallCount = selectedInstallEntries.length;
   const selectedInstallKey = selectedInstallEntries
     .map(([key]) => key)
@@ -296,15 +318,34 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
     }
     return keys;
   }, [items]);
-  const resolveChosenVersion = (key: string, result: AddonSearchResult) => {
-    const versionId = selectedVersionByKey[key];
-    if (!versionId) return result.latest || null;
-    return (
-      result.versions?.find((version) => version.versionId === versionId) ||
-      result.latest ||
-      null
+  const resolveChosenVersion = useCallback(
+    (key: string, result: AddonSearchResult) => {
+      const versionId = selectedVersionByKey[key];
+      if (!versionId) return result.latest || null;
+      return (
+        result.versions?.find((version) => version.versionId === versionId) ||
+        result.latest ||
+        null
+      );
+    },
+    [selectedVersionByKey],
+  );
+  const selectedVersionSignature = Object.entries(selectedInstalls)
+    .map(
+      ([key, result]) =>
+        `${key}:${selectedVersionByKey[key] || result.latest?.versionId || ''}`,
+    )
+    .sort()
+    .join('|');
+  const summaryVersionsReady = selectedInstallEntries.every(
+    ([key]) => hydratedVersionKeyState[key] === true,
+  );
+  const selectedVersionsReady =
+    summaryVersionsReady &&
+    selectedInstallEntries.every(([key, result]) =>
+      Boolean(resolveChosenVersion(key, result)),
     );
-  };
+  const installDependencyError = installPreviewError || summaryVersionsError;
 
   useEffect(() => {
     if (!isInstallSummaryOpen || selectedInstallKey === '') {
@@ -318,9 +359,6 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
     }
 
     let cancelled = false;
-    const loadingTimer = window.setTimeout(() => {
-      setLoadingSummaryVersions(true);
-    }, 0);
     void Promise.all(
       entriesToHydrate.map(async ([key, result]) => {
         const response = await api.getAddonVersions(server.id, {
@@ -335,6 +373,9 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
     )
       .then((updates) => {
         if (cancelled) return;
+        for (const update of updates) {
+          hydratedVersionKeys.current.add(update.key);
+        }
         setSelectedInstalls((prev) => {
           const next = { ...prev };
           for (const update of updates) {
@@ -345,7 +386,6 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
               latest: update.versions[0] || current.latest,
               versions: update.versions,
             };
-            hydratedVersionKeys.current.add(update.key);
           }
           return next;
         });
@@ -358,13 +398,22 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           }
           return next;
         });
+        setHydratedVersionKeyState((prev) => {
+          const next = { ...prev };
+          for (const update of updates) {
+            next[update.key] = true;
+          }
+          return next;
+        });
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         if (err instanceof Error) {
           setError(err.message);
+          setSummaryVersionsError(err.message);
         } else {
           setError('Failed to load versions');
+          setSummaryVersionsError('Failed to load compatible versions');
         }
       })
       .finally(() => {
@@ -375,9 +424,122 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
 
     return () => {
       cancelled = true;
-      window.clearTimeout(loadingTimer);
     };
   }, [isInstallSummaryOpen, selectedInstallKey, selectedInstalls, server.id]);
+
+  useEffect(() => {
+    const requestId = ++installPreviewRequestRef.current;
+    // This effect resets transient preview state when the selected roots or
+    // the dependency checkbox changes. The async request below is still
+    // cancelled and guarded by requestId before applying results.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (
+      !isInstallSummaryOpen ||
+      !includeDependencies ||
+      selectedInstallKey === ''
+    ) {
+      setLoadingInstallPreview(false);
+      setInstallPreviewError(null);
+      setPreviewDependencies([]);
+      return;
+    }
+    if (!summaryVersionsReady || loadingSummaryVersions) {
+      setLoadingInstallPreview(false);
+      setInstallPreviewError(null);
+      setPreviewDependencies([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingInstallPreview(true);
+    setInstallPreviewError(null);
+    setPreviewDependencies([]);
+
+    const previewRequests = Object.entries(selectedInstalls).map(
+      async ([key, result]) => {
+        if (result.source !== 'modrinth' && result.source !== 'curseforge') {
+          throw new Error(`Unsupported addon source: ${result.source}`);
+        }
+        const version = resolveChosenVersion(key, result);
+        if (!version) {
+          throw new Error(
+            `No compatible version found for ${result.projectName}`,
+          );
+        }
+        const response = await api.previewAddonInstall(server.id, {
+          source: result.source,
+          projectId: result.projectId,
+          versionId:
+            result.source === 'modrinth' ? version.versionId : undefined,
+          fileId: result.source === 'curseforge' ? version.fileId : undefined,
+        });
+        return response.data.dependencies || [];
+      },
+    );
+
+    void Promise.all(previewRequests)
+      .then((responses) => {
+        if (cancelled || installPreviewRequestRef.current !== requestId) {
+          return;
+        }
+        const selectedRootKeys = new Set(
+          selectedInstallEntries.map(
+            ([, result]) => `${result.source}:${result.projectId}`,
+          ),
+        );
+        const dependencyMap = new Map<string, AddonInstallDependency>();
+        for (const dependencies of responses) {
+          for (const dependency of dependencies) {
+            const dependencyKey = `${dependency.source}:${dependency.projectId}`;
+            if (selectedRootKeys.has(dependencyKey)) {
+              continue;
+            }
+            dependencyMap.set(dependencyKey, dependency);
+          }
+        }
+        setPreviewDependencies(Array.from(dependencyMap.values()));
+      })
+      .catch((err: unknown) => {
+        if (cancelled || installPreviewRequestRef.current !== requestId) {
+          return;
+        }
+        if (
+          err &&
+          typeof err === 'object' &&
+          'response' in err &&
+          (err as AxiosError<string>).response?.data
+        ) {
+          setInstallPreviewError(
+            String((err as AxiosError<string>).response?.data),
+          );
+        } else if (err instanceof Error) {
+          setInstallPreviewError(err.message);
+        } else {
+          setInstallPreviewError('Failed to preview dependencies');
+        }
+      })
+      .finally(() => {
+        if (!cancelled && installPreviewRequestRef.current === requestId) {
+          setLoadingInstallPreview(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [
+    includeDependencies,
+    isInstallSummaryOpen,
+    loadingSummaryVersions,
+    selectedInstallKey,
+    selectedInstallEntries,
+    selectedInstalls,
+    selectedVersionSignature,
+    resolveChosenVersion,
+    server.id,
+    summaryVersionsReady,
+  ]);
 
   return (
     <div className="server-v2-addons-layout">
@@ -556,6 +718,11 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                         hydratedVersionKeys.current.delete(key);
                         return next;
                       });
+                      setHydratedVersionKeyState((prev) => {
+                        const next = { ...prev };
+                        delete next[key];
+                        return next;
+                      });
                       setSelectedVersionByKey((prev) => {
                         const next = { ...prev };
                         delete next[key];
@@ -615,7 +782,15 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
         <div className="server-v2-addons-install-footer">
           <Button
             variant="secondary"
-            onClick={() => setIsInstallSummaryOpen(true)}
+            onClick={() => {
+              const needsVersionHydration = selectedInstallEntries.some(
+                ([key]) => !hydratedVersionKeys.current.has(key),
+              );
+              setLoadingSummaryVersions(needsVersionHydration);
+              setInstallPreviewError(null);
+              setSummaryVersionsError(null);
+              setIsInstallSummaryOpen(true);
+            }}
             disabled={
               selectedInstallCount === 0 ||
               actionKey !== null ||
@@ -768,12 +943,13 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                 <select
                   className="form-input"
                   value={selectedVersionByKey[key] || ''}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setSummaryVersionsError(null);
                     setSelectedVersionByKey((prev) => ({
                       ...prev,
                       [key]: e.target.value,
-                    }))
-                  }
+                    }));
+                  }}
                 >
                   {(result.versions || []).length === 0 && (
                     <option value="">
@@ -790,6 +966,67 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
             );
           })}
         </ul>
+        {includeDependencies && (
+          <section className="server-v2-install-summary-dependencies">
+            <div className="server-v2-install-summary-dependencies-head">
+              <strong>
+                Required dependencies ({previewDependencies.length})
+              </strong>
+            </div>
+            {!installDependencyError &&
+              (loadingSummaryVersions ||
+                loadingInstallPreview ||
+                !summaryVersionsReady) && (
+                <p className="server-v2-settings-hint">
+                  Checking required dependencies...
+                </p>
+              )}
+            {installDependencyError && (
+              <p className="server-v2-install-summary-error">
+                {installDependencyError}
+              </p>
+            )}
+            {!installDependencyError &&
+              !loadingSummaryVersions &&
+              !loadingInstallPreview &&
+              summaryVersionsReady &&
+              previewDependencies.length === 0 && (
+                <p className="server-v2-settings-hint">
+                  All required dependencies are already installed.
+                </p>
+              )}
+            {previewDependencies.length > 0 && !installDependencyError && (
+              <ul className="server-v2-install-summary-dependency-list">
+                {previewDependencies.map((dependency) => (
+                  <li
+                    key={`${dependency.source}:${dependency.projectId}`}
+                    className="server-v2-install-summary-dependency"
+                  >
+                    {dependency.iconUrl ? (
+                      <img
+                        src={dependency.iconUrl}
+                        alt={`${dependency.name || dependency.projectId} icon`}
+                        className="server-v2-install-icon"
+                      />
+                    ) : (
+                      <div className="server-v2-install-icon-placeholder" />
+                    )}
+                    <div>
+                      <strong>{dependency.name || dependency.projectId}</strong>
+                      <small>
+                        {dependency.source} •{' '}
+                        {dependency.versionLabel || 'compatible version'}
+                      </small>
+                      {dependency.filename && (
+                        <small>{dependency.filename}</small>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
         <div className="server-v2-addons-install-footer">
           <Button
             variant="secondary"
@@ -824,7 +1061,13 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                 setSelectedVersionByKey({});
               });
             }}
-            disabled={selectedInstallCount === 0 || actionKey !== null}
+            disabled={
+              selectedInstallCount === 0 ||
+              actionKey !== null ||
+              !selectedVersionsReady ||
+              (includeDependencies &&
+                (loadingInstallPreview || Boolean(installDependencyError)))
+            }
           >
             Install selected
           </Button>

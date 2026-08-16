@@ -2,6 +2,7 @@ import type { AxiosProgressEvent } from 'axios';
 import axios from 'axios';
 
 import type {
+  AddonInstallPreviewResponse,
   AddonListResponse,
   AddonSearchResponse,
   AddonVersionsResponse,
@@ -291,6 +292,22 @@ export const api = {
   ) =>
     apiInstance.post<AddonVersionsResponse>(
       `/servers/${serverId}/addons/versions`,
+      data,
+      {
+        timeout: 30000,
+      },
+    ),
+  previewAddonInstall: (
+    serverId: string,
+    data: {
+      source: 'modrinth' | 'curseforge';
+      projectId: string;
+      versionId?: string;
+      fileId?: number;
+    },
+  ) =>
+    apiInstance.post<AddonInstallPreviewResponse>(
+      `/servers/${serverId}/addons/install-preview`,
       data,
       {
         timeout: 30000,

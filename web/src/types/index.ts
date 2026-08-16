@@ -177,6 +177,21 @@ export interface AddonVersionsResponse {
   versions: AddonVersion[];
 }
 
+export interface AddonInstallDependency {
+  name: string;
+  source: Exclude<AddonSource, 'manual'>;
+  projectId: string;
+  iconUrl?: string;
+  versionId?: string;
+  fileId?: number;
+  versionLabel?: string;
+  filename?: string;
+}
+
+export interface AddonInstallPreviewResponse {
+  dependencies: AddonInstallDependency[];
+}
+
 export interface ServerVersionUpdateResult {
   backupName: string;
   restored: boolean;
