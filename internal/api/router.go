@@ -196,8 +196,8 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("GET /updates", protect(systemHandler.HandleCheckUpdates, "admin"))
 	mux.Handle("GET /version", protect(systemHandler.HandleGetVersion, ""))
 
-	mux.Handle("GET /ws/servers/{id}/console", protect(wsHandler.HandleConsole, ""))
-	mux.Handle("GET /ws/progress/{id}", protect(wsHandler.HandleProgress, ""))
+	mux.Handle("GET /ws/servers/{id}/console", protect(wsHandler.HandleWebSocket, ""))
+	mux.Handle("GET /ws/progress/{id}", protect(wsHandler.HandleWebSocket, ""))
 
 	mux.Handle("GET /users", protect(usersHandler.HandleListUsers, "admin"))
 	mux.Handle("POST /users", protect(usersHandler.HandleCreateUser, "admin"))

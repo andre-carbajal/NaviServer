@@ -140,10 +140,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			break
 		}
 		switch msg.String() {
-		case "ctrl+c":
-			m.err = fmt.Errorf("quit")
-			return m, tea.Quit
-		case "q":
+		case "ctrl+c", "q":
 			m.err = fmt.Errorf("quit")
 			return m, tea.Quit
 		case "esc":
@@ -246,8 +243,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.list.SetWidth(msg.Width - 4)
 		m.list.SetHeight(msg.Height - 12)
-		if m.mode == ViewWizard {
-		}
 	case serverDataMsg:
 		m.isLoading = false
 		m.servers = msg.servers

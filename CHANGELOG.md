@@ -49,3 +49,7 @@
 - Build and installer maintenance:
     - Sorted Docker package lists, quoted runtime UID/GID arguments, routed
       installer errors to stderr, and clarified blank-import registration.
+
+- CLI and API maintenance:
+    - Reused the WebSocket handler for console and progress routes, merged
+      duplicate CLI key branches, and removed an empty dashboard branch.

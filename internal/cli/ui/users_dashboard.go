@@ -510,15 +510,7 @@ func (m usersDashboardModel) updateEditPermissions(msg tea.KeyMsg) (tea.Model, t
 		}
 		m.message = "Refreshing permissions..."
 		return m, tea.Batch(fetchServersCmd(m.client), fetchPermissionsCmd(m.client, m.activeUser.ID))
-	case "s":
-		if m.activeUser == nil {
-			m.err = fmt.Errorf("no user selected")
-			return m, nil
-		}
-		m.err = nil
-		m.message = "Saving permissions..."
-		return m, setPermissionsCmd(m.client, m.activeUser.ID, m.permissionRows)
-	case "enter":
+	case "s", "enter":
 		if m.activeUser == nil {
 			m.err = fmt.Errorf("no user selected")
 			return m, nil
