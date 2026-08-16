@@ -17,11 +17,11 @@ case "${OS}" in
     *)          echo "Unsupported operating system: ${OS}"; exit 1;;
 esac
 
-if [ "$OS_TYPE" = "macos" ]; then
+if [[ "$OS_TYPE" = "macos" ]]; then
     ASSET_SUFFIX="macos"
 else
     # Linux
-    if [ "$ARCH" = "x86_64" ]; then
+    if [[ "$ARCH" = "x86_64" ]]; then
         ASSET_SUFFIX="linux"
     else
         echo "Warning: The official Linux build is optimized for x86_64. Your architecture is ${ARCH}."
@@ -38,7 +38,7 @@ echo "1) Headless (Service/Daemon)"
 echo "2) Desktop (App/Shortcut)"
 read -p "Enter choice [1-2]: " INSTALL_MODE
 
-if [ "$INSTALL_MODE" != "1" ] && [ "$INSTALL_MODE" != "2" ]; then
+if [[ "$INSTALL_MODE" != "1" ]] && [[ "$INSTALL_MODE" != "2" ]]; then
     echo "Invalid choice. Exiting."
     exit 1
 fi
@@ -49,7 +49,7 @@ command -v unzip >/dev/null 2>&1 || { echo >&2 "unzip is required but not instal
 
 # Helper: run command with sudo only if not already root
 run_sudo() {
-  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
     "$@"
   else
     sudo "$@"
@@ -65,23 +65,23 @@ BIN_DIR="/usr/local/bin"
 
 # Stop existing service if running
 echo "Checking for existing installation..."
-if [ "$OS_TYPE" = "linux" ]; then
+if [[ "$OS_TYPE" = "linux" ]]; then
     if systemctl is-active --quiet naviserver; then
         echo "Stopping existing NaviServer service..."
         run_sudo systemctl stop naviserver
     fi
-elif [ "$OS_TYPE" = "macos" ]; then
+elif [[ "$OS_TYPE" = "macos" ]]; then
     USER_HOME="$HOME"
     PLIST_FILE="$USER_HOME/Library/LaunchAgents/com.naviserver.server.plist"
 
-    if [ -f "$PLIST_FILE" ]; then
+    if [[ -f "$PLIST_FILE" ]]; then
         echo "Stopping existing NaviServer agent..."
         launchctl unload "$PLIST_FILE" 2>/dev/null || true
     fi
 fi
 
 # Clean up previous installation
-if [ -d "$INSTALL_DIR" ]; then
+if [[ -d "$INSTALL_DIR" ]]; then
     echo "Removing previous installation at ${INSTALL_DIR}..."
     run_sudo rm -rf "${INSTALL_DIR}"
 fi
@@ -92,7 +92,7 @@ LATEST_URL=$(curl --proto '=https' --tlsv1.2 -Ls -o /dev/null -w %{url_effective
 VERSION=$(basename "$LATEST_URL")
 CLEAN_VERSION="${VERSION#v}"
 
-if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
+if [[ -z "$VERSION" ]] || [[ "$VERSION" = "latest" ]]; then
     echo "Error: Could not determine latest version."
     exit 1
 fi
@@ -118,7 +118,7 @@ echo "Extracting..."
 unzip -q "${TMP_DIR}/${ASSET_NAME}" -d "${TMP_DIR}/extracted"
 
 # Installation Logic
-if [ "$INSTALL_MODE" = "1" ]; then
+if [[ "$INSTALL_MODE" = "1" ]]; then
     # HEADLESS MODE
     echo "Installing Headless Mode..."
 
@@ -126,11 +126,11 @@ if [ "$INSTALL_MODE" = "1" ]; then
     run_sudo rm -rf "${INSTALL_DIR}/*"
 
     # Check if extracted content is inside a folder (common with zips) or flat
-    if [ -d "${TMP_DIR}/extracted/NaviServer.app" ]; then
+    if [[ -d "${TMP_DIR}/extracted/NaviServer.app" ]]; then
          # macOS app bundle case - we need the binary inside
          run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/NaviServer" "${INSTALL_DIR}/naviserver-server"
          # Also copy web_dist if it exists inside Resources or MacOS
-         if [ -d "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/web_dist" ]; then
+         if [[ -d "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/web_dist" ]]; then
              run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app/Contents/MacOS/web_dist" "${INSTALL_DIR}/"
          fi
     else
@@ -138,7 +138,7 @@ if [ "$INSTALL_MODE" = "1" ]; then
     fi
 
     # Ensure CLI is installed if it was outside the app bundle
-    if [ -f "${TMP_DIR}/extracted/naviserver-cli" ]; then
+    if [[ -f "${TMP_DIR}/extracted/naviserver-cli" ]]; then
         run_sudo cp "${TMP_DIR}/extracted/naviserver-cli" "${INSTALL_DIR}/"
     fi
 
@@ -147,14 +147,14 @@ if [ "$INSTALL_MODE" = "1" ]; then
 
     # Set permissions
     run_sudo chmod +x "${INSTALL_DIR}/naviserver-server"
-    if [ -f "${INSTALL_DIR}/naviserver-cli" ]; then
+    if [[ -f "${INSTALL_DIR}/naviserver-cli" ]]; then
         run_sudo chmod +x "${INSTALL_DIR}/naviserver-cli"
         run_sudo ln -sf "${INSTALL_DIR}/naviserver-cli" "${BIN_DIR}/naviserver-cli"
     fi
     run_sudo chown -R "$REAL_USER" "$INSTALL_DIR"
 
     # Service Configuration
-    if [ "$OS_TYPE" = "linux" ]; then
+    if [[ "$OS_TYPE" = "linux" ]]; then
         SERVICE_FILE="/etc/systemd/system/naviserver.service"
         echo "Setting up systemd service..."
 
@@ -194,7 +194,7 @@ EOF
             exit 1
         fi
 
-    elif [ "$OS_TYPE" = "macos" ]; then
+    elif [[ "$OS_TYPE" = "macos" ]]; then
         USER_HOME="$HOME"
         PLIST_FILE="$USER_HOME/Library/LaunchAgents/com.naviserver.server.plist"
 
@@ -255,12 +255,12 @@ else
     # DESKTOP MODE
     echo "Installing Desktop Mode..."
 
-    if [ "$OS_TYPE" = "macos" ]; then
+    if [[ "$OS_TYPE" = "macos" ]]; then
         APP_DEST="/Applications/NaviServer.app"
         echo "Installing to ${APP_DEST} (requires sudo)..."
 
         # Look for NaviServer.app in extracted files
-        if [ -d "${TMP_DIR}/extracted/NaviServer.app" ]; then
+        if [[ -d "${TMP_DIR}/extracted/NaviServer.app" ]]; then
             run_sudo rm -rf "${APP_DEST}"
             run_sudo cp -r "${TMP_DIR}/extracted/NaviServer.app" "/Applications/"
             echo "NaviServer.app installed to /Applications."
@@ -268,7 +268,7 @@ else
             echo "Error: NaviServer.app not found in the downloaded package."
         fi
 
-    elif [ "$OS_TYPE" = "linux" ]; then
+    elif [[ "$OS_TYPE" = "linux" ]]; then
         # Install binaries to /opt/naviserver (needs sudo)
         run_sudo mkdir -p "${INSTALL_DIR}"
         run_sudo rm -rf "${INSTALL_DIR}/*"
@@ -282,7 +282,7 @@ else
         DESKTOP_FILE="${INSTALL_DIR}/naviserver.desktop"
         ICON_FILE="${INSTALL_DIR}/naviserver.png"
 
-        if [ -f "$DESKTOP_FILE" ]; then
+        if [[ -f "$DESKTOP_FILE" ]]; then
              run_sudo cp "$DESKTOP_FILE" "/usr/share/applications/naviserver.desktop"
              echo "Desktop entry installed."
         else
@@ -304,7 +304,7 @@ EOF
     fi
 
     # Install CLI if available (needs sudo)
-    if [ -f "${TMP_DIR}/extracted/naviserver-cli" ]; then
+    if [[ -f "${TMP_DIR}/extracted/naviserver-cli" ]]; then
         echo "Installing CLI tool..."
         run_sudo cp "${TMP_DIR}/extracted/naviserver-cli" "${BIN_DIR}/naviserver-cli"
         run_sudo chmod +x "${BIN_DIR}/naviserver-cli"

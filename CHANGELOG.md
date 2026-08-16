@@ -35,3 +35,7 @@
       alphabetical sorting.
     - Moved file-row click handling onto the action buttons so file operations
       remain keyboard-accessible.
+
+- Reliability:
+    - Updated Bash conditionals in the build, installation, migration, and
+      uninstallation scripts to use Bash's safer `[[ ... ]]` syntax.

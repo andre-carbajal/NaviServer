@@ -16,11 +16,11 @@ cp -r web/dist/* dist/web_dist/
 
 # Calculate version for injection
 VERSION="${NAVISERVER_VERSION:-}"
-if [ -z "${VERSION}" ] && [ -f "internal/updater/updater.go" ]; then
+if [[ -z "${VERSION}" ]] && [[ -f "internal/updater/updater.go" ]]; then
     VERSION=$(grep -E 'CurrentVersion\s*=' internal/updater/updater.go | head -n 1 | awk -F'"' '{print $2}')
     VERSION="${VERSION#v}"
 fi
-if [ -z "${VERSION}" ]; then
+if [[ -z "${VERSION}" ]]; then
     VERSION="dev"
 fi
 
@@ -92,7 +92,7 @@ EOF
 
     if command -v sips >/dev/null 2>&1; then
         ICON_SRC="cmd/server/icon.png"
-        if [ -f "$ICON_SRC" ]; then
+        if [[ -f "$ICON_SRC" ]]; then
             echo "Generating AppIcon.icns..."
             ICONSET="${RESOURCES_DIR}/AppIcon.iconset"
             mkdir -p "${ICONSET}"
@@ -127,7 +127,7 @@ EOF
         mkdir -p "${APP_DST}" "${BIN_DST}"
 
         cp -R "${APP_DIR}" "${APP_DST}/"
-        if [ -f "dist/naviserver-cli" ]; then
+        if [[ -f "dist/naviserver-cli" ]]; then
             cp "dist/naviserver-cli" "${BIN_DST}/naviserver-cli"
             chmod +x "${BIN_DST}/naviserver-cli"
         fi
@@ -143,7 +143,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     echo "Creating Linux Desktop Entry..."
 
     ICON_SRC="cmd/server/icon.png"
-    if [ -f "$ICON_SRC" ]; then
+    if [[ -f "$ICON_SRC" ]]; then
         cp "$ICON_SRC" "dist/naviserver.png"
     fi
 

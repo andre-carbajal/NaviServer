@@ -34,7 +34,7 @@ if isinstance(value, str):
 PY
 )
 
-  if [ -z "$current_value" ]; then
+  if [[ -z "$current_value" ]]; then
     return 0
   fi
 
@@ -81,7 +81,7 @@ maybe_update_config_json_paths() {
   local old_prefix="$2"
   local new_prefix="$3"
 
-  if [ ! -f "$config_file" ]; then
+  if [[ ! -f "$config_file" ]]; then
     color_info "No se encontro config.json para ajustar rutas"
     return 0
   fi
@@ -104,7 +104,7 @@ maybe_update_config_json_paths() {
 
 # Helper for sudo
 run_sudo() {
-  if [ "${EUID:-$(id -u)}" -eq 0 ]; then "$@"; else sudo "$@"; fi
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then "$@"; else sudo "$@"; fi
 }
 
 OS="$(uname -s)"
@@ -160,7 +160,7 @@ echo ""
 # ============================================================
 color_info "Step 1: Validating old installation..."
 
-if [ ! -d "$OLD_DATA_DIR" ]; then
+if [[ ! -d "$OLD_DATA_DIR" ]]; then
     color_error "No old data directory found at ${OLD_DATA_DIR}"
     color_error "Nothing to migrate. Exiting."
     exit 1
@@ -202,7 +202,7 @@ echo ""
 # ============================================================
 color_info "Step 3: Stopping old services..."
 
-if [ "$OS_TYPE" = "linux" ]; then
+if [[ "$OS_TYPE" = "linux" ]]; then
     if systemctl is-active --quiet "${OLD_APP}" 2>/dev/null; then
         run_sudo systemctl stop "${OLD_APP}" || true
         run_sudo systemctl disable "${OLD_APP}" || true
@@ -210,9 +210,9 @@ if [ "$OS_TYPE" = "linux" ]; then
     else
         color_info "Old service not running"
     fi
-elif [ "$OS_TYPE" = "macos" ]; then
+elif [[ "$OS_TYPE" = "macos" ]]; then
     PLIST="${HOME}/Library/LaunchAgents/com.${OLD_APP}.server.plist"
-    if [ -f "$PLIST" ]; then
+    if [[ -f "$PLIST" ]]; then
         launchctl unload "$PLIST" 2>/dev/null || true
         color_success "Old agent stopped"
     else
@@ -227,7 +227,7 @@ echo ""
 # ============================================================
 color_info "Step 4: Migrating data..."
 
-if [ -d "$NEW_DATA_DIR" ]; then
+if [[ -d "$NEW_DATA_DIR" ]]; then
     color_warning "New data directory already exists at ${NEW_DATA_DIR}"
     color_warning "Skipping data move to avoid overwriting. Please merge manually if needed."
 else
@@ -240,7 +240,7 @@ else
     fi
     
     # Rename secret file to match new convention
-    if [ -f "${NEW_DATA_DIR}/.naviger_secret" ]; then
+    if [[ -f "${NEW_DATA_DIR}/.naviger_secret" ]]; then
         mv "${NEW_DATA_DIR}/.naviger_secret" "${NEW_DATA_DIR}/.naviserver_secret"
         color_success "Secret file migrated"
     fi
@@ -263,8 +263,8 @@ echo ""
 # ============================================================
 color_info "Step 5: Cleaning up old installation..."
 
-if [ -d "$OLD_INSTALL_DIR" ]; then
-    if [ -d "$NEW_INSTALL_DIR" ]; then
+if [[ -d "$OLD_INSTALL_DIR" ]]; then
+    if [[ -d "$NEW_INSTALL_DIR" ]]; then
         run_sudo rm -rf "$OLD_INSTALL_DIR"
         color_success "Old installation removed"
     else
@@ -287,7 +287,7 @@ color_info "Step 6: Installing new version automatically..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_SCRIPT="${SCRIPT_DIR}/install.sh"
 
-if [ ! -f "$INSTALL_SCRIPT" ]; then
+if [[ ! -f "$INSTALL_SCRIPT" ]]; then
     color_error "install.sh not found at ${INSTALL_SCRIPT}"
     color_warning "Please run the installation manually:"
     color_warning "  bash ${SCRIPT_DIR}/install.sh"
@@ -319,7 +319,7 @@ echo ""
 # ============================================================
 color_info "Step 7: Verifying new service..."
 
-if [ "$OS_TYPE" = "linux" ]; then
+if [[ "$OS_TYPE" = "linux" ]]; then
     # Check if it's a headless installation
     if systemctl is-active --quiet naviserver 2>/dev/null; then
         color_success "NaviServer service is running"
@@ -337,9 +337,9 @@ if [ "$OS_TYPE" = "linux" ]; then
             fi
         fi
     fi
-elif [ "$OS_TYPE" = "macos" ]; then
+elif [[ "$OS_TYPE" = "macos" ]]; then
     PLIST="${HOME}/Library/LaunchAgents/com.naviserver.server.plist"
-    if [ -f "$PLIST" ]; then
+    if [[ -f "$PLIST" ]]; then
         if launchctl list com.naviserver.server >/dev/null 2>&1; then
             color_success "NaviServer agent is running"
         else

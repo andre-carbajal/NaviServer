@@ -46,7 +46,7 @@ for arg in "$@"; do
 done
 
 run_sudo() {
-  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
     "$@"
   else
     sudo "$@"
@@ -54,7 +54,7 @@ run_sudo() {
 }
 
 REAL_USER="${SUDO_USER:-$USER}"
-if [ -z "$REAL_USER" ]; then
+if [[ -z "$REAL_USER" ]]; then
   REAL_USER="$USER"
 fi
 
@@ -66,7 +66,7 @@ case "$OS" in
 esac
 
 # Determine config directory
-if [ "$OS_TYPE" = "linux" ]; then
+if [[ "$OS_TYPE" = "linux" ]]; then
     USER_CONFIG_DIR="${HOME}/.config"
 else
     USER_CONFIG_DIR="${HOME}/Library/Application Support"
@@ -85,7 +85,7 @@ echo ""
 # CONFIRMATION AND BACKUP
 # ============================================================
 
-if [ "$KEEP_DATA" = "yes" ]; then
+if [[ "$KEEP_DATA" = "yes" ]]; then
     color_info "Using --keep-data flag"
     color_success "Your data will be preserved at: ${DATA_DIR}"
     echo ""
@@ -93,7 +93,7 @@ else
     echo "This will remove NaviServer installation at: ${INSTALL_DIR}"
     echo ""
     
-    if [ "$FORCE" != "yes" ]; then
+    if [[ "$FORCE" != "yes" ]]; then
         color_warning "Your data will be DELETED unless backed up!"
         echo ""
         read -r -p "Do you want to create a backup before uninstalling? (y/n) " backup_confirm
@@ -110,7 +110,7 @@ else
     fi
     
     # Create backup if confirmed
-    if [ "$backup_confirm" = "yes" ] || [ "$backup_confirm" != "no" ]; then
+    if [[ "$backup_confirm" = "yes" ]] || [[ "$backup_confirm" != "no" ]]; then
         TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
         BACKUP_FILE="${HOME}/naviserver_uninstall_backup_${TIMESTAMP}.tar.gz"
         
@@ -129,8 +129,8 @@ else
 fi
 
 # Final confirmation
-if [ "$FORCE" != "yes" ]; then
-    if [ "$KEEP_DATA" = "yes" ]; then
+if [[ "$FORCE" != "yes" ]]; then
+    if [[ "$KEEP_DATA" = "yes" ]]; then
         read -r -p "Continue uninstallation (keeping data)? [y/N]: " confirm
     else
         read -r -p "Continue uninstallation? [y/N]: " confirm
@@ -150,7 +150,7 @@ echo ""
 color_info "Stopping and removing service/agent (if present)..."
 echo ""
 
-if [ "$OS_TYPE" = "linux" ]; then
+if [[ "$OS_TYPE" = "linux" ]]; then
   if command -v systemctl >/dev/null 2>&1; then
     if systemctl is-active --quiet naviserver; then
       echo "Stopping naviserver service..."
@@ -162,7 +162,7 @@ if [ "$OS_TYPE" = "linux" ]; then
       run_sudo systemctl disable naviserver || true
     fi
 
-    if [ -f "$SERVICE_FILE" ]; then
+    if [[ -f "$SERVICE_FILE" ]]; then
       echo "Removing systemd service file ${SERVICE_FILE}..."
       run_sudo rm -f "$SERVICE_FILE"
       echo "Reloading systemd daemon..."
@@ -181,16 +181,16 @@ if [ "$OS_TYPE" = "linux" ]; then
 
   # Remove desktop entry if it exists (user-owned, no sudo needed)
   DESKTOP_FILE="$HOME/.local/share/applications/naviserver.desktop"
-  if [ -f "$DESKTOP_FILE" ]; then
+  if [[ -f "$DESKTOP_FILE" ]]; then
       echo "Removing desktop entry..."
       rm -f "$DESKTOP_FILE"
   fi
 
-elif [ "$OS_TYPE" = "macos" ]; then
+elif [[ "$OS_TYPE" = "macos" ]]; then
   USER_HOME="$HOME"
   PLIST_FILE="$USER_HOME/Library/LaunchAgents/${PLIST_NAME}"
 
-  if [ -f "$PLIST_FILE" ]; then
+  if [[ -f "$PLIST_FILE" ]]; then
     echo "Unloading launchd agent $PLIST_FILE..."
     launchctl unload "$PLIST_FILE" 2>/dev/null || true
 
@@ -202,26 +202,26 @@ elif [ "$OS_TYPE" = "macos" ]; then
 
   # Remove App Bundle from system Applications (needs sudo)
   APP_PATH="/Applications/NaviServer.app"
-  if [ -d "$APP_PATH" ]; then
+  if [[ -d "$APP_PATH" ]]; then
       echo "Removing NaviServer.app from /Applications (requires sudo)..."
       run_sudo rm -rf "$APP_PATH"
   fi
 
   # Remove App Bundle from user Applications (no sudo needed)
   USER_APP_PATH="$USER_HOME/Applications/NaviServer.app"
-  if [ -d "$USER_APP_PATH" ]; then
+  if [[ -d "$USER_APP_PATH" ]]; then
       echo "Removing NaviServer.app from user Applications..."
       rm -rf "$USER_APP_PATH"
   fi
 
   # Remove naviserver-cli from /usr/local/bin (needs sudo)
-  if [ -f "${BIN_DIR}/naviserver-cli" ] || [ -L "${BIN_DIR}/naviserver-cli" ]; then
+  if [[ -f "${BIN_DIR}/naviserver-cli" ]] || [[ -L "${BIN_DIR}/naviserver-cli" ]]; then
       echo "Removing ${BIN_DIR}/naviserver-cli (requires sudo)..."
       run_sudo rm -f "${BIN_DIR}/naviserver-cli" || true
   fi
 
   # Remove PATH entry added by PKG (needs sudo)
-  if [ -f "/etc/paths.d/naviserver" ]; then
+  if [[ -f "/etc/paths.d/naviserver" ]]; then
       echo "Removing /etc/paths.d/naviserver (requires sudo)..."
       run_sudo rm -f "/etc/paths.d/naviserver" || true
   fi
@@ -235,20 +235,20 @@ elif [ "$OS_TYPE" = "macos" ]; then
 fi
 
 # Remove symlinks in BIN_DIR (Linux only; needs sudo)
-if [ "$OS_TYPE" = "linux" ]; then
+if [[ "$OS_TYPE" = "linux" ]]; then
   echo "Removing symlinks in ${BIN_DIR} (requires sudo)..."
-  if [ -L "${BIN_DIR}/naviserver-cli" ] || [ -e "${BIN_DIR}/naviserver-cli" ]; then
+  if [[ -L "${BIN_DIR}/naviserver-cli" ]] || [[ -e "${BIN_DIR}/naviserver-cli" ]]; then
     run_sudo rm -f "${BIN_DIR}/naviserver-cli" || true
     echo "Removed ${BIN_DIR}/naviserver-cli"
   fi
-  if [ -L "${BIN_DIR}/naviserver-server" ] || [ -e "${BIN_DIR}/naviserver-server" ]; then
+  if [[ -L "${BIN_DIR}/naviserver-server" ]] || [[ -e "${BIN_DIR}/naviserver-server" ]]; then
     run_sudo rm -f "${BIN_DIR}/naviserver-server" || true
     echo "Removed ${BIN_DIR}/naviserver-server"
   fi
 fi
 
 # Remove installation directory (needs sudo)
-if [ -d "$INSTALL_DIR" ]; then
+if [[ -d "$INSTALL_DIR" ]]; then
   echo "Removing installation directory ${INSTALL_DIR} (requires sudo)..."
   run_sudo rm -rf "$INSTALL_DIR" || true
   echo "Removed ${INSTALL_DIR}"
@@ -257,8 +257,8 @@ else
 fi
 
 # Remove data directory if not keeping it
-if [ "$KEEP_DATA" != "yes" ]; then
-    if [ -d "$DATA_DIR" ]; then
+if [[ "$KEEP_DATA" != "yes" ]]; then
+    if [[ -d "$DATA_DIR" ]]; then
         echo "Removing data directory ${DATA_DIR}..."
         rm -rf "$DATA_DIR" || true
         echo "Removed ${DATA_DIR}"
@@ -274,7 +274,7 @@ color_success "Uninstall complete."
 echo "═══════════════════════════════════════════════════════"
 echo ""
 
-if [ "$KEEP_DATA" = "yes" ]; then
+if [[ "$KEEP_DATA" = "yes" ]]; then
     color_success "Your data has been preserved at: ${DATA_DIR}"
 else
     color_info "If you need to restore from backup, extract it with:"
