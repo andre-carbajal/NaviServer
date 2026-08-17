@@ -43,10 +43,7 @@ dist-ssr
 
 DS_Store
 
-.agents/*
-AGENTS.md
-GEMINI.md
-skills-lock.json
+.codex
 
 out/*
 tmp/*

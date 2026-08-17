@@ -39,6 +39,18 @@
       `word-break: break-word` declaration with the existing overflow wrapping.
     - Removed the redundant deprecated stylesheet `type` assignment.
     - Simplified the player-action availability guard with optional chaining.
+    - Fixed live console WebSocket cleanup so stale connections cannot duplicate
+      incoming log lines or schedule parallel reconnects.
+    - Fixed alert and confirmation dialogs overflowing, becoming too wide, or
+      misaligning their actions on narrow viewports by using a compact max width,
+      centering their content, and including padding in the width calculation.
+    - Added automatic process fallback after a graceful stop timeout and made
+      manual `Kill` available while a server is `STOPPING`.
+    - Prevented deletion of active servers, synchronized displayed status with
+      supervised processes, and surfaced start/delete API errors in the UI.
+    - Added orderly daemon shutdown: active Minecraft servers receive `stop`,
+      unresponsive processes are forced to exit after the grace period, and
+      headless shutdown waits for cleanup to finish.
 
 - Reliability:
     - Updated Bash conditionals in the build, installation, migration, and
@@ -51,6 +63,7 @@
       while preserving editor, addon, backup, chart, and server-settings states.
     - Released service context resources when daemon goroutines finish and
       preserved the full graceful-shutdown timeout during cancellation.
+    - Waited for killed server processes to exit before reporting `STOPPED`.
 
 - Build and installer maintenance:
     - Sorted Docker package lists, quoted runtime UID/GID arguments, routed
