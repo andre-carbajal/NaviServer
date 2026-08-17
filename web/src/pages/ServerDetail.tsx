@@ -2222,8 +2222,7 @@ const ServerDetail: React.FC = () => {
               type="button"
               disabled={
                 isPlayerActionLoading ||
-                !selectedPlayer ||
-                !selectedPlayer.isOnline
+                !selectedPlayer?.isOnline
               }
               title={
                 selectedPlayer?.isOnline === false

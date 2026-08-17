@@ -38,6 +38,7 @@
     - Consolidated duplicate responsive CSS selectors and replaced the obsolete
       `word-break: break-word` declaration with the existing overflow wrapping.
     - Removed the redundant deprecated stylesheet `type` assignment.
+    - Simplified the player-action availability guard with optional chaining.
 
 - Reliability:
     - Updated Bash conditionals in the build, installation, migration, and
