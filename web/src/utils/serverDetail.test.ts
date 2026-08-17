@@ -5,6 +5,7 @@ import {
   clampRamAllocation,
   compareMinecraftVersions,
   getAvatarUrl,
+  getPowerControlState,
   isFutureMinecraftVersion,
   normalizeServerSettings,
   readIntPropertyFromContent,
@@ -12,6 +13,16 @@ import {
 } from './serverDetail';
 
 describe('server detail utilities', () => {
+  it('keeps Kill available while a server is stopping', () => {
+    expect(getPowerControlState('STOPPING', null)).toEqual({
+      stopDisabled: true,
+      moreDisabled: false,
+      restartDisabled: true,
+      killDisabled: false,
+    });
+    expect(getPowerControlState('STARTING', null).moreDisabled).toBe(true);
+  });
+
   it('parses and compares Minecraft versions safely', () => {
     expect(compareMinecraftVersions('1.21.1', '1.21.2')).toBe(-1);
     expect(compareMinecraftVersions('v1.21.2', '1.21.2')).toBe(0);

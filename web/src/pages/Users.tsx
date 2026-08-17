@@ -102,7 +102,7 @@ const UsersPage: React.FC = () => {
                   <td>{user.username}</td>
                   <td>
                     <span
-                      className="status-badge status-running"
+                      className="status-badge user-role-status-badge"
                       style={{
                         backgroundColor:
                           user.role === 'admin' ? '#f59e0b' : '#3b82f6',

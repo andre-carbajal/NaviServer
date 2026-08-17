@@ -69,11 +69,13 @@ import type {
   ServerSettings,
   ServerVersionUpdateResult,
 } from '../types';
+import { getApiErrorMessage } from '../utils/apiError';
 import {
   FALLBACK_RAM_MAX_MB,
   RAM_MIN_MB,
   clampRamAllocation,
   getAvatarUrl,
+  getPowerControlState,
   isFutureMinecraftVersion,
   normalizeServerSettings,
   readIntPropertyFromContent,
@@ -464,6 +466,13 @@ const ServerDetail: React.FC = () => {
       setServer((prev) => (prev ? { ...prev, status: 'STARTING' } : null));
     } catch (err) {
       console.error(err);
+      setPowerAction(null);
+      await fetchServer();
+      await showAlert({
+        title: 'Start Failed',
+        message: getApiErrorMessage(err, 'Failed to start server.'),
+        variant: 'danger',
+      });
     } finally {
       setPowerAction(null);
     }
@@ -737,9 +746,11 @@ const ServerDetail: React.FC = () => {
       navigate('/');
     } catch (err) {
       console.error('Failed to delete server:', err);
+      setIsDeleteModalOpen(false);
+      setIsDeletingServer(false);
       await showAlert({
         title: 'Delete Failed',
-        message: 'Failed to delete server.',
+        message: getApiErrorMessage(err, 'Failed to delete server.'),
         variant: 'danger',
       });
     } finally {
@@ -1143,8 +1154,7 @@ const ServerDetail: React.FC = () => {
   if (!server) return <div>Server not found</div>;
 
   const address = `${publicIP}:${server.port}`;
-  const isPowerDisabled =
-    server.status === 'STARTING' || server.status === 'STOPPING';
+  const powerControlState = getPowerControlState(server.status, powerAction);
   const isStoppedLike = server.status === 'STOPPED';
 
   return (
@@ -1225,7 +1235,7 @@ const ServerDetail: React.FC = () => {
                 <Button
                   variant="danger"
                   onClick={handleStop}
-                  disabled={isPowerDisabled || powerAction !== null}
+                  disabled={powerControlState.stopDisabled}
                 >
                   {powerAction === 'stop' ? (
                     <LoaderCircle size={16} className="spin" />
@@ -1238,16 +1248,24 @@ const ServerDetail: React.FC = () => {
                   type="button"
                   className="server-v2-more-btn"
                   onClick={() => setIsPowerMenuOpen((prev) => !prev)}
-                  disabled={isPowerDisabled || powerAction !== null}
+                  disabled={powerControlState.moreDisabled}
                 >
                   <MoreVertical size={16} />
                 </button>
                 {isPowerMenuOpen && (
                   <div className="server-v2-dropdown">
-                    <button type="button" onClick={handleRestart}>
+                    <button
+                      type="button"
+                      onClick={handleRestart}
+                      disabled={powerControlState.restartDisabled}
+                    >
                       <RotateCcw size={15} /> Restart
                     </button>
-                    <button type="button" onClick={handleKill}>
+                    <button
+                      type="button"
+                      onClick={handleKill}
+                      disabled={powerControlState.killDisabled}
+                    >
                       <Skull size={15} /> Kill
                     </button>
                   </div>
@@ -2134,6 +2152,9 @@ const ServerDetail: React.FC = () => {
                       Warning: this action cannot be undone. All worlds,
                       configurations, and related files will be deleted.
                     </p>
+                    {!isServerStopped && (
+                      <p>Stop the server first before deleting it.</p>
+                    )}
                     <Button
                       type="button"
                       variant="danger"
@@ -2141,7 +2162,7 @@ const ServerDetail: React.FC = () => {
                         setDeleteConfirmName('');
                         setIsDeleteModalOpen(true);
                       }}
-                      disabled={isDeletingServer}
+                      disabled={isDeletingServer || !isServerStopped}
                     >
                       Delete Server
                     </Button>

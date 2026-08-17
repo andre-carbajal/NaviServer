@@ -284,6 +284,7 @@ dialog.modal-overlay::backdrop {
 
 .modal-content {
   background-color: var(--bg-card);
+  box-sizing: border-box;
   padding: 30px;
   border-radius: 12px;
   width: 100%;
@@ -361,7 +362,13 @@ dialog.modal-overlay::backdrop {
 }
 
 .app-dialog-body {
+  width: 100%;
   max-width: 420px;
+  margin-inline: auto;
+}
+
+.app-dialog-body .btn {
+  box-sizing: border-box;
 }
 
 .app-dialog-message {
@@ -583,6 +590,12 @@ dialog.modal-overlay::backdrop {
   color: white;
 }
 
+.user-role-status-badge {
+  display: inline-flex;
+  align-items: center;
+  box-shadow: none;
+}
+
 .status-badge.status-stopped {
   background-color: #ef4444;
   color: white;
@@ -775,6 +788,12 @@ dialog.modal-overlay::backdrop {
     margin: 20px;
     max-width: calc(100% - 40px);
     border-radius: 12px;
+  }
+
+  .modal-content.app-dialog-content {
+    width: 100%;
+    max-width: min(460px, calc(100% - 32px));
+    margin: 16px;
   }
 
   .servers-grid {
@@ -2768,6 +2787,11 @@ dialog.modal-overlay::backdrop {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.server-v2-more-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .server-v2-dropdown {
   position: absolute;
   top: 44px;
@@ -2796,6 +2820,16 @@ dialog.modal-overlay::backdrop {
 
 .server-v2-dropdown button:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.server-v2-dropdown button:disabled {
+  color: var(--text-muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.server-v2-dropdown button:disabled:hover {
+  background: transparent;
 }
 
 .server-v2-body {

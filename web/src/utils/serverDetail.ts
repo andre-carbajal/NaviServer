@@ -1,9 +1,22 @@
-import type { ServerSettings } from '../types';
+import type { Server, ServerSettings } from '../types';
 
 const MINEATAR_BASE_URL = 'https://api.mineatar.io/head';
 const STEVE_UUID = '8667ba71-b85a-4004-af54-457a9734eed7';
 export const RAM_MIN_MB = 512;
 export const FALLBACK_RAM_MAX_MB = 262144;
+
+export type ServerPowerAction = null | 'start' | 'stop' | 'restart' | 'kill';
+
+export const getPowerControlState = (
+  status: Server['status'],
+  powerAction: ServerPowerAction,
+) => ({
+  stopDisabled:
+    status === 'STARTING' || status === 'STOPPING' || powerAction !== null,
+  moreDisabled: status === 'STARTING' || powerAction !== null,
+  restartDisabled: status === 'STOPPING' || powerAction !== null,
+  killDisabled: powerAction !== null,
+});
 
 export const getAvatarUrl = (uuid?: string) =>
   `${MINEATAR_BASE_URL}/${encodeURIComponent(uuid || STEVE_UUID)}?scale=8&overlay=true`;
