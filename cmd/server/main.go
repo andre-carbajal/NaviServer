@@ -182,13 +182,17 @@ func runHeadless() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	go startDaemonService(ctx)
+	serviceDone := make(chan struct{})
+	go func() {
+		defer close(serviceDone)
+		startDaemonService(ctx)
+	}()
 
 	<-sigs
 	log.Println("Signal received, shutting down...")
 	cancel()
-
-	time.Sleep(1 * time.Second)
+	<-serviceDone
+	signal.Stop(sigs)
 }
 
 func startDaemonService(ctx context.Context) {
@@ -215,6 +219,11 @@ func startDaemonService(ctx context.Context) {
 		log.Printf("Fatal DB Error: %v", err)
 		return
 	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			log.Printf("Database close error: %v", err)
+		}
+	}()
 
 	jvmMgr := jvm.NewManager(cfg.RuntimesPath)
 	srvMgr := server.NewManager(cfg.ServersPath, store, jvmMgr)
@@ -261,6 +270,10 @@ func startDaemonService(ctx context.Context) {
 
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Printf("HTTP Shutdown error: %v", err)
+	}
+
+	if err := supervisor.Shutdown(context.Background()); err != nil {
+		log.Printf("Server shutdown error: %v", err)
 	}
 
 	log.Println("Daemon stopped cleanly.")

@@ -36,11 +36,20 @@ type Supervisor struct {
 }
 
 type ActiveProcess struct {
-	Cmd       *exec.Cmd
-	Stdin     io.WriteCloser
-	Cancel    context.CancelFunc
-	StartedAt time.Time
+	Cmd           *exec.Cmd
+	Stdin         io.WriteCloser
+	Cancel        context.CancelFunc
+	StartedAt     time.Time
+	Done          chan struct{}
+	stopRequested bool
+	killRequested bool
 }
+
+const (
+	gracefulShutdownTimeout = 45 * time.Second
+	processKillWaitTimeout  = 5 * time.Second
+	processPollInterval     = 250 * time.Millisecond
+)
 
 func NewSupervisor(store *storage.GormStore, jvm *jvm.Manager, hubManager *ws.HubManager, serversPath string) *Supervisor {
 	return &Supervisor{
@@ -50,6 +59,116 @@ func NewSupervisor(store *storage.GormStore, jvm *jvm.Manager, hubManager *ws.Hu
 		ServersPath: serversPath,
 		processes:   make(map[string]*ActiveProcess),
 	}
+}
+
+func (s *Supervisor) IsRunning(serverID string) bool {
+	if s == nil {
+		return false
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, exists := s.processes[serverID]
+	return exists
+}
+
+func (s *Supervisor) activeServerIDs() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	ids := make([]string, 0, len(s.processes))
+	for id := range s.processes {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (s *Supervisor) hasActiveProcesses() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.processes) > 0
+}
+
+func (s *Supervisor) waitForProcesses(ctx context.Context) bool {
+	if !s.hasActiveProcesses() {
+		return true
+	}
+
+	ticker := time.NewTicker(processPollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-ticker.C:
+			if !s.hasActiveProcesses() {
+				return true
+			}
+		}
+	}
+}
+
+func (s *Supervisor) waitForServerToStop(serverID string, timeout time.Duration) bool {
+	if !s.IsRunning(serverID) {
+		return true
+	}
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	ticker := time.NewTicker(processPollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			return false
+		case <-ticker.C:
+			if !s.IsRunning(serverID) {
+				return true
+			}
+		}
+	}
+}
+
+// Shutdown asks every active server to stop cleanly, then forcefully terminates
+// only the processes that did not exit before the shutdown deadline.
+func (s *Supervisor) Shutdown(ctx context.Context) error {
+	if s == nil {
+		return nil
+	}
+
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, gracefulShutdownTimeout)
+		defer cancel()
+	}
+
+	serverIDs := s.activeServerIDs()
+	if len(serverIDs) == 0 {
+		return nil
+	}
+
+	var shutdownErrors []error
+	for _, id := range serverIDs {
+		if err := s.requestStop(id, 0); err != nil {
+			shutdownErrors = append(shutdownErrors, fmt.Errorf("stop server %s: %w", id, err))
+		}
+	}
+
+	if !s.waitForProcesses(ctx) {
+		for _, id := range s.activeServerIDs() {
+			if err := s.KillServer(id); err != nil {
+				shutdownErrors = append(shutdownErrors, fmt.Errorf("kill server %s: %w", id, err))
+			}
+		}
+	}
+
+	if s.hasActiveProcesses() {
+		shutdownErrors = append(shutdownErrors, errors.New("some server processes did not stop"))
+	}
+
+	return errors.Join(shutdownErrors...)
 }
 
 func (s *Supervisor) StartServer(serverID string) error {
@@ -180,14 +299,21 @@ func (s *Supervisor) StartServer(serverID string) error {
 	}
 
 	if err := s.Store.UpdateStatus(serverID, "RUNNING"); err != nil {
-		slog.Warn("could not update status to RUNNING", "error", err)
+		cancel()
+		if killErr := cmd.Process.Kill(); killErr != nil {
+			slog.Warn("could not clean up process after status update failure", "error", killErr)
+		}
+		_ = cmd.Wait()
+		return fmt.Errorf("could not update status to RUNNING: %w", err)
 	}
 
+	done := make(chan struct{})
 	s.processes[serverID] = &ActiveProcess{
 		Cmd:       cmd,
 		Stdin:     stdin,
 		Cancel:    cancel,
 		StartedAt: time.Now(),
+		Done:      done,
 	}
 
 	go func(id string, c *exec.Cmd, cancelFunc context.CancelFunc) {
@@ -201,82 +327,99 @@ func (s *Supervisor) StartServer(serverID string) error {
 		hub := s.HubManager.GetHub(id)
 		hub.ClearLogs()
 
-		if err == nil {
-			if uerr := s.Store.UpdateStatus(id, "STOPPED"); uerr != nil {
-				slog.Warn("could not update status to STOPPED", "error", uerr)
-			}
-			return
-		}
-
-		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-			_ = exitErr.ExitCode()
-			if uerr := s.Store.UpdateStatus(id, "STOPPED"); uerr != nil {
-				slog.Warn("could not update status to STOPPED", "error", uerr)
+		if err != nil {
+			if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
+				_ = exitErr.ExitCode()
+			} else {
+				slog.Warn("server process exited with an unexpected error", "server", id, "error", err)
 			}
 		}
 
+		if uerr := s.Store.UpdateStatus(id, "STOPPED"); uerr != nil {
+			slog.Warn("could not update status to STOPPED", "error", uerr)
+		}
+		close(done)
 	}(serverID, cmd, cancel)
 
 	return nil
 }
 
 func (s *Supervisor) StopServer(serverID string) error {
+	return s.requestStop(serverID, gracefulShutdownTimeout)
+}
+
+func (s *Supervisor) requestStop(serverID string, fallbackTimeout time.Duration) error {
 	s.mu.Lock()
 	proc, exists := s.processes[serverID]
-	s.mu.Unlock()
-
 	if !exists {
+		s.mu.Unlock()
 		return fmt.Errorf("server is not running")
 	}
+	if proc.stopRequested || proc.killRequested {
+		s.mu.Unlock()
+		return nil
+	}
+	proc.stopRequested = true
+	s.mu.Unlock()
 
 	if err := s.Store.UpdateStatus(serverID, "STOPPING"); err != nil {
 		slog.Warn("could not update status to STOPPING", "error", err)
 	}
-	_, err := io.WriteString(proc.Stdin, "stop\n")
-	return err
+
+	if proc.Stdin == nil {
+		stopErr := fmt.Errorf("server process stdin is not available")
+		if killErr := s.forceKillProcess(serverID, proc); killErr != nil {
+			return errors.Join(stopErr, killErr)
+		}
+		slog.Warn("server process stdin is not available; forced process termination", "server", serverID)
+		return nil
+	}
+
+	if _, err := io.WriteString(proc.Stdin, "stop\n"); err != nil {
+		if killErr := s.forceKillProcess(serverID, proc); killErr != nil {
+			return errors.Join(err, killErr)
+		}
+		slog.Warn("could not send stop command; forced process termination", "server", serverID, "error", err)
+		return nil
+	}
+
+	if fallbackTimeout > 0 {
+		s.watchStopTimeout(serverID, proc, fallbackTimeout)
+	}
+
+	return nil
 }
 
-func (s *Supervisor) RestartServer(serverID string) error {
-	s.mu.Lock()
-	_, exists := s.processes[serverID]
-	s.mu.Unlock()
+func (s *Supervisor) watchStopTimeout(serverID string, proc *ActiveProcess, timeout time.Duration) {
+	go func() {
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
 
-	if !exists {
-		return s.StartServer(serverID)
-	}
-
-	if err := s.StopServer(serverID); err != nil {
-		return err
-	}
-
-	timeout := time.After(45 * time.Second)
-	ticker := time.NewTicker(250 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
 		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for server to stop before restart")
-		case <-ticker.C:
-			s.mu.Lock()
-			_, stillRunning := s.processes[serverID]
-			s.mu.Unlock()
-
-			if !stillRunning {
-				return s.StartServer(serverID)
+		case <-proc.Done:
+			return
+		case <-timer.C:
+			if err := s.forceKillProcess(serverID, proc); err != nil {
+				slog.Warn("failed to force stop server after graceful shutdown timeout", "server", serverID, "error", err)
 			}
 		}
-	}
+	}()
 }
 
-func (s *Supervisor) KillServer(serverID string) error {
+func (s *Supervisor) forceKillProcess(serverID string, proc *ActiveProcess) error {
 	s.mu.Lock()
-	proc, exists := s.processes[serverID]
-	s.mu.Unlock()
-
-	if !exists {
-		return fmt.Errorf("server is not running")
+	current, exists := s.processes[serverID]
+	if !exists || current != proc {
+		s.mu.Unlock()
+		return nil
 	}
+	if proc.killRequested {
+		s.mu.Unlock()
+		return s.waitForProcessDone(proc)
+	}
+	proc.killRequested = true
+	proc.stopRequested = true
+	s.mu.Unlock()
 
 	if err := s.Store.UpdateStatus(serverID, "STOPPING"); err != nil {
 		slog.Warn("could not update status to STOPPING", "error", err)
@@ -290,15 +433,64 @@ func (s *Supervisor) KillServer(serverID string) error {
 		return fmt.Errorf("server process is not available")
 	}
 
-	if err := proc.Cmd.Process.Kill(); err != nil {
+	if err := proc.Cmd.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return fmt.Errorf("failed to kill server process: %w", err)
 	}
 
-	if err := s.Store.UpdateStatus(serverID, "STOPPED"); err != nil {
-		slog.Warn("could not update status to STOPPED after kill", "error", err)
+	return s.waitForProcessDone(proc)
+}
+
+func (s *Supervisor) waitForProcessDone(proc *ActiveProcess) error {
+	if proc.Done == nil {
+		return nil
 	}
 
-	return nil
+	timer := time.NewTimer(processKillWaitTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-proc.Done:
+		return nil
+	case <-timer.C:
+		return fmt.Errorf("timed out waiting for server process to stop")
+	}
+}
+
+func (s *Supervisor) RestartServer(serverID string) error {
+	return s.restartServerWithTimeout(serverID, gracefulShutdownTimeout)
+}
+
+func (s *Supervisor) restartServerWithTimeout(serverID string, timeout time.Duration) error {
+	if !s.IsRunning(serverID) {
+		return s.StartServer(serverID)
+	}
+
+	if err := s.requestStop(serverID, 0); err != nil {
+		return err
+	}
+
+	if !s.waitForServerToStop(serverID, timeout) {
+		if err := s.KillServer(serverID); err != nil && s.IsRunning(serverID) {
+			return fmt.Errorf("timeout waiting for server to stop before restart: %w", err)
+		}
+		if !s.waitForServerToStop(serverID, processKillWaitTimeout) {
+			return fmt.Errorf("timeout waiting for server to stop before restart")
+		}
+	}
+
+	return s.StartServer(serverID)
+}
+
+func (s *Supervisor) KillServer(serverID string) error {
+	s.mu.Lock()
+	proc, exists := s.processes[serverID]
+	s.mu.Unlock()
+
+	if !exists {
+		return fmt.Errorf("server is not running")
+	}
+
+	return s.forceKillProcess(serverID, proc)
 }
 
 func (s *Supervisor) SendCommand(serverID, cmd string) error {

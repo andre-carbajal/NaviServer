@@ -26,6 +26,9 @@ func (h *ServerHandler) HandleListServers(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	for i := range servers {
+		h.applyRuntimeStatus(&servers[i])
+	}
 
 	userCtx := r.Context().Value(domain.UserContextKey)
 	if userCtx != nil {
@@ -133,6 +136,7 @@ func (h *ServerHandler) HandleGetServer(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Server not found", http.StatusNotFound)
 		return
 	}
+	h.applyRuntimeStatus(srv)
 
 	userCtx := r.Context().Value(domain.UserContextKey)
 	if userCtx != nil {
@@ -453,14 +457,45 @@ func (h *ServerHandler) HandleDeleteServer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.Manager.DeleteServer(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if h.Supervisor != nil && h.Supervisor.IsRunning(id) {
+		http.Error(w, "server must be stopped before deletion", http.StatusConflict)
 		return
 	}
 
-	h.HubManager.RemoveHub(id)
+	srv, err := h.Manager.GetServer(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if srv == nil {
+		http.Error(w, "server not found", http.StatusNotFound)
+		return
+	}
+	if srv.Status != "" && srv.Status != "STOPPED" {
+		http.Error(w, "server must be stopped before deletion", http.StatusConflict)
+		return
+	}
+
+	if err := h.Manager.DeleteServer(id); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "must be stopped") {
+			http.Error(w, err.Error(), http.StatusConflict)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if h.HubManager != nil {
+		h.HubManager.RemoveHub(id)
+	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ServerHandler) applyRuntimeStatus(srv *domain.Server) {
+	if srv != nil && h.Supervisor != nil && h.Supervisor.IsRunning(srv.ID) {
+		srv.Status = "RUNNING"
+	}
 }
 
 func (h *ServerHandler) HandleStartServer(w http.ResponseWriter, r *http.Request) {
