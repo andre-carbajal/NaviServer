@@ -5,14 +5,14 @@ import { Modal } from '../components/ui/Modal';
 
 type DialogVariant = 'default' | 'danger' | 'success';
 
-type AlertOptions = {
+export type AlertOptions = {
   title: string;
   message: string;
   confirmText?: string;
   variant?: DialogVariant;
 };
 
-type ConfirmOptions = AlertOptions & {
+export type ConfirmOptions = AlertOptions & {
   cancelText?: string;
 };
 

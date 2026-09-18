@@ -20,42 +20,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useModalDialog } from '../../hooks/useModalDialog';
 import { api } from '../../services/api';
 import type { FileEntry } from '../../types';
+import {
+  formatFileSize,
+  getParentServerPath,
+  isEditableFile,
+  joinServerPath,
+} from '../../utils/fileExplorer';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import FileEditor from './FileEditor';
-
-const IGNORED_EDIT_EXTENSIONS = new Set([
-  '.jar',
-  '.zip',
-  '.tar',
-  '.gz',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.ico',
-  '.exe',
-  '.dll',
-  '.so',
-  '.dylib',
-  '.DS_Store',
-]);
-
-const isEditable = (filename: string) => {
-  if (filename === '.DS_Store') return false;
-  const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
-  return !IGNORED_EDIT_EXTENSIONS.has(ext);
-};
-
-const formatSize = (bytes: number) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return (
-    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  );
-};
 
 interface FileExplorerProps {
   serverId: string;
@@ -122,17 +95,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   const handleUp = () => {
     if (currentPath === '/') return;
-    const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
+    const parentPath = getParentServerPath(currentPath);
     setCurrentPath(parentPath);
   };
 
   const handleFileClick = (file: FileEntry) => {
     if (file.isDirectory) {
-      const newPath =
-        currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+      const newPath = joinServerPath(currentPath, file.name);
       setCurrentPath(newPath);
     } else {
-      if (!isEditable(file.name)) {
+      if (!isEditableFile(file.name)) {
         void showAlert({
           title: 'Cannot Edit File',
           message: 'This file type cannot be edited.',
@@ -140,8 +112,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         });
         return;
       }
-      const filePath =
-        currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+      const filePath = joinServerPath(currentPath, file.name);
       setEditingFile(filePath);
     }
   };
@@ -153,10 +124,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   const handleConfirmDelete = async () => {
     if (!filePendingDelete || deletingFile) return;
 
-    const filePath =
-      currentPath === '/'
-        ? `/${filePendingDelete.name}`
-        : `${currentPath}/${filePendingDelete.name}`;
+    const filePath = joinServerPath(currentPath, filePendingDelete.name);
 
     setDeletingFile(true);
     try {
@@ -179,8 +147,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   const handleCreateDir = async () => {
     if (!newDirName) return;
-    const newPath =
-      currentPath === '/' ? `/${newDirName}` : `${currentPath}/${newDirName}`;
+    const newPath = joinServerPath(currentPath, newDirName);
 
     try {
       await api.createDirectory(serverId, newPath);
@@ -405,8 +372,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   const handleDownload = async (file: FileEntry) => {
     try {
-      const filePath =
-        currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+      const filePath = joinServerPath(currentPath, file.name);
       const response = await api.downloadFile(serverId, filePath);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -691,14 +657,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                     {file.name}
                   </td>
                   <td className="tw:text-gray-500">
-                    {file.isDirectory ? '-' : formatSize(file.size)}
+                    {file.isDirectory ? '-' : formatFileSize(file.size)}
                   </td>
                   <td className="tw:text-gray-500">
                     {new Date(file.lastModified).toLocaleString()}
                   </td>
                   <td>
                     <div className="tw:flex tw:items-center tw:gap-2 tw:opacity-0 tw:transition-opacity tw:duration-200 tw:group-hover:opacity-100">
-                      {!file.isDirectory && isEditable(file.name) && (
+                      {!file.isDirectory && isEditableFile(file.name) && (
                         <button
                           type="button"
                           onClick={(event) => {

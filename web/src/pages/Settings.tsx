@@ -1,234 +1,53 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 
 import { Button } from '../components/ui/Button';
+import {
+  BYTES_PER_LINE_ESTIMATE,
+  useGlobalSettings,
+} from '../hooks/useGlobalSettings';
 import { useModalDialog } from '../hooks/useModalDialog';
-import { api } from '../services/api';
 import { humanSize } from '../utils/format';
 
-const BYTES_PER_LINE_ESTIMATE = 200;
-
 const Settings: React.FC = () => {
-  const [portRange, setPortRange] = useState({ start: 0, end: 0 });
-  const [initialPortRange, setInitialPortRange] = useState({
-    start: 0,
-    end: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isRestarting, setIsRestarting] = useState(false);
-  const [logBufferSize, setLogBufferSize] = useState(1000);
-  const [initialLogBufferSize, setInitialLogBufferSize] = useState(1000);
-  const [isSavingLogBuffer, setIsSavingLogBuffer] = useState(false);
-  const [logBufferError, setLogBufferError] = useState<string | null>(null);
-  const [publicIP, setPublicIP] = useState('localhost');
-  const [initialPublicIP, setInitialPublicIP] = useState('localhost');
-  const [networkInterfaces, setNetworkInterfaces] = useState<string[]>([]);
-  const [isSavingPublicIP, setIsSavingPublicIP] = useState(false);
-  const [publicIPWarning, setPublicIPWarning] = useState<string | null>(null);
-  const [curseForgeKey, setCurseForgeKey] = useState('');
-  const [isSavingCurseForgeKey, setIsSavingCurseForgeKey] = useState(false);
-  const [isClearingCurseForgeKey, setIsClearingCurseForgeKey] = useState(false);
   const { showAlert, showConfirm, modalDialog } = useModalDialog();
-  const [curseForgeKeyStatus, setCurseForgeKeyStatus] = useState<{
-    hasCustomKey: boolean;
-    hasEmbeddedKey: boolean;
-    effectiveSource: 'custom' | 'embedded' | 'none';
-  }>({
-    hasCustomKey: false,
-    hasEmbeddedKey: false,
-    effectiveSource: 'none',
-  });
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await api.getPortRange();
-        setPortRange(res.data);
-        setInitialPortRange(res.data);
-        const lb = await api.getLogBufferSize();
-        const size = lb.data?.log_buffer_size ?? 1000;
-        setLogBufferSize(size);
-        setInitialLogBufferSize(size);
-
-        const [publicIPRes, interfacesRes, curseForgeRes] = await Promise.all([
-          api.getPublicIP(),
-          api.getNetworkInterfaces(),
-          api.getCurseForgeKeyStatus(),
-        ]);
-        const savedIP = publicIPRes.data?.public_ip ?? 'localhost';
-        setPublicIP(savedIP);
-        setInitialPublicIP(savedIP);
-
-        const ifaces = interfacesRes.data?.interfaces ?? [];
-        setNetworkInterfaces(ifaces);
-        setCurseForgeKeyStatus(curseForgeRes.data);
-
-        if (savedIP !== 'localhost' && !ifaces.includes(savedIP)) {
-          setPublicIPWarning(
-            `The configured IP "${savedIP}" is not currently available on any network interface.`,
-          );
-        }
-      } catch (err) {
-        console.error('Failed to fetch settings:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, []);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    const newPortRange = { ...portRange, [name]: Number.parseInt(value, 10) };
-    setPortRange(newPortRange);
-    setHasChanges(
-      JSON.stringify(newPortRange) !== JSON.stringify(initialPortRange),
-    );
-  };
-
-  const handleLogBufferChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    const parsed = Number.parseInt(raw, 10);
-    if (raw === '') {
-      setLogBufferSize(0);
-      setLogBufferError(null);
-      return;
-    }
-    if (Number.isNaN(parsed)) {
-      setLogBufferSize(0);
-      setLogBufferError('The value must be an integer >= 0');
-      return;
-    }
-    if (parsed < 0) {
-      setLogBufferSize(parsed);
-      setLogBufferError('The value cannot be negative');
-      return;
-    }
-    setLogBufferSize(parsed);
-    setLogBufferError(null);
-  };
-
-  const estimatedBytes = logBufferSize * BYTES_PER_LINE_ESTIMATE;
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await api.updatePortRange(portRange);
-      setInitialPortRange(portRange);
-      setHasChanges(false);
-    } catch (err) {
-      console.error('Failed to save settings:', err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSaveLogBuffer = async () => {
-    if (Number.isNaN(logBufferSize) || logBufferSize < 0) {
-      setLogBufferError('The value must be an integer >= 0');
-      return;
-    }
-    setLogBufferError(null);
-    setIsSavingLogBuffer(true);
-    try {
-      await api.updateLogBufferSize({ log_buffer_size: logBufferSize });
-      setInitialLogBufferSize(logBufferSize);
-    } catch (err) {
-      console.error('Failed to save log buffer size:', err);
-      setLogBufferError('The save operation failed. Please try again.');
-    } finally {
-      setIsSavingLogBuffer(false);
-    }
-  };
-
-  const handleSavePublicIP = async () => {
-    setIsSavingPublicIP(true);
-    try {
-      await api.updatePublicIP({ public_ip: publicIP });
-      setInitialPublicIP(publicIP);
-      if (publicIP !== 'localhost' && !networkInterfaces.includes(publicIP)) {
-        setPublicIPWarning(
-          `The configured IP "${publicIP}" is not currently available on any network interface.`,
-        );
-      } else {
-        setPublicIPWarning(null);
-      }
-    } catch (err) {
-      console.error('Failed to save public IP:', err);
-    } finally {
-      setIsSavingPublicIP(false);
-    }
-  };
-
-  const handleRestart = async () => {
-    const shouldRestart = await showConfirm({
-      title: 'Restart Daemon',
-      message:
-        'Are you sure you want to restart the daemon? This will stop all running servers.',
-      confirmText: 'Restart',
-      variant: 'danger',
+  const settings = useGlobalSettings(showAlert, showConfirm);
+  const {
+    loading,
+    portRange,
+    setPortRange,
+    portsChanged: hasChanges,
+    isSaving,
+    publicIP,
+    setPublicIP,
+    initialPublicIP,
+    networkInterfaces,
+    publicIPWarning,
+    isSavingPublicIP,
+    curseForgeKey,
+    setCurseForgeKey,
+    curseForgeKeyStatus,
+    isSavingCurseForgeKey,
+    isClearingCurseForgeKey,
+    logBufferSize,
+    initialLogBufferSize,
+    logBufferError,
+    isSavingLogBuffer,
+    isRestarting,
+  } = settings;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setPortRange({
+      ...portRange,
+      [e.target.name]: Number.parseInt(e.target.value, 10),
     });
-    if (!shouldRestart) return;
-
-    setIsRestarting(true);
-    try {
-      await api.restartDaemon();
-      await showAlert({
-        title: 'Restart Sent',
-        message:
-          'Daemon restart command sent. The page may lose connection briefly.',
-      });
-    } catch (err) {
-      await showAlert({
-        title: 'Restart Failed',
-        message: 'Failed to send daemon restart command. Please try again.',
-        variant: 'danger',
-      });
-      console.error('Failed to restart daemon:', err);
-    } finally {
-      setIsRestarting(false);
-    }
-  };
-
-  const handleSaveCurseForgeKey = async () => {
-    const value = curseForgeKey.trim();
-    if (!value) return;
-    setIsSavingCurseForgeKey(true);
-    try {
-      await api.setCurseForgeKey(value);
-      const status = await api.getCurseForgeKeyStatus();
-      setCurseForgeKeyStatus(status.data);
-      setCurseForgeKey('');
-    } catch (err) {
-      console.error('Failed to save CurseForge API key:', err);
-      await showAlert({
-        title: 'Save Failed',
-        message: 'Failed to save CurseForge API key.',
-        variant: 'danger',
-      });
-    } finally {
-      setIsSavingCurseForgeKey(false);
-    }
-  };
-
-  const handleClearCurseForgeKey = async () => {
-    setIsClearingCurseForgeKey(true);
-    try {
-      await api.clearCurseForgeKey();
-      const status = await api.getCurseForgeKeyStatus();
-      setCurseForgeKeyStatus(status.data);
-    } catch (err) {
-      console.error('Failed to clear CurseForge API key:', err);
-      await showAlert({
-        title: 'Clear Failed',
-        message: 'Failed to clear CurseForge API key.',
-        variant: 'danger',
-      });
-    } finally {
-      setIsClearingCurseForgeKey(false);
-    }
-  };
+  const estimatedBytes = logBufferSize * BYTES_PER_LINE_ESTIMATE;
+  const handleLogBufferChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    settings.changeLogBuffer(e.target.value);
+  const handleSave = settings.savePorts;
+  const handleSaveLogBuffer = settings.saveLogBuffer;
+  const handleSavePublicIP = settings.savePublicIP;
+  const handleRestart = settings.restart;
+  const handleSaveCurseForgeKey = settings.saveCurseForgeKey;
+  const handleClearCurseForgeKey = settings.clearCurseForgeKey;
 
   if (loading) return <div>Loading settings...</div>;
 

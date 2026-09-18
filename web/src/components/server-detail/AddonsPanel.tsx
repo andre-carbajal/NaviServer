@@ -27,6 +27,7 @@ import type {
   AddonSource,
   Server,
 } from '../../types';
+import { mergeAddonResults } from '../../utils/addons';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 
@@ -178,16 +179,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({
         }
         const nextItems = response.data.items || [];
         if (append) {
-          setSearchResults((prev) => {
-            const map = new Map<string, AddonSearchResult>();
-            for (const item of prev) {
-              map.set(`${item.source}-${item.projectId}`, item);
-            }
-            for (const item of nextItems) {
-              map.set(`${item.source}-${item.projectId}`, item);
-            }
-            return Array.from(map.values());
-          });
+          setSearchResults((prev) => mergeAddonResults(prev, nextItems));
         } else {
           setSearchResults(nextItems);
         }
@@ -409,7 +401,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({
     .sort((a, b) => a.localeCompare(b))
     .join('|');
   const summaryVersionsReady = selectedInstallEntries.every(
-    ([key]) => hydratedVersionKeyState[key] === true,
+    ([key]) => hydratedVersionKeyState[key],
   );
   const selectedVersionsReady =
     summaryVersionsReady &&

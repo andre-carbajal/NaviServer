@@ -36,7 +36,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
       variant={variant}
       onClick={handleCopy}
       type="button"
-      className={`${className} ${copied ? 'tw:border-green-500/25 tw:bg-green-500/12 tw:text-primary' : ''}`.trim()}
+      className={`tw:[&_svg]:block tw:[&_svg]:shrink-0 tw:[&_svg]:stroke-current ${className} ${copied ? 'tw:border-green-500/25 tw:bg-green-500/12 tw:text-primary' : ''}`.trim()}
       {...props}
     >
       {!hideIcon &&

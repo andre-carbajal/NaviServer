@@ -29,46 +29,18 @@ import { useModalDialog } from '../hooks/useModalDialog';
 import { useServers } from '../hooks/useServers';
 import { WS_BASE_URL, api } from '../services/api';
 import type { Backup } from '../types';
-
-interface CreatingBackup extends Backup {
-  serverId: string;
-}
+import {
+  type CreatingBackup,
+  formatBackupDateTime,
+  readCreatingBackups,
+  writeCreatingBackups,
+} from '../utils/backups';
 
 interface UploadingBackup {
   id: string;
   name: string;
   progress: number;
 }
-
-const CREATING_BACKUPS_STORAGE_KEY = 'creating_backups:v1';
-const LEGACY_CREATING_BACKUPS_STORAGE_KEY = 'creating_backups';
-
-const readCreatingBackups = (): CreatingBackup[] => {
-  const stored =
-    localStorage.getItem(CREATING_BACKUPS_STORAGE_KEY) ??
-    localStorage.getItem(LEGACY_CREATING_BACKUPS_STORAGE_KEY);
-
-  if (!stored) return [];
-
-  try {
-    return JSON.parse(stored) as CreatingBackup[];
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
-};
-
-const writeCreatingBackups = (backups: CreatingBackup[]) => {
-  localStorage.setItem(CREATING_BACKUPS_STORAGE_KEY, JSON.stringify(backups));
-  localStorage.removeItem(LEGACY_CREATING_BACKUPS_STORAGE_KEY);
-};
-
-const formatBackupDateTime = (value?: string) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
-};
 
 const Backups: React.FC = () => {
   const { id } = useParams<{ id: string }>();

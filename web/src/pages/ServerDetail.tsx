@@ -2,7 +2,6 @@ import axios from 'axios';
 import {
   ArrowLeft,
   Ban,
-  BarChart3,
   CircleHelp,
   Clock3,
   Cpu,
@@ -14,21 +13,17 @@ import {
   LoaderCircle,
   MemoryStick,
   MoreVertical,
-  Package,
   Play,
   PowerOff,
   RotateCcw,
-  Search,
   Settings2,
   Share2,
   Shield,
   Skull,
   Square,
-  Terminal,
   Trash2,
   Upload,
   UserX,
-  Users,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -52,8 +47,15 @@ import React, {
 } from 'react';
 
 import AddonsPanel from '../components/server-detail/AddonsPanel';
-import ConsoleView from '../components/server-detail/ConsoleView';
-import PlayerAvatar from '../components/server-detail/PlayerAvatar';
+import { ConsolePanel } from '../components/server-detail/ConsolePanel';
+import {
+  type PlayerFilter,
+  PlayersPanel,
+} from '../components/server-detail/PlayersPanel';
+import {
+  type DetailTab,
+  ServerDetailNav,
+} from '../components/server-detail/ServerDetailNav';
 import ShareModal from '../components/server-detail/ShareModal';
 import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
@@ -62,6 +64,14 @@ import { useAuth } from '../context/AuthContext';
 import { useConsole } from '../hooks/useConsole';
 import { useCopy } from '../hooks/useCopy';
 import { useModalDialog } from '../hooks/useModalDialog';
+import {
+  type BannedIPEntry,
+  type BannedListItem,
+  type BannedPlayerEntry,
+  type OperatorEntry,
+  usePlayerLists,
+} from '../hooks/usePlayerLists';
+import { useServerLifecycle } from '../hooks/useServerLifecycle';
 import { useServerStats } from '../hooks/useServerStats';
 import { api } from '../services/api';
 import type {
@@ -86,55 +96,12 @@ const FileExplorer = React.lazy(
   () => import('../components/server-detail/FileExplorer'),
 );
 
-type DetailTab =
-  'performance' | 'console' | 'players' | 'files' | 'addons' | 'settings';
 type ChartRange = '1m' | '5m' | '30m' | '1h' | '4h';
-type PlayerFilter = 'all' | 'admins' | 'banned';
 
 interface StatSnapshot {
   ts: number;
   cpu: number;
   ramMb: number;
-}
-
-interface OperatorEntry {
-  uuid?: string;
-  name?: string;
-  level?: number;
-  bypassesPlayerLimit?: boolean;
-}
-
-interface BannedPlayerEntry {
-  uuid?: string;
-  name?: string;
-  created?: string;
-  source?: string;
-  expires?: string;
-  reason?: string;
-}
-
-interface BannedIPEntry {
-  ip?: string;
-  created?: string;
-  source?: string;
-  expires?: string;
-  reason?: string;
-}
-
-interface PlayerListItem {
-  key: string;
-  name: string;
-  uuid?: string;
-  isOnline: boolean;
-  source: 'online' | 'operator';
-}
-
-interface BannedListItem {
-  key: string;
-  type: 'player' | 'ip';
-  label: string;
-  uuid?: string;
-  detail?: string;
 }
 
 interface SelectedPlayerAction extends PlayerInfo {
@@ -190,9 +157,6 @@ const ServerDetail: React.FC = () => {
   const [iconError, setIconError] = useState(false);
   const [serverIconVersion, setServerIconVersion] = useState(() => Date.now());
   const [activeTab, setActiveTab] = useState<DetailTab>('performance');
-  const [powerAction, setPowerAction] = useState<
-    null | 'start' | 'stop' | 'restart' | 'kill'
-  >(null);
   const [isPowerMenuOpen, setIsPowerMenuOpen] = useState(false);
   const [chartRange, setChartRange] = useState<ChartRange>('1m');
   const [statsHistory, setStatsHistory] = useState<StatSnapshot[]>([]);
@@ -255,7 +219,6 @@ const ServerDetail: React.FC = () => {
     server?.status === 'RUNNING',
   );
   const { copy } = useCopy(1500);
-
   useEffect(() => {
     const fetchPublicIP = async () => {
       try {
@@ -296,6 +259,20 @@ const ServerDetail: React.FC = () => {
       setLoading(false);
     }
   }, [id]);
+
+  const {
+    powerAction,
+    start: handleStart,
+    stop: handleStop,
+    restart: handleRestart,
+    kill: handleKill,
+  } = useServerLifecycle({
+    server,
+    refresh: fetchServer,
+    setServer,
+    showAlert,
+    closeMenu: () => setIsPowerMenuOpen(false),
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -442,68 +419,6 @@ const ServerDetail: React.FC = () => {
     observer.observe(node);
     return () => observer.disconnect();
   }, [activeTab, loading]);
-
-  const handleStart = async () => {
-    if (!server) return;
-    try {
-      setPowerAction('start');
-      await api.startServer(server.id);
-      setServer((prev) => (prev ? { ...prev, status: 'STARTING' } : null));
-    } catch (err) {
-      console.error(err);
-      setPowerAction(null);
-      await fetchServer();
-      await showAlert({
-        title: 'Start Failed',
-        message: getApiErrorMessage(err, 'Failed to start server.'),
-        variant: 'danger',
-      });
-    } finally {
-      setPowerAction(null);
-    }
-  };
-
-  const handleStop = async () => {
-    if (!server) return;
-    try {
-      setPowerAction('stop');
-      await api.stopServer(server.id);
-      setServer((prev) => (prev ? { ...prev, status: 'STOPPING' } : null));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setPowerAction(null);
-      setIsPowerMenuOpen(false);
-    }
-  };
-
-  const handleRestart = async () => {
-    if (!server) return;
-    try {
-      setPowerAction('restart');
-      await api.restartServer(server.id);
-      setServer((prev) => (prev ? { ...prev, status: 'STARTING' } : null));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setPowerAction(null);
-      setIsPowerMenuOpen(false);
-    }
-  };
-
-  const handleKill = async () => {
-    if (!server) return;
-    try {
-      setPowerAction('kill');
-      await api.killServer(server.id);
-      setServer((prev) => (prev ? { ...prev, status: 'STOPPED' } : null));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setPowerAction(null);
-      setIsPowerMenuOpen(false);
-    }
-  };
 
   const fetchSettingsData = useCallback(async () => {
     if (!id || user?.role !== 'admin') return;
@@ -990,137 +905,21 @@ const ServerDetail: React.FC = () => {
 
   const players = useMemo(() => stats.players ?? [], [stats.players]);
   const canModeratePlayers = Boolean(server?.permissions?.canViewConsole);
-  const normalizedSearch = playersSearch.trim().toLowerCase();
-
-  const onlineNameSet = useMemo(
-    () => new Set(players.map((player) => player.name.toLowerCase())),
-    [players],
-  );
-
-  const onlineIdSet = useMemo(
-    () =>
-      new Set(
-        players.flatMap((player) =>
-          player.id ? [player.id.toLowerCase()] : [],
-        ),
-      ),
-    [players],
-  );
-
-  const onlineItems = useMemo<PlayerListItem[]>(
-    () =>
-      players.map((player, idx) => ({
-        key: `${player.id || player.name}-${idx}`,
-        name: player.name,
-        uuid: player.id,
-        isOnline: true,
-        source: 'online',
-      })),
-    [players],
-  );
-
-  const operatorItems = useMemo<PlayerListItem[]>(
-    () =>
-      operators.map((operator, idx) => {
-        const normalizedName = operator.name?.toLowerCase();
-        const normalizedUuid = operator.uuid?.toLowerCase();
-        const isOnline = Boolean(
-          (normalizedName && onlineNameSet.has(normalizedName)) ||
-          (normalizedUuid && onlineIdSet.has(normalizedUuid)),
-        );
-        const fallbackName =
-          operator.name || operator.uuid || `Operator ${idx + 1}`;
-        return {
-          key: `op-${operator.uuid || operator.name || idx}`,
-          name: fallbackName,
-          uuid: operator.uuid,
-          isOnline,
-          source: 'operator',
-        };
-      }),
-    [operators, onlineIdSet, onlineNameSet],
-  );
-
-  const operatorNameSet = useMemo(
-    () =>
-      new Set(
-        operators.flatMap((operator) =>
-          operator.name ? [operator.name.toLowerCase()] : [],
-        ),
-      ),
-    [operators],
-  );
-
-  const operatorUuidSet = useMemo(
-    () =>
-      new Set(
-        operators.flatMap((operator) =>
-          operator.uuid ? [operator.uuid.toLowerCase()] : [],
-        ),
-      ),
-    [operators],
-  );
-
-  const bannedItems = useMemo<BannedListItem[]>(
-    () => [
-      ...bannedPlayers.map((bannedPlayer, idx) => ({
-        key: `bp-${bannedPlayer.uuid || bannedPlayer.name || idx}`,
-        type: 'player' as const,
-        label:
-          bannedPlayer.name || bannedPlayer.uuid || `Banned player ${idx + 1}`,
-        uuid: bannedPlayer.uuid,
-        detail: bannedPlayer.reason || bannedPlayer.source,
-      })),
-      ...bannedIps.map((bannedIp, idx) => ({
-        key: `bi-${bannedIp.ip || idx}`,
-        type: 'ip' as const,
-        label: bannedIp.ip || `Banned IP ${idx + 1}`,
-        detail: bannedIp.reason || bannedIp.source,
-      })),
-    ],
-    [bannedIps, bannedPlayers],
-  );
-
-  const filteredOnlineItems = useMemo(
-    () =>
-      onlineItems.filter((player) => {
-        if (!normalizedSearch) return true;
-        return (
-          player.name.toLowerCase().includes(normalizedSearch) ||
-          player.uuid?.toLowerCase().includes(normalizedSearch)
-        );
-      }),
-    [normalizedSearch, onlineItems],
-  );
-
-  const filteredOperatorItems = useMemo(() => {
-    const sortedOperators = operatorItems.toSorted((a, b) => {
-      if (a.isOnline !== b.isOnline) {
-        return a.isOnline ? -1 : 1;
-      }
-      return a.name.localeCompare(b.name);
-    });
-
-    return sortedOperators.filter((player) => {
-      if (!normalizedSearch) return true;
-      return (
-        player.name.toLowerCase().includes(normalizedSearch) ||
-        player.uuid?.toLowerCase().includes(normalizedSearch)
-      );
-    });
-  }, [normalizedSearch, operatorItems]);
-
-  const filteredBannedItems = useMemo(
-    () =>
-      bannedItems.filter((entry) => {
-        if (!normalizedSearch) return true;
-        return (
-          entry.label.toLowerCase().includes(normalizedSearch) ||
-          entry.detail?.toLowerCase().includes(normalizedSearch) ||
-          entry.uuid?.toLowerCase().includes(normalizedSearch)
-        );
-      }),
-    [bannedItems, normalizedSearch],
+  const {
+    onlineItems,
+    operatorItems,
+    bannedItems,
+    operatorNameSet,
+    operatorUuidSet,
+    filteredOnlineItems,
+    filteredOperatorItems,
+    filteredBannedItems,
+  } = usePlayerLists(
+    players,
+    operators,
+    bannedPlayers,
+    bannedIps,
+    playersSearch,
   );
 
   const selectedPlayerCanDeleteData = Boolean(selectedPlayer?.id?.trim());
@@ -1267,7 +1066,7 @@ const ServerDetail: React.FC = () => {
                 text={address}
                 variant="secondary"
                 title="Copy address"
-                className="tw:h-6 tw:w-6 tw:min-h-6 tw:shrink-0 tw:p-0 tw:max-[1024px]:!hidden"
+                className="tw:h-6 tw:w-6 tw:min-h-6 tw:min-w-6 tw:shrink-0 tw:p-0 tw:max-[1024px]:!hidden"
               />
             </div>
           </div>
@@ -1285,7 +1084,8 @@ const ServerDetail: React.FC = () => {
               text={address}
               variant="secondary"
               title="Copy address"
-              className="tw:h-6 tw:w-6 tw:min-h-6 tw:shrink-0 tw:p-0"
+              iconSize={16}
+              className="tw:h-6 tw:w-6 tw:min-h-6 tw:min-w-6 tw:shrink-0 tw:p-0 tw:text-text-main"
             />
           </div>
         </div>
@@ -1617,245 +1417,51 @@ const ServerDetail: React.FC = () => {
           )}
 
           {activeTab === 'console' && (
-            <div className="tw:flex tw:h-full tw:min-w-0 tw:flex-col tw:gap-2.5 tw:overflow-x-hidden tw:max-[1024px]:h-auto">
-              <div className="tw:flex tw:items-center tw:justify-between">
-                <h2 className="tw:m-0">Console</h2>
-                <span
-                  className={
-                    isConnected ? 'tw:text-green-400' : 'tw:text-red-300'
-                  }
-                >
-                  {isConnected ? '● Connected' : '○ Disconnected'}
-                </span>
-              </div>
-
-              <ConsoleView logs={logs} />
-
-              <form
-                onSubmit={handleCommandSubmit}
-                className="tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-2 tw:max-[1024px]:w-full tw:max-[1024px]:grid-cols-[minmax(0,1fr)_minmax(72px,auto)]"
-              >
-                <input
-                  type="text"
-                  aria-label="Server console command"
-                  value={commandInput}
-                  onChange={(e) => setCommandInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base tw:min-w-0"
-                  placeholder="Type a command..."
-                  disabled={!isConnected}
-                />
-                <Button
-                  type="submit"
-                  disabled={!isConnected || !commandInput.trim()}
-                  className="tw:shrink-0 tw:max-[1024px]:min-w-[72px] tw:max-[1024px]:px-2.5"
-                >
-                  Send
-                </Button>
-              </form>
-            </div>
+            <ConsolePanel
+              command={commandInput}
+              connected={isConnected}
+              logs={logs}
+              onCommandChange={setCommandInput}
+              onKeyDown={handleKeyDown}
+              onSubmit={handleCommandSubmit}
+            />
           )}
 
           {activeTab === 'players' && (
-            <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5">
-              <div className="tw:mb-2.5 tw:flex tw:items-center tw:justify-between tw:gap-2.5">
-                <h2 className="tw:m-0">Player Management</h2>
-                <span>
-                  Online {stats.onlinePlayers}/{stats.maxPlayers}
-                </span>
-              </div>
-
-              <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-2.5">
-                <label className="tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:px-2.5 tw:text-text-muted">
-                  <Search size={16} />
-                  <input
-                    type="text"
-                    value={playersSearch}
-                    onChange={(e) => setPlayersSearch(e.target.value)}
-                    placeholder="Search players..."
-                    className="tw:w-full tw:border-0 tw:bg-transparent tw:py-2.5 tw:text-text-main tw:outline-none"
-                  />
-                </label>
-
-                <div className="tw:flex tw:flex-wrap tw:gap-2">
-                  <button
-                    type="button"
-                    className={`tw:cursor-pointer tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:px-3 tw:py-[7px] tw:text-[0.82rem] tw:text-text-muted ${playerFilter === 'all' ? 'tw:border-[rgba(167,139,250,0.45)] tw:bg-[rgba(167,139,250,0.2)] tw:text-white' : ''}`}
-                    onClick={() => setPlayerFilter('all')}
-                  >
-                    All ({onlineItems.length})
-                  </button>
-                  <button
-                    type="button"
-                    className={`tw:cursor-pointer tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:px-3 tw:py-[7px] tw:text-[0.82rem] tw:text-text-muted ${playerFilter === 'admins' ? 'tw:border-[rgba(167,139,250,0.45)] tw:bg-[rgba(167,139,250,0.2)] tw:text-white' : ''}`}
-                    onClick={() => setPlayerFilter('admins')}
-                  >
-                    Admins ({operatorItems.length})
-                  </button>
-                  <button
-                    type="button"
-                    className={`tw:cursor-pointer tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:px-3 tw:py-[7px] tw:text-[0.82rem] tw:text-text-muted ${playerFilter === 'banned' ? 'tw:border-[rgba(167,139,250,0.45)] tw:bg-[rgba(167,139,250,0.2)] tw:text-white' : ''}`}
-                    onClick={() => setPlayerFilter('banned')}
-                  >
-                    Banned ({bannedItems.length})
-                  </button>
-                </div>
-              </div>
-
-              {playerFilter === 'all' &&
-                (filteredOnlineItems.length === 0 ? (
-                  <div className="tw:p-6 tw:text-center tw:text-text-muted">
-                    No players found
-                  </div>
-                ) : (
-                  <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0">
-                    {filteredOnlineItems.map((player) => (
-                      <li
-                        key={player.key}
-                        className={`tw:flex tw:items-center tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:p-2.5 ${canModeratePlayers ? 'tw:hover:border-[rgba(167,139,250,0.45)] tw:hover:bg-[rgba(167,139,250,0.1)]' : ''}`}
-                      >
-                        <button
-                          type="button"
-                          className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5 tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:font-[inherit] tw:text-text-main"
-                          disabled={!canModeratePlayers}
-                          onClick={() => {
-                            if (!canModeratePlayers) return;
-                            const normalizedName = player.name.toLowerCase();
-                            const normalizedUuid = player.uuid?.toLowerCase();
-                            const isOperator = Boolean(
-                              operatorNameSet.has(normalizedName) ||
-                              (normalizedUuid &&
-                                operatorUuidSet.has(normalizedUuid)),
-                            );
-                            setSelectedPlayer({
-                              name: player.name,
-                              id: player.uuid || '',
-                              isOnline: true,
-                              isOperator,
-                            });
-                            setIsPlayerActionsOpen(true);
-                          }}
-                        >
-                          <PlayerAvatar
-                            player={{
-                              name: player.name,
-                              id: player.uuid || '',
-                            }}
-                          />
-                          <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
-                            <strong>{player.name}</strong>
-                            <small className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[0.72rem] tw:text-text-muted">
-                              {player.uuid || 'No UUID available'}
-                            </small>
-                          </div>
-                          <span className="tw:ml-auto tw:rounded-full tw:border tw:border-green-400/35 tw:bg-green-400/12 tw:px-2 tw:py-[3px] tw:text-[0.7rem] tw:text-green-400">
-                            Online
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-
-              {playerFilter === 'admins' &&
-                (filteredOperatorItems.length === 0 ? (
-                  <div className="tw:p-6 tw:text-center tw:text-text-muted">
-                    No operators found
-                  </div>
-                ) : (
-                  <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0">
-                    {filteredOperatorItems.map((operator) => (
-                      <li
-                        key={operator.key}
-                        className={`tw:flex tw:items-center tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:p-2.5 ${canModeratePlayers ? 'tw:hover:border-[rgba(167,139,250,0.45)] tw:hover:bg-[rgba(167,139,250,0.1)]' : ''}`}
-                      >
-                        <button
-                          type="button"
-                          className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5 tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:font-[inherit] tw:text-text-main"
-                          disabled={!canModeratePlayers}
-                          onClick={() => {
-                            if (!canModeratePlayers) return;
-                            setSelectedPlayer({
-                              name: operator.name,
-                              id: operator.uuid || '',
-                              isOnline: operator.isOnline,
-                              isOperator: true,
-                            });
-                            setIsPlayerActionsOpen(true);
-                          }}
-                        >
-                          <PlayerAvatar
-                            player={{
-                              name: operator.name,
-                              id: operator.uuid || '',
-                            }}
-                          />
-                          <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
-                            <strong>{operator.name}</strong>
-                            <small className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[0.72rem] tw:text-text-muted">
-                              {operator.uuid || 'No UUID available'}
-                            </small>
-                          </div>
-                          <span
-                            className={`tw:ml-auto tw:rounded-full tw:border tw:px-2 tw:py-[3px] tw:text-[0.7rem] ${operator.isOnline ? 'tw:border-green-400/35 tw:bg-green-400/12 tw:text-green-400' : 'tw:border-border tw:bg-white/3 tw:text-text-muted'}`}
-                          >
-                            {operator.isOnline ? 'Online' : 'Offline'}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-
-              {playerFilter === 'banned' &&
-                (filteredBannedItems.length === 0 ? (
-                  <div className="tw:p-6 tw:text-center tw:text-text-muted">
-                    No banned entries
-                  </div>
-                ) : (
-                  <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0">
-                    {filteredBannedItems.map((item) => (
-                      <li
-                        key={item.key}
-                        className="tw:flex tw:items-center tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:p-2.5"
-                      >
-                        <div className="tw:flex tw:h-7 tw:w-7 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md tw:border tw:border-border tw:bg-white/4 tw:text-text-muted">
-                          {item.type === 'player' ? (
-                            <Ban size={16} />
-                          ) : (
-                            <Globe size={16} />
-                          )}
-                        </div>
-                        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
-                          <strong>{item.label}</strong>
-                          <small className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[0.72rem] tw:text-text-muted">
-                            {item.type === 'player'
-                              ? item.uuid || item.detail || 'Banned player'
-                              : item.detail || 'Banned IP'}
-                          </small>
-                        </div>
-                        <button
-                          type="button"
-                          className="tw:ml-auto tw:cursor-pointer tw:rounded-lg tw:border tw:border-emerald-400/35 tw:bg-emerald-400/12 tw:px-2.5 tw:py-1.5 tw:text-emerald-300 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
-                          onClick={() => handlePardon(item)}
-                          disabled={
-                            !canModeratePlayers || isPlayerActionLoading
-                          }
-                        >
-                          Pardon
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-
-              {!canModeratePlayers && (
-                <p className="tw:mb-0 tw:mt-2.5 tw:text-[0.82rem] tw:text-text-muted">
-                  You can view players, but moderation actions require console
-                  permission.
-                </p>
-              )}
-            </div>
+            <PlayersPanel
+              banned={filteredBannedItems}
+              bannedCount={bannedItems.length}
+              canModerate={canModeratePlayers}
+              filter={playerFilter}
+              isActionLoading={isPlayerActionLoading}
+              maxPlayers={stats.maxPlayers}
+              online={filteredOnlineItems}
+              onlineCount={onlineItems.length}
+              onlinePlayers={stats.onlinePlayers}
+              operators={filteredOperatorItems}
+              operatorCount={operatorItems.length}
+              search={playersSearch}
+              onFilterChange={setPlayerFilter}
+              onPardon={handlePardon}
+              onSearchChange={setPlayersSearch}
+              onSelectPlayer={(player, isOperator) => {
+                if (!canModeratePlayers) return;
+                const normalizedName = player.name.toLowerCase();
+                const normalizedUuid = player.uuid?.toLowerCase();
+                setSelectedPlayer({
+                  name: player.name,
+                  id: player.uuid || '',
+                  isOnline: player.isOnline,
+                  isOperator:
+                    isOperator ||
+                    operatorNameSet.has(normalizedName) ||
+                    Boolean(
+                      normalizedUuid && operatorUuidSet.has(normalizedUuid),
+                    ),
+                });
+                setIsPlayerActionsOpen(true);
+              }}
+            />
           )}
 
           {activeTab === 'files' && (
@@ -2387,58 +1993,12 @@ const ServerDetail: React.FC = () => {
           )}
         </section>
 
-        <aside className="tw:box-border tw:flex tw:h-fit tw:flex-col tw:gap-2 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-2.5 tw:max-[1024px]:order-[-1] tw:max-[1024px]:flex-row tw:max-[1024px]:flex-wrap tw:max-[1024px]:overflow-visible tw:max-[640px]:grid tw:max-[640px]:grid-cols-2 tw:max-[640px]:gap-2 tw:max-[640px]:p-2">
-          <button
-            type="button"
-            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'performance' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
-            onClick={() => setActiveTab('performance')}
-          >
-            <BarChart3 size={16} />
-            Performance
-          </button>
-          <button
-            type="button"
-            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'console' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
-            onClick={() => setActiveTab('console')}
-          >
-            <Terminal size={16} />
-            Console
-          </button>
-          <button
-            type="button"
-            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'players' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
-            onClick={() => setActiveTab('players')}
-          >
-            <Users size={16} />
-            Players
-          </button>
-          <button
-            type="button"
-            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'files' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
-            onClick={() => setActiveTab('files')}
-          >
-            <HardDrive size={16} />
-            Files
-          </button>
-          {supportsAddons && (
-            <button
-              type="button"
-              className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'addons' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
-              onClick={() => setActiveTab('addons')}
-            >
-              <Package size={16} />
-              {addonsLabel}
-            </button>
-          )}
-          <button
-            type="button"
-            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'settings' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <Settings2 size={16} />
-            Settings
-          </button>
-        </aside>
+        <ServerDetailNav
+          activeTab={activeTab}
+          addonsLabel={addonsLabel}
+          supportsAddons={supportsAddons}
+          onSelect={setActiveTab}
+        />
       </div>
 
       <Modal
