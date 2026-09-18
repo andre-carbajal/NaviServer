@@ -6,7 +6,7 @@ RUN npm ci --ignore-scripts
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.26.4-bookworm AS backend
+FROM golang:1.26.8-bookworm AS backend
 WORKDIR /src
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \

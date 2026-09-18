@@ -16,6 +16,7 @@ import {
   MoreVertical,
   Package,
   Play,
+  PowerOff,
   RotateCcw,
   Search,
   Settings2,
@@ -32,7 +33,6 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -906,6 +906,39 @@ const ServerDetail: React.FC = () => {
     deleteConfirmName.trim() === (server?.name || '');
   const isServerOnlineForChart =
     server?.status === 'RUNNING' && !isStatsOffline;
+  const performanceEmptyState = (() => {
+    switch (server?.status) {
+      case 'STOPPED':
+        return {
+          title: 'Server is offline',
+          description: 'Start the server to view CPU and RAM performance.',
+        };
+      case 'STARTING':
+        return {
+          title: 'Server is starting',
+          description: 'Performance data will appear when startup finishes.',
+        };
+      case 'STOPPING':
+        return {
+          title: 'Server is stopping',
+          description: 'Performance data is unavailable while it shuts down.',
+        };
+      case 'CREATING':
+        return {
+          title: 'Server is being created',
+          description: 'Performance data will appear when setup finishes.',
+        };
+      case 'RUNNING':
+        return isStatsOffline
+          ? {
+              title: 'Performance data unavailable',
+              description: 'Waiting for the statistics connection to recover.',
+            }
+          : null;
+      default:
+        return null;
+    }
+  })();
   let chartOverlayMessage: string | null = null;
   if (isServerOnlineForChart) {
     if (chartSize.width <= 0 || chartSize.height <= 0) {
@@ -1331,104 +1364,187 @@ const ServerDetail: React.FC = () => {
               <div className="server-v2-chart-card">
                 <div className="server-v2-chart-header">
                   <h2>Performance Graph</h2>
-                  <div className="server-v2-range-selector">
-                    {(Object.keys(RANGE_TO_MS) as ChartRange[]).map((range) => (
-                      <button
-                        key={range}
-                        type="button"
-                        className={chartRange === range ? 'active' : ''}
-                        onClick={() => setChartRange(range)}
-                      >
-                        {range}
-                      </button>
-                    ))}
-                  </div>
+                  {!performanceEmptyState && (
+                    <div className="server-v2-range-selector">
+                      {(Object.keys(RANGE_TO_MS) as ChartRange[]).map(
+                        (range) => (
+                          <button
+                            key={range}
+                            type="button"
+                            className={chartRange === range ? 'active' : ''}
+                            onClick={() => setChartRange(range)}
+                          >
+                            {range}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="server-v2-chart-shell" ref={chartShellRef}>
-                  {chartSize.width > 0 && chartSize.height > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={visibleHistory}
-                        margin={{ top: 12, right: 24, left: 8, bottom: 4 }}
-                      >
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          stroke="rgba(255,255,255,0.08)"
-                        />
-                        <XAxis
-                          dataKey="ts"
-                          type="number"
-                          scale="time"
-                          domain={[rangeStart, rangeEnd]}
-                          stroke="var(--text-muted)"
-                          tickFormatter={formatTimeTick}
-                          minTickGap={24}
-                        />
-                        <YAxis
-                          yAxisId="cpu"
-                          domain={[0, 100]}
-                          tickFormatter={(value) => `${value}%`}
-                          stroke="var(--text-muted)"
-                          width={44}
-                        />
-                        <YAxis
-                          yAxisId="ram"
-                          orientation="right"
-                          domain={[0, ramDomainMax]}
-                          tickFormatter={(value) =>
-                            `${Math.round(Number(value))}MB`
-                          }
-                          stroke="var(--text-muted)"
-                          width={60}
-                        />
-                        <Tooltip
-                          labelFormatter={(value) =>
-                            formatTimeTick(Number(value))
-                          }
-                          formatter={(value, name) => {
-                            const numericValue = Number(value ?? 0);
-                            if (name === 'CPU %') {
-                              return [`${numericValue.toFixed(1)}%`, name];
-                            }
-                            return [`${Math.round(numericValue)} MB`, name];
-                          }}
-                          contentStyle={{
-                            background: '#1e1e1e',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '8px',
-                          }}
-                          labelStyle={{ color: 'var(--text-main)' }}
-                        />
-                        <Legend />
-                        <Line
-                          yAxisId="cpu"
-                          type="monotone"
-                          dataKey="cpu"
-                          name="CPU %"
-                          stroke="#60a5fa"
-                          strokeWidth={2}
-                          dot={false}
-                          isAnimationActive={false}
-                        />
-                        <Line
-                          yAxisId="ram"
-                          type="monotone"
-                          dataKey="ramMb"
-                          name="RAM MB"
-                          stroke="#a855f7"
-                          strokeWidth={2}
-                          dot={false}
-                          isAnimationActive={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : null}
-
-                  {chartOverlayMessage && (
-                    <div className="server-v2-empty-chart">
-                      {chartOverlayMessage}
+                <div className="server-v2-charts" ref={chartShellRef}>
+                  {performanceEmptyState ? (
+                    <div className="server-v2-performance-empty" role="status">
+                      <PowerOff size={32} aria-hidden="true" />
+                      <strong>{performanceEmptyState.title}</strong>
+                      <span>{performanceEmptyState.description}</span>
                     </div>
+                  ) : (
+                    <>
+                      <section className="server-v2-chart-panel">
+                        <h3>CPU Usage</h3>
+                        <div className="server-v2-chart-shell">
+                          {chartSize.width > 0 && chartSize.height > 0 ? (
+                            <ResponsiveContainer
+                              width="100%"
+                              height="100%"
+                              minWidth={0}
+                              minHeight={0}
+                              initialDimension={{ width: 1, height: 1 }}
+                            >
+                              <LineChart
+                                data={visibleHistory}
+                                margin={{
+                                  top: 12,
+                                  right: 20,
+                                  left: 12,
+                                  bottom: 12,
+                                }}
+                              >
+                                <CartesianGrid
+                                  strokeDasharray="3 3"
+                                  stroke="rgba(255,255,255,0.08)"
+                                />
+                                <XAxis
+                                  dataKey="ts"
+                                  type="number"
+                                  scale="time"
+                                  domain={[rangeStart, rangeEnd]}
+                                  stroke="var(--text-muted)"
+                                  tickFormatter={formatTimeTick}
+                                  minTickGap={24}
+                                  padding={{ left: 8, right: 8 }}
+                                />
+                                <YAxis
+                                  domain={[0, 100]}
+                                  tickFormatter={(value) => `${value}%`}
+                                  stroke="var(--text-muted)"
+                                  width={60}
+                                />
+                                <Tooltip
+                                  labelFormatter={(value) =>
+                                    formatTimeTick(Number(value))
+                                  }
+                                  formatter={(value) => [
+                                    `${Number(value ?? 0).toFixed(1)}%`,
+                                    'CPU',
+                                  ]}
+                                  contentStyle={{
+                                    background: '#1e1e1e',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                  labelStyle={{ color: 'var(--text-main)' }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="cpu"
+                                  name="CPU"
+                                  stroke="#60a5fa"
+                                  strokeWidth={2}
+                                  dot={false}
+                                  isAnimationActive={false}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          ) : null}
+
+                          {chartOverlayMessage && (
+                            <div className="server-v2-empty-chart">
+                              {chartOverlayMessage}
+                            </div>
+                          )}
+                        </div>
+                      </section>
+
+                      <section className="server-v2-chart-panel">
+                        <h3>RAM Usage</h3>
+                        <div className="server-v2-chart-shell">
+                          {chartSize.width > 0 && chartSize.height > 0 ? (
+                            <ResponsiveContainer
+                              width="100%"
+                              height="100%"
+                              minWidth={0}
+                              minHeight={0}
+                              initialDimension={{ width: 1, height: 1 }}
+                            >
+                              <LineChart
+                                data={visibleHistory}
+                                margin={{
+                                  top: 12,
+                                  right: 20,
+                                  left: 12,
+                                  bottom: 12,
+                                }}
+                              >
+                                <CartesianGrid
+                                  strokeDasharray="3 3"
+                                  stroke="rgba(255,255,255,0.08)"
+                                />
+                                <XAxis
+                                  dataKey="ts"
+                                  type="number"
+                                  scale="time"
+                                  domain={[rangeStart, rangeEnd]}
+                                  stroke="var(--text-muted)"
+                                  tickFormatter={formatTimeTick}
+                                  minTickGap={24}
+                                  padding={{ left: 8, right: 8 }}
+                                />
+                                <YAxis
+                                  domain={[0, ramDomainMax]}
+                                  tickFormatter={(value) =>
+                                    `${Math.round(Number(value))}MB`
+                                  }
+                                  stroke="var(--text-muted)"
+                                  width={68}
+                                />
+                                <Tooltip
+                                  labelFormatter={(value) =>
+                                    formatTimeTick(Number(value))
+                                  }
+                                  formatter={(value) => [
+                                    `${Math.round(Number(value ?? 0))} MB`,
+                                    'RAM',
+                                  ]}
+                                  contentStyle={{
+                                    background: '#1e1e1e',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                  }}
+                                  labelStyle={{ color: 'var(--text-main)' }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="ramMb"
+                                  name="RAM"
+                                  stroke="#a855f7"
+                                  strokeWidth={2}
+                                  dot={false}
+                                  isAnimationActive={false}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          ) : null}
+
+                          {chartOverlayMessage && (
+                            <div className="server-v2-empty-chart">
+                              {chartOverlayMessage}
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    </>
                   )}
                 </div>
               </div>

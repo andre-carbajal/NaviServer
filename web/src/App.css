@@ -2965,7 +2965,6 @@ dialog.modal-overlay::backdrop {
 
 .server-v2-chart-card {
   grid-column: 1 / -1;
-  min-height: 360px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -3008,8 +3007,53 @@ dialog.modal-overlay::backdrop {
   color: white;
 }
 
+.server-v2-charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+
+.server-v2-chart-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.server-v2-chart-panel h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.server-v2-performance-empty {
+  grid-column: 1 / -1;
+  min-height: 280px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-dark);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.server-v2-performance-empty strong {
+  color: var(--text-main);
+  font-size: 1.05rem;
+}
+
+.server-v2-performance-empty span {
+  max-width: 360px;
+}
+
 .server-v2-chart-shell {
-  flex: 1;
+  height: 280px;
   min-height: 250px;
   min-width: 0;
   border: 1px solid var(--border-color);
@@ -3802,7 +3846,7 @@ dialog.modal-overlay::backdrop {
   }
 
   .server-v2-chart-card {
-    min-height: 320px;
+    min-height: 0;
   }
 
   .server-v2-content {
