@@ -1902,7 +1902,7 @@ const ServerDetail: React.FC = () => {
                 <>
                   <div className="tw:grid tw:grid-cols-2 tw:gap-4 tw:max-[1024px]:grid-cols-1">
                     <div className="tw:rounded-[14px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-4 tw:max-[640px]:p-3">
-                      <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                      <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-center">
                         <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                           <Gamepad2 size={18} />
                         </div>
@@ -2099,7 +2099,7 @@ const ServerDetail: React.FC = () => {
                     </div>
 
                     <div className="tw:rounded-[14px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-4 tw:max-[640px]:p-3">
-                      <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                      <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-center">
                         <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                           <Gauge size={18} />
                         </div>
@@ -2222,7 +2222,7 @@ const ServerDetail: React.FC = () => {
                   </div>
 
                   <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
-                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-center">
                       <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                         <Upload size={18} />
                       </div>
@@ -2293,7 +2293,7 @@ const ServerDetail: React.FC = () => {
                   </div>
 
                   <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
-                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-center">
                       <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                         <Download size={18} />
                       </div>
@@ -2353,7 +2353,7 @@ const ServerDetail: React.FC = () => {
                   </div>
 
                   <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-rose-500/35 tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
-                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-center">
                       <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-rose-500/35 tw:bg-rose-500/12 tw:text-rose-300">
                         <Trash2 size={18} />
                       </div>
