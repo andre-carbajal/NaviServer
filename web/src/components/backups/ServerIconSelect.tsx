@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { api } from '../services/api';
-import type { Server } from '../types';
+import { api } from '../../services/api';
+import type { Server } from '../../types';
 
 interface ServerIconSelectProps {
   label: string;

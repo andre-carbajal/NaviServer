@@ -18,7 +18,7 @@ import React, {
   useState,
 } from 'react';
 
-import { api } from '../services/api';
+import { api } from '../../services/api';
 import type {
   Addon,
   AddonInstallDependency,
@@ -26,9 +26,9 @@ import type {
   AddonSearchResult,
   AddonSource,
   Server,
-} from '../types';
-import { Button } from './ui/Button';
-import { Modal } from './ui/Modal';
+} from '../../types';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 
 interface AddonsPanelProps {
   server: Server;
@@ -584,8 +584,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
               type="checkbox"
               checked={includeDependencies}
               onChange={(e) => setIncludeDependencies(e.target.checked)}
-            />
-            {' '}
+            />{' '}
             Include dependencies
           </label>
           <Button
@@ -693,70 +692,70 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                   key={resultKey}
                   className={isInstalled ? 'installed' : undefined}
                 >
-                <label className="server-v2-install-row">
-                  <input
-                    type="checkbox"
-                    disabled={isInstalled}
-                    checked={Boolean(selectedInstalls[resultKey])}
-                    onChange={(e) => {
-                      const key = resultKey;
-                      if (isInstalled) {
-                        return;
-                      }
-                      if (e.target.checked) {
-                        setSelectedInstalls((prev) => ({
-                          ...prev,
-                          [key]: result,
-                        }));
-                        setSelectedVersionByKey((prev) => ({
-                          ...prev,
-                          [key]: result.latest?.versionId || '',
-                        }));
-                        return;
-                      }
-                      setSelectedInstalls((prev) => {
-                        const next = { ...prev };
-                        delete next[key];
-                        hydratedVersionKeys.current.delete(key);
-                        return next;
-                      });
-                      setHydratedVersionKeyState((prev) => {
-                        const next = { ...prev };
-                        delete next[key];
-                        return next;
-                      });
-                      setSelectedVersionByKey((prev) => {
-                        const next = { ...prev };
-                        delete next[key];
-                        return next;
-                      });
-                    }}
-                  />
-                  {result.iconUrl ? (
-                    <img
-                      src={result.iconUrl}
-                      alt={`${result.projectName} icon`}
-                      className="server-v2-install-icon"
+                  <label className="server-v2-install-row">
+                    <input
+                      type="checkbox"
+                      disabled={isInstalled}
+                      checked={Boolean(selectedInstalls[resultKey])}
+                      onChange={(e) => {
+                        const key = resultKey;
+                        if (isInstalled) {
+                          return;
+                        }
+                        if (e.target.checked) {
+                          setSelectedInstalls((prev) => ({
+                            ...prev,
+                            [key]: result,
+                          }));
+                          setSelectedVersionByKey((prev) => ({
+                            ...prev,
+                            [key]: result.latest?.versionId || '',
+                          }));
+                          return;
+                        }
+                        setSelectedInstalls((prev) => {
+                          const next = { ...prev };
+                          delete next[key];
+                          hydratedVersionKeys.current.delete(key);
+                          return next;
+                        });
+                        setHydratedVersionKeyState((prev) => {
+                          const next = { ...prev };
+                          delete next[key];
+                          return next;
+                        });
+                        setSelectedVersionByKey((prev) => {
+                          const next = { ...prev };
+                          delete next[key];
+                          return next;
+                        });
+                      }}
                     />
-                  ) : (
-                    <div className="server-v2-install-icon-placeholder" />
+                    {result.iconUrl ? (
+                      <img
+                        src={result.iconUrl}
+                        alt={`${result.projectName} icon`}
+                        className="server-v2-install-icon"
+                      />
+                    ) : (
+                      <div className="server-v2-install-icon-placeholder" />
+                    )}
+                    <div className="server-v2-install-text">
+                      <strong>{result.projectName}</strong>
+                      <small>{resultDescription}</small>
+                    </div>
+                  </label>
+                  {result.projectUrl && (
+                    <a
+                      href={result.projectUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="server-v2-addon-link"
+                      aria-label={`Open ${result.projectName} page`}
+                    >
+                      <Globe size={14} />
+                    </a>
                   )}
-                  <div className="server-v2-install-text">
-                    <strong>{result.projectName}</strong>
-                    <small>{resultDescription}</small>
-                  </div>
-                </label>
-                {result.projectUrl && (
-                  <a
-                    href={result.projectUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="server-v2-addon-link"
-                    aria-label={`Open ${result.projectName} page`}
-                  >
-                    <Globe size={14} />
-                  </a>
-                )}
                 </li>
               );
             })}

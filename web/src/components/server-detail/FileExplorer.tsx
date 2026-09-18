@@ -17,12 +17,12 @@ import {
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { useModalDialog } from '../hooks/useModalDialog';
-import { api } from '../services/api';
-import type { FileEntry } from '../types';
+import { useModalDialog } from '../../hooks/useModalDialog';
+import { api } from '../../services/api';
+import type { FileEntry } from '../../types';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import FileEditor from './FileEditor';
-import { Button } from './ui/Button';
-import { Modal } from './ui/Modal';
 
 const IGNORED_EDIT_EXTENSIONS = new Set([
   '.jar',
@@ -52,7 +52,9 @@ const formatSize = (bytes: number) => {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return (
+    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  );
 };
 
 interface FileExplorerProps {

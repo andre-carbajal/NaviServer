@@ -2844,6 +2844,7 @@ dialog.modal-overlay::backdrop {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 12px;
 }
 
 .server-v2-content,
@@ -3851,6 +3852,7 @@ dialog.modal-overlay::backdrop {
 
   .server-v2-content {
     overflow: visible;
+    padding-right: 0;
   }
 
   .server-v2-console-wrap {

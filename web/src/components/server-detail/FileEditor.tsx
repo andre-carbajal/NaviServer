@@ -4,8 +4,8 @@ import { registerJson5Language } from 'monaco-json5-highlighter';
 
 import React, { Suspense, useEffect, useState } from 'react';
 
-import { useModalDialog } from '../hooks/useModalDialog';
-import { api } from '../services/api';
+import { useModalDialog } from '../../hooks/useModalDialog';
+import { api } from '../../services/api';
 
 const getLanguage = (path: string) => {
   const ext = path.split('.').pop()?.toLowerCase();

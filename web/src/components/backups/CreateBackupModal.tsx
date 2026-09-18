@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
-import type { Server } from '../types';
+import type { Server } from '../../types';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import ServerIconSelect from './ServerIconSelect';
-import { Button } from './ui/Button';
-import { Modal } from './ui/Modal';
 
 interface CreateBackupModalProps {
   isOpen: boolean;

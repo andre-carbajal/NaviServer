@@ -24,7 +24,7 @@ const { mockApi } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../services/api', () => ({
+vi.mock('../../services/api', () => ({
   api: mockApi,
 }));
 

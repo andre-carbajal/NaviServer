@@ -3,8 +3,8 @@ import { Lock, X } from 'lucide-react';
 
 import React, { useState } from 'react';
 
-import { api } from '../services/api';
-import type { User } from '../types';
+import { api } from '../../services/api';
+import type { User } from '../../types';
 
 interface Props {
   user: User;

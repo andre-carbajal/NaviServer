@@ -51,9 +51,10 @@ import React, {
   useState,
 } from 'react';
 
-import AddonsPanel from '../components/AddonsPanel';
-import ConsoleView from '../components/ConsoleView';
-import ShareModal from '../components/ShareModal';
+import AddonsPanel from '../components/server-detail/AddonsPanel';
+import ConsoleView from '../components/server-detail/ConsoleView';
+import PlayerAvatar from '../components/server-detail/PlayerAvatar';
+import ShareModal from '../components/server-detail/ShareModal';
 import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
 import { Modal } from '../components/ui/Modal';
@@ -74,7 +75,6 @@ import {
   FALLBACK_RAM_MAX_MB,
   RAM_MIN_MB,
   clampRamAllocation,
-  getAvatarUrl,
   getPowerControlState,
   isFutureMinecraftVersion,
   normalizeServerSettings,
@@ -82,15 +82,12 @@ import {
   upsertPropertyLine,
 } from '../utils/serverDetail';
 
-const FileExplorer = React.lazy(() => import('../components/FileExplorer'));
+const FileExplorer = React.lazy(
+  () => import('../components/server-detail/FileExplorer'),
+);
 
 type DetailTab =
-  | 'performance'
-  | 'console'
-  | 'players'
-  | 'files'
-  | 'addons'
-  | 'settings';
+  'performance' | 'console' | 'players' | 'files' | 'addons' | 'settings';
 type ChartRange = '1m' | '5m' | '30m' | '1h' | '4h';
 type PlayerFilter = 'all' | 'admins' | 'banned';
 
@@ -162,7 +159,9 @@ const formatBytes = (bytes: number) => {
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return (
+    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  );
 };
 
 const formatDuration = (seconds: number) => {
@@ -175,20 +174,6 @@ const formatDuration = (seconds: number) => {
   if (mins > 0) return `${mins}m ${secs}s`;
   return `${secs}s`;
 };
-
-const PlayerAvatar: React.FC<{ player: PlayerInfo }> = ({ player }) => (
-  <img
-    src={getAvatarUrl(player.id)}
-    alt={`${player.name} avatar`}
-    className="server-v2-player-avatar"
-    onError={(event) => {
-      const fallbackUrl = getAvatarUrl();
-      if (event.currentTarget.src !== fallbackUrl) {
-        event.currentTarget.src = fallbackUrl;
-      }
-    }}
-  />
-);
 
 const ServerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -2357,10 +2342,7 @@ const ServerDetail: React.FC = () => {
           <div className="server-v2-player-actions-list">
             <button
               type="button"
-              disabled={
-                isPlayerActionLoading ||
-                !selectedPlayer?.isOnline
-              }
+              disabled={isPlayerActionLoading || !selectedPlayer?.isOnline}
               title={
                 selectedPlayer?.isOnline === false
                   ? 'Player is offline, cannot be kicked.'

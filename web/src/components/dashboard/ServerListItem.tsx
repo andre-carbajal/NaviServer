@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 
 import React, { useEffect, useState } from 'react';
 
-import { useCopy } from '../hooks/useCopy';
-import { api } from '../services/api';
-import type { Server, ServerStats } from '../types';
-import { formatBytes } from '../utils/format';
-import { Button } from './ui/Button';
-import { CopyButton } from './ui/CopyButton';
+import { useCopy } from '../../hooks/useCopy';
+import { api } from '../../services/api';
+import type { Server, ServerStats } from '../../types';
+import { formatBytes } from '../../utils/format';
+import { Button } from '../ui/Button';
+import { CopyButton } from '../ui/CopyButton';
 
 interface ServerListItemProps {
   server: Server;

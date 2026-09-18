@@ -2,8 +2,8 @@ import { Key, X } from 'lucide-react';
 
 import React, { useEffect, useState } from 'react';
 
-import { api } from '../services/api';
-import type { Permission, Server, User } from '../types';
+import { api } from '../../services/api';
+import type { Permission, Server, User } from '../../types';
 
 interface Props {
   user: User;

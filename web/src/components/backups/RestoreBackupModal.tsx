@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 
-import { api } from '../services/api.ts';
-import type { Server } from '../types';
+import { api } from '../../services/api';
+import type { Server } from '../../types';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 import ServerIconSelect from './ServerIconSelect';
-import { Button } from './ui/Button';
-import { Modal } from './ui/Modal';
 
 export interface RestoreData {
   targetServerId?: string;

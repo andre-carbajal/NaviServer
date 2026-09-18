@@ -17,8 +17,7 @@ type ConfirmOptions = AlertOptions & {
 };
 
 type DialogState =
-  | ({ type: 'alert' } & AlertOptions)
-  | ({ type: 'confirm' } & ConfirmOptions);
+  ({ type: 'alert' } & AlertOptions) | ({ type: 'confirm' } & ConfirmOptions);
 
 const getButtonVariant = (variant?: DialogVariant) => {
   if (variant === 'danger') return 'danger';

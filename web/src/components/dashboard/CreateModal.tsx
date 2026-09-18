@@ -2,9 +2,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 import React, { useEffect, useMemo, useState } from 'react';
 
-import { api } from '../services/api.ts';
-import { Button } from './ui/Button';
-import { Modal } from './ui/Modal';
+import { api } from '../../services/api';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 
 const loaderLogoMap: Record<string, string> = {
   paper: '/loaders/paper.webp',

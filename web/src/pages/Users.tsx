@@ -3,10 +3,10 @@ import { Key, Lock, Trash2, UserPlus } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import '../App.css';
-import ChangePasswordModal from '../components/ChangePasswordModal';
 import ConfirmationModal from '../components/ConfirmationModal';
-import CreateUserModal from '../components/CreateUserModal';
-import PermissionsModal from '../components/PermissionsModal';
+import ChangePasswordModal from '../components/users/ChangePasswordModal';
+import CreateUserModal from '../components/users/CreateUserModal';
+import PermissionsModal from '../components/users/PermissionsModal';
 import { useAuth } from '../context/AuthContext';
 import { useModalDialog } from '../hooks/useModalDialog';
 import { api } from '../services/api';

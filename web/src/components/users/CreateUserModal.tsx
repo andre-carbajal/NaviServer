@@ -2,10 +2,10 @@ import axios from 'axios';
 
 import React, { useState } from 'react';
 
-import { api } from '../services/api';
-import type { User } from '../types';
-import { Button } from './ui/Button';
-import { Modal } from './ui/Modal';
+import { api } from '../../services/api';
+import type { User } from '../../types';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 
 interface Props {
   onClose: () => void;

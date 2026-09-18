@@ -2,10 +2,10 @@ import { Globe, Loader2 } from 'lucide-react';
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { api } from '../services/api';
-import { Button } from './ui/Button';
-import { CopyButton } from './ui/CopyButton';
-import { Modal } from './ui/Modal';
+import { api } from '../../services/api';
+import { Button } from '../ui/Button';
+import { CopyButton } from '../ui/CopyButton';
+import { Modal } from '../ui/Modal';
 
 interface ShareModalProps {
   isOpen: boolean;

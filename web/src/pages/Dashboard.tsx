@@ -8,8 +8,8 @@ import {
 
 import React, { useEffect, useMemo, useState } from 'react';
 
-import CreateModal from '../components/CreateModal';
-import ServerListItem from '../components/ServerListItem';
+import CreateModal from '../components/dashboard/CreateModal';
+import ServerListItem from '../components/dashboard/ServerListItem';
 import { Button } from '../components/ui/Button';
 import { useServers } from '../hooks/useServers';
 import { api } from '../services/api';
