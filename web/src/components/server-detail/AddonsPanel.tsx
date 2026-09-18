@@ -33,9 +33,18 @@ import { Modal } from '../ui/Modal';
 interface AddonsPanelProps {
   server: Server;
   canManage: boolean;
+  confirmAction: (
+    title: string,
+    message: string,
+    confirmText: string,
+  ) => Promise<boolean>;
 }
 
-const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
+const AddonsPanel: React.FC<AddonsPanelProps> = ({
+  server,
+  canManage,
+  confirmAction,
+}) => {
   const SEARCH_BATCH_SIZE = 20;
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Addon[]>([]);
@@ -300,6 +309,68 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
   ]);
 
   const title = addonType === 'plugin' ? 'Plugins' : 'Mods';
+  const addonLabel = addonType === 'plugin' ? 'plugin' : 'mod';
+
+  const toggleAddon = async (addon: Addon) => {
+    if (!addon.disabled) {
+      const confirmed = await confirmAction(
+        `Disable ${addonLabel}`,
+        `Disable ${addon.projectName || addon.name}?`,
+        'Disable',
+      );
+      if (!confirmed) return;
+    }
+
+    await runAction(`toggle-${addon.id}`, () =>
+      api.setAddonDisabled(server.id, addon.id, {
+        disabled: !addon.disabled,
+      }),
+    );
+  };
+
+  const deleteAddon = async (addon: Addon) => {
+    const confirmed = await confirmAction(
+      `Delete ${addonLabel}`,
+      `Delete ${addon.projectName || addon.name}?`,
+      'Delete',
+    );
+    if (!confirmed) return;
+
+    await runAction(`delete-${addon.id}`, () =>
+      api.deleteAddon(server.id, addon.id),
+    );
+  };
+
+  const updateAddon = async (addon: Addon) => {
+    const confirmed = await confirmAction(
+      `Update ${addonLabel}`,
+      `Update ${addon.projectName || addon.name} to ${addon.latest?.versionLabel || 'the latest version'}?`,
+      'Update',
+    );
+    if (!confirmed) return;
+
+    await runAction(`update-${addon.id}`, () =>
+      api.updateAddon(server.id, addon.id, {
+        includeDependencies,
+      }),
+    );
+  };
+
+  const updateAllAddons = async () => {
+    const addonTitle = title.toLowerCase();
+    const confirmed = await confirmAction(
+      `Update all ${addonTitle}`,
+      `Update all installed ${addonTitle} with available updates?`,
+      'Update all',
+    );
+    if (!confirmed) return;
+
+    await runAction('update-all', () =>
+      api.updateAllAddons(server.id, {
+        includeDependencies,
+      }),
+    );
+  };
 
   const selectedInstallEntries = useMemo(
     () => Object.entries(selectedInstalls),
@@ -542,10 +613,10 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
   ]);
 
   return (
-    <div className="server-v2-addons-layout">
-      <div className="server-v2-settings-card">
-        <div className="server-v2-settings-panel-head">
-          <div className="server-v2-settings-panel-icon">
+    <div className="tw:grid tw:min-w-0 tw:gap-4">
+      <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-[14px]">
+        <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:[&_h3]:m-0 tw:[&_h3]:text-[1.1rem] tw:[&_p]:mt-0.5 tw:[&_p]:mb-0 tw:[&_p]:text-[0.9rem] tw:[&_p]:text-text-muted">
+          <div className="tw:flex tw:h-10 tw:w-10 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
             <Upload size={18} />
           </div>
           <div>
@@ -555,33 +626,34 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
         </div>
 
         {!isStopped && (
-          <p className="server-v2-settings-hint">
+          <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
             Stop the server to install, remove or update {title.toLowerCase()}.
           </p>
         )}
 
         {!canManage && (
-          <p className="server-v2-settings-hint">
+          <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
             You need console permission to manage {title.toLowerCase()}.
           </p>
         )}
 
-        <div className="server-v2-addons-toolbar">
+        <div className="tw:mt-3 tw:flex tw:flex-wrap tw:items-center tw:gap-2.5">
           <Button
             variant="secondary"
             onClick={() => loadAddons(true)}
             disabled={loading || actionKey !== null}
           >
             {loading ? (
-              <Loader2 size={14} className="spin" />
+              <Loader2 size={14} className="tw:animate-spin" />
             ) : (
               <RefreshCw size={14} />
             )}
             Sync
           </Button>
-          <label className="server-v2-addons-toggle">
+          <label className="tw:flex tw:items-center tw:gap-2 tw:text-[0.9rem] tw:text-text-muted">
             <input
               type="checkbox"
+              className="tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:p-0 tw:before:flex tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:items-center tw:before:justify-center tw:before:leading-none tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
               checked={includeDependencies}
               onChange={(e) => setIncludeDependencies(e.target.checked)}
             />{' '}
@@ -589,17 +661,11 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           </label>
           <Button
             variant="secondary"
-            onClick={() =>
-              runAction('update-all', () =>
-                api.updateAllAddons(server.id, {
-                  includeDependencies,
-                }),
-              )
-            }
+            onClick={() => void updateAllAddons()}
             disabled={!canManage || !isStopped || actionKey !== null}
           >
             {actionKey === 'update-all' ? (
-              <Loader2 size={14} className="spin" />
+              <Loader2 size={14} className="tw:animate-spin" />
             ) : (
               <Download size={14} />
             )}
@@ -613,21 +679,21 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           </Button>
         </div>
 
-        {error && <p className="server-v2-addons-error">{error}</p>}
+        {error && <p className="tw:mt-2 tw:text-red-400">{error}</p>}
       </div>
 
       <Modal
         isOpen={isInstallOpen}
         onClose={() => setIsInstallOpen(false)}
         title={`Install ${title}`}
-        contentClassName="modal-content-install"
+        contentClassName="tw:max-w-[840px] tw:max-h-[78vh]"
       >
-        <div className="server-v2-addons-search">
+        <div className="tw:mt-[14px] tw:grid tw:grid-cols-[1fr_180px_auto] tw:items-center tw:gap-2.5 tw:[&_label]:flex tw:[&_label]:items-center tw:[&_label]:gap-2">
           <label>
             <Search size={16} />
             <input
               type="text"
-              className="form-input"
+              className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -640,7 +706,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
             />
           </label>
           <select
-            className="form-input"
+            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
             value={searchSource}
             onChange={(e) => {
               const nextSource = e.target.value as 'modrinth' | 'curseforge';
@@ -658,12 +724,12 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
             <option value="modrinth">Modrinth</option>
             <option value="curseforge">CurseForge</option>
           </select>
-          {searching && <Loader2 size={18} className="spin" />}
+          {searching && <Loader2 size={18} className="tw:animate-spin" />}
         </div>
 
         <div
           ref={searchResultsRef}
-          className="server-v2-addons-results"
+          className="tw:mt-[14px] tw:max-h-[42vh] tw:overflow-y-auto tw:[&_ul]:mt-2.5 tw:[&_ul]:flex tw:[&_ul]:list-none tw:[&_ul]:flex-col tw:[&_ul]:gap-2.5 tw:[&_ul]:p-0 tw:[&_li]:flex tw:[&_li]:cursor-pointer tw:[&_li]:items-center tw:[&_li]:justify-between tw:[&_li]:gap-3 tw:[&_li]:rounded-[10px] tw:[&_li]:border tw:[&_li]:border-border tw:[&_li]:px-3 tw:[&_li]:py-2.5 tw:[&_li.selected]:border-[#6a7cff] tw:[&_li.selected]:bg-[#6a7cff]/14 tw:[&_li.installed]:opacity-65"
           onScroll={(event) => {
             const target = event.currentTarget;
             const threshold = 64;
@@ -690,11 +756,12 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
               return (
                 <li
                   key={resultKey}
-                  className={isInstalled ? 'installed' : undefined}
+                  className={isInstalled ? 'tw:opacity-65' : undefined}
                 >
-                  <label className="server-v2-install-row">
+                  <label className="tw:grid tw:w-full tw:grid-cols-[auto_28px_1fr] tw:items-center tw:gap-2.5">
                     <input
                       type="checkbox"
+                      className="tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:p-0 tw:before:flex tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:items-center tw:before:justify-center tw:before:leading-none tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
                       disabled={isInstalled}
                       checked={Boolean(selectedInstalls[resultKey])}
                       onChange={(e) => {
@@ -735,12 +802,12 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                       <img
                         src={result.iconUrl}
                         alt={`${result.projectName} icon`}
-                        className="server-v2-install-icon"
+                        className="tw:h-7 tw:w-7 tw:rounded-md tw:object-cover"
                       />
                     ) : (
-                      <div className="server-v2-install-icon-placeholder" />
+                      <div className="tw:h-7 tw:w-7 tw:rounded-md tw:bg-white/8" />
                     )}
-                    <div className="server-v2-install-text">
+                    <div className="tw:min-w-0 tw:[&_strong]:block tw:[&_small]:block">
                       <strong>{result.projectName}</strong>
                       <small>{resultDescription}</small>
                     </div>
@@ -750,7 +817,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                       href={result.projectUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="server-v2-addon-link"
+                      className="tw:inline-flex tw:h-[30px] tw:w-[30px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:border tw:border-border tw:bg-transparent tw:text-text-muted tw:hover:border-[#6a7cff] tw:hover:text-text-main"
                       aria-label={`Open ${result.projectName} page`}
                     >
                       <Globe size={14} />
@@ -762,18 +829,18 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           </ul>
 
           {searchingMore && (
-            <div className="server-v2-addons-pagination">
+            <div className="tw:mt-2.5 tw:flex tw:items-center tw:justify-between tw:gap-2.5 tw:[&_span]:text-[0.9rem] tw:[&_span]:text-text-muted">
               <span>Loading more...</span>
             </div>
           )}
           {!searchingMore && !searchHasMore && searchResults.length > 0 && (
-            <div className="server-v2-addons-pagination">
+            <div className="tw:mt-2.5 tw:flex tw:items-center tw:justify-between tw:gap-2.5 tw:[&_span]:text-[0.9rem] tw:[&_span]:text-text-muted">
               <span>End of results</span>
             </div>
           )}
         </div>
 
-        <div className="server-v2-addons-install-footer">
+        <div className="tw:mt-3 tw:grid tw:grid-cols-[1fr_auto] tw:gap-2.5">
           <Button
             variant="secondary"
             onClick={() => {
@@ -797,31 +864,31 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
         </div>
       </Modal>
 
-      <div className="server-v2-settings-card">
+      <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-[14px]">
         <h3>Installed {title}</h3>
         {loading && <p>Loading...</p>}
         {!loading && items.length === 0 && (
           <p>No {title.toLowerCase()} found.</p>
         )}
         {!loading && items.length > 0 && (
-          <ul className="server-v2-addon-list">
+          <ul className="tw:mt-2.5 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0 tw:[&_li]:flex tw:[&_li]:items-center tw:[&_li]:justify-between tw:[&_li]:gap-3 tw:[&_li]:rounded-[10px] tw:[&_li]:border tw:[&_li]:border-border tw:[&_li]:px-3 tw:[&_li]:py-2.5 tw:[&_li.disabled]:opacity-65 tw:[&_small]:block tw:[&_small]:text-text-muted">
             {items.map((addon) => {
               const canUpdate =
                 addon.status === 'update_available' && !addon.disabled;
               return (
                 <li
                   key={addon.id}
-                  className={addon.disabled ? 'disabled' : undefined}
+                  className={addon.disabled ? 'tw:opacity-65' : undefined}
                 >
-                  <div className="server-v2-installed-addon-meta">
+                  <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2.5 tw:[&_div]:min-w-0 tw:[&_strong]:[overflow-wrap:anywhere] tw:[&_small]:[overflow-wrap:anywhere]">
                     {addon.iconUrl ? (
                       <img
                         src={addon.iconUrl}
                         alt={`${addon.projectName || addon.name} icon`}
-                        className="server-v2-install-icon"
+                        className="tw:h-7 tw:w-7 tw:rounded-md tw:object-cover"
                       />
                     ) : (
-                      <div className="server-v2-install-icon-placeholder" />
+                      <div className="tw:h-7 tw:w-7 tw:rounded-md tw:bg-white/8" />
                     )}
                     <div>
                       <strong>{addon.projectName || addon.name}</strong>
@@ -837,58 +904,45 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                       )}
                     </div>
                   </div>
-                  <div className="server-v2-addon-actions">
+                  <div className="tw:flex tw:shrink-0 tw:gap-2">
                     <Button
                       variant="secondary"
-                      onClick={() =>
-                        runAction(`toggle-${addon.id}`, () =>
-                          api.setAddonDisabled(server.id, addon.id, {
-                            disabled: !addon.disabled,
-                          }),
-                        )
-                      }
+                      onClick={() => void toggleAddon(addon)}
                       disabled={!canManage || !isStopped || actionKey !== null}
+                      aria-label={`${addon.disabled ? 'Enable' : 'Disable'} ${addon.projectName || addon.name}`}
                       title={addon.disabled ? 'Enable' : 'Disable'}
                     >
                       {actionKey === `toggle-${addon.id}` ? (
-                        <Loader2 size={14} className="spin" />
+                        <Loader2 size={14} className="tw:animate-spin" />
                       ) : (
                         <Power size={14} />
                       )}
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={() =>
-                        runAction(`update-${addon.id}`, () =>
-                          api.updateAddon(server.id, addon.id, {
-                            includeDependencies,
-                          }),
-                        )
-                      }
+                      onClick={() => void updateAddon(addon)}
                       disabled={
                         !canManage ||
                         !isStopped ||
                         !canUpdate ||
                         actionKey !== null
                       }
+                      aria-label={`Update ${addon.projectName || addon.name}`}
                     >
                       {actionKey === `update-${addon.id}` ? (
-                        <Loader2 size={14} className="spin" />
+                        <Loader2 size={14} className="tw:animate-spin" />
                       ) : (
                         <Download size={14} />
                       )}
                     </Button>
                     <Button
                       variant="danger"
-                      onClick={() =>
-                        runAction(`delete-${addon.id}`, () =>
-                          api.deleteAddon(server.id, addon.id),
-                        )
-                      }
+                      onClick={() => void deleteAddon(addon)}
                       disabled={!canManage || !isStopped || actionKey !== null}
+                      aria-label={`Delete ${addon.projectName || addon.name}`}
                     >
                       {actionKey === `delete-${addon.id}` ? (
-                        <Loader2 size={14} className="spin" />
+                        <Loader2 size={14} className="tw:animate-spin" />
                       ) : (
                         <Trash2 size={14} />
                       )}
@@ -905,27 +959,27 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
         isOpen={isInstallSummaryOpen}
         onClose={() => setIsInstallSummaryOpen(false)}
         title={`Install Summary (${selectedInstallCount})`}
-        contentClassName="modal-content-install-summary"
+        contentClassName="tw:max-w-[760px] tw:max-h-[78vh]"
       >
         {loadingSummaryVersions && (
-          <p className="server-v2-settings-hint">
+          <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
             Loading compatible versions...
           </p>
         )}
-        <ul className="server-v2-install-summary-list">
+        <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2 tw:p-0 tw:[&_li]:rounded-lg tw:[&_li]:border tw:[&_li]:border-border tw:[&_li]:p-2 tw:[&_small]:block tw:[&_small]:text-text-muted">
           {selectedInstallEntries.map(([key, result]) => {
             const version = resolveChosenVersion(key, result);
             return (
               <li key={key}>
-                <div className="server-v2-install-summary-addon">
+                <div className="tw:mb-2 tw:flex tw:items-center tw:gap-2.5">
                   {result.iconUrl ? (
                     <img
                       src={result.iconUrl}
                       alt={`${result.projectName} icon`}
-                      className="server-v2-install-icon"
+                      className="tw:h-7 tw:w-7 tw:rounded-md tw:object-cover"
                     />
                   ) : (
-                    <div className="server-v2-install-icon-placeholder" />
+                    <div className="tw:h-7 tw:w-7 tw:rounded-md tw:bg-white/8" />
                   )}
                   <div>
                     <strong>{result.projectName}</strong>
@@ -935,7 +989,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
                   </div>
                 </div>
                 <select
-                  className="form-input"
+                  className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
                   value={selectedVersionByKey[key] || ''}
                   onChange={(e) => {
                     setSummaryVersionsError(null);
@@ -961,8 +1015,8 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
           })}
         </ul>
         {includeDependencies && (
-          <section className="server-v2-install-summary-dependencies">
-            <div className="server-v2-install-summary-dependencies-head">
+          <section className="tw:mt-4 tw:border-t tw:border-border tw:pt-[14px]">
+            <div className="tw:mb-2">
               <strong>
                 Required dependencies ({previewDependencies.length})
               </strong>
@@ -971,39 +1025,37 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
               (loadingSummaryVersions ||
                 loadingInstallPreview ||
                 !summaryVersionsReady) && (
-                <p className="server-v2-settings-hint">
+                <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
                   Checking required dependencies...
                 </p>
               )}
             {installDependencyError && (
-              <p className="server-v2-install-summary-error">
-                {installDependencyError}
-              </p>
+              <p className="tw:m-0 tw:text-red-200">{installDependencyError}</p>
             )}
             {!installDependencyError &&
               !loadingSummaryVersions &&
               !loadingInstallPreview &&
               summaryVersionsReady &&
               previewDependencies.length === 0 && (
-                <p className="server-v2-settings-hint">
+                <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
                   All required dependencies are already installed.
                 </p>
               )}
             {previewDependencies.length > 0 && !installDependencyError && (
-              <ul className="server-v2-install-summary-dependency-list">
+              <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-1.5 tw:p-0">
                 {previewDependencies.map((dependency) => (
                   <li
                     key={`${dependency.source}:${dependency.projectId}`}
-                    className="server-v2-install-summary-dependency"
+                    className="tw:flex tw:items-center tw:gap-2.5 tw:rounded-lg tw:border tw:border-border tw:bg-white/2 tw:px-2.5 tw:py-2 tw:[&_div]:min-w-0 tw:[&_small]:block tw:[&_small]:text-text-muted tw:[&_small]:[overflow-wrap:anywhere]"
                   >
                     {dependency.iconUrl ? (
                       <img
                         src={dependency.iconUrl}
                         alt={`${dependency.name || dependency.projectId} icon`}
-                        className="server-v2-install-icon"
+                        className="tw:h-7 tw:w-7 tw:rounded-md tw:object-cover"
                       />
                     ) : (
-                      <div className="server-v2-install-icon-placeholder" />
+                      <div className="tw:h-7 tw:w-7 tw:rounded-md tw:bg-white/8" />
                     )}
                     <div>
                       <strong>{dependency.name || dependency.projectId}</strong>
@@ -1021,7 +1073,7 @@ const AddonsPanel: React.FC<AddonsPanelProps> = ({ server, canManage }) => {
             )}
           </section>
         )}
-        <div className="server-v2-addons-install-footer">
+        <div className="tw:mt-3 tw:grid tw:grid-cols-[1fr_auto] tw:gap-2.5">
           <Button
             variant="secondary"
             onClick={() => setIsInstallSummaryOpen(false)}

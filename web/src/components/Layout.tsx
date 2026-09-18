@@ -10,7 +10,6 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 import React, { useEffect, useState } from 'react';
 
-import '../App.css';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
@@ -40,141 +39,112 @@ const Layout: React.FC = () => {
   }, []);
 
   return (
-    <div className="layout">
-      <header className="mobile-header">
-        <div className="brand">
+    <div className="tw:flex tw:h-full tw:w-full tw:flex-col tw:pt-[50px] tw:pb-[50px] tw:min-[769px]:flex-row tw:min-[769px]:p-0">
+      <header className="tw:fixed tw:inset-x-0 tw:top-0 tw:z-[100] tw:flex tw:h-[50px] tw:items-center tw:justify-between tw:border-b tw:border-border tw:bg-bg-sidebar tw:px-4 tw:min-[769px]:hidden">
+        <div className="tw:flex tw:h-[60px] tw:items-center tw:gap-3 tw:border-0 tw:p-0 tw:text-[1.1rem] tw:font-bold tw:text-primary tw:max-[481px]:gap-1.5 tw:max-[481px]:text-base">
           <img
             src="/apple-touch-icon.png"
             alt="NaviServer"
-            style={{ width: '24px', height: '24px' }}
+            className="tw:h-6 tw:w-6 tw:max-[481px]:h-5 tw:max-[481px]:w-5"
           />
           <span>NaviServer</span>
         </div>
-        <div className="user-info">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginRight: '8px',
-            }}
-          >
-            <span
-              className="mobile-version"
-              style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}
-            >
-              {version}
-            </span>
+        <div className="tw:flex tw:items-center tw:gap-3 tw:text-text-muted tw:max-[481px]:gap-2 tw:max-[481px]:text-[0.8rem]">
+          <div className="tw:mr-2 tw:flex tw:items-center tw:gap-2">
+            <span className="tw:text-xs tw:text-text-muted">{version}</span>
             {updateAvailable && (
               <a
                 href={releaseUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Update Available"
-                style={{
-                  fontSize: '0.75rem',
-                  color: '#fbbf24',
-                  textDecoration: 'none',
-                  backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className="tw:flex tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-sm tw:bg-amber-400/10 tw:px-1.5 tw:py-0.5 tw:text-xs tw:font-semibold tw:text-amber-300 tw:no-underline"
               >
                 <AlertTriangle size={12} />
               </a>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="user-name">{user?.username}</span>
-            <span className="user-role-badge">{user?.role}</span>
+          <div className="tw:flex tw:items-center tw:gap-2">
+            <span className="tw:overflow-hidden tw:text-[0.9rem] tw:font-medium tw:text-ellipsis tw:whitespace-nowrap tw:text-text-main">
+              {user?.username}
+            </span>
+            <span className="tw:rounded-sm tw:bg-primary/10 tw:px-1.5 tw:py-0.5 tw:text-[0.7rem] tw:font-semibold tw:text-primary tw:uppercase">
+              {user?.role}
+            </span>
           </div>
           <button
             type="button"
             onClick={logout}
-            className="logout-btn"
+            className="tw:ml-auto tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-1.5 tw:text-text-muted tw:transition-all tw:duration-200 tw:hover:bg-white/10 tw:hover:text-danger"
             title="Logout"
           >
             <LogOut size={18} />
           </button>
         </div>
       </header>
-      <aside className="sidebar">
-        <div className="brand">
+      <aside className="tw:fixed tw:inset-x-0 tw:bottom-0 tw:z-[100] tw:flex tw:h-[50px] tw:w-full tw:flex-row tw:items-center tw:border-t tw:border-border tw:bg-bg-sidebar tw:min-[769px]:static tw:min-[769px]:h-auto tw:min-[769px]:w-[250px] tw:min-[769px]:flex-col tw:min-[769px]:items-stretch tw:min-[769px]:border-t-0 tw:min-[769px]:border-r">
+        <div className="tw:hidden tw:h-[60px] tw:items-center tw:gap-3 tw:border-b tw:border-border tw:px-5 tw:text-[1.2rem] tw:font-bold tw:text-primary tw:min-[769px]:flex">
           <img
             src="/apple-touch-icon.png"
             alt="NaviServer"
-            style={{ width: '24px', height: '24px' }}
+            className="tw:h-6 tw:w-6"
           />
           <span>NaviServer</span>
         </div>
-        <nav>
+        <nav className="tw:flex tw:h-full tw:w-full tw:flex-row tw:justify-around tw:p-0 tw:min-[769px]:h-auto tw:min-[769px]:flex-col tw:min-[769px]:justify-start tw:min-[769px]:gap-[5px] tw:min-[769px]:px-2.5 tw:min-[769px]:py-5">
           <NavLink
             to="/"
             className={({ isActive }) =>
-              isActive ? 'nav-item active' : 'nav-item'
+              `tw:flex tw:h-full tw:flex-1 tw:items-center tw:justify-center tw:gap-3 tw:rounded-none tw:p-0 tw:text-text-muted tw:no-underline tw:transition-all tw:duration-200 tw:hover:bg-primary/10 tw:hover:text-white tw:min-[769px]:h-auto tw:min-[769px]:flex-none tw:min-[769px]:justify-start tw:min-[769px]:rounded-lg tw:min-[769px]:px-4 tw:min-[769px]:py-3 ${isActive ? 'tw:bg-primary tw:text-white' : ''}`
             }
           >
             <LayoutDashboard size={20} />
-            <span>Dashboard</span>
+            <span className="tw:hidden tw:min-[769px]:inline">Dashboard</span>
           </NavLink>
           <NavLink
             to="/servers/backups/all"
             className={({ isActive }) =>
-              isActive ? 'nav-item active' : 'nav-item'
+              `tw:flex tw:h-full tw:flex-1 tw:items-center tw:justify-center tw:gap-3 tw:rounded-none tw:p-0 tw:text-text-muted tw:no-underline tw:transition-all tw:duration-200 tw:hover:bg-primary/10 tw:hover:text-white tw:min-[769px]:h-auto tw:min-[769px]:flex-none tw:min-[769px]:justify-start tw:min-[769px]:rounded-lg tw:min-[769px]:px-4 tw:min-[769px]:py-3 ${isActive ? 'tw:bg-primary tw:text-white' : ''}`
             }
           >
             <DatabaseBackup size={20} />
-            <span>Backups</span>
+            <span className="tw:hidden tw:min-[769px]:inline">Backups</span>
           </NavLink>
           {user?.role === 'admin' && (
             <NavLink
               to="/users"
               className={({ isActive }) =>
-                isActive ? 'nav-item active' : 'nav-item'
+                `tw:flex tw:h-full tw:flex-1 tw:items-center tw:justify-center tw:gap-3 tw:rounded-none tw:p-0 tw:text-text-muted tw:no-underline tw:transition-all tw:duration-200 tw:hover:bg-primary/10 tw:hover:text-white tw:min-[769px]:h-auto tw:min-[769px]:flex-none tw:min-[769px]:justify-start tw:min-[769px]:rounded-lg tw:min-[769px]:px-4 tw:min-[769px]:py-3 ${isActive ? 'tw:bg-primary tw:text-white' : ''}`
               }
             >
               <Users size={20} />
-              <span>Users</span>
+              <span className="tw:hidden tw:min-[769px]:inline">Users</span>
             </NavLink>
           )}
           {user?.role === 'admin' && (
             <NavLink
               to="/settings"
               className={({ isActive }) =>
-                isActive ? 'nav-item active' : 'nav-item'
+                `tw:flex tw:h-full tw:flex-1 tw:items-center tw:justify-center tw:gap-3 tw:rounded-none tw:p-0 tw:text-text-muted tw:no-underline tw:transition-all tw:duration-200 tw:hover:bg-primary/10 tw:hover:text-white tw:min-[769px]:h-auto tw:min-[769px]:flex-none tw:min-[769px]:justify-start tw:min-[769px]:rounded-lg tw:min-[769px]:px-4 tw:min-[769px]:py-3 ${isActive ? 'tw:bg-primary tw:text-white' : ''}`
               }
             >
               <Settings size={20} />
-              <span>Settings</span>
+              <span className="tw:hidden tw:min-[769px]:inline">Settings</span>
             </NavLink>
           )}
         </nav>
-        <div className="sidebar-footer">
-          <div className="user-info">
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
-            >
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <span className="user-name">{user?.username}</span>
-                <span className="user-role-badge">{user?.role}</span>
+        <div className="tw:mt-auto tw:hidden tw:border-t tw:border-border tw:bg-black/20 tw:p-4 tw:min-[769px]:block">
+          <div className="tw:flex tw:items-center tw:gap-3 tw:text-text-muted">
+            <div className="tw:flex tw:flex-col tw:gap-1">
+              <div className="tw:flex tw:items-center tw:gap-2">
+                <span className="tw:overflow-hidden tw:text-[0.9rem] tw:font-medium tw:text-ellipsis tw:whitespace-nowrap tw:text-text-main">
+                  {user?.username}
+                </span>
+                <span className="tw:rounded-sm tw:bg-primary/10 tw:px-1.5 tw:py-0.5 tw:text-[0.7rem] tw:font-semibold tw:text-primary tw:uppercase">
+                  {user?.role}
+                </span>
               </div>
-              <div
-                className="version-info"
-                style={{
-                  fontSize: '0.8rem',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
+              <div className="tw:flex tw:items-center tw:gap-1.5 tw:text-[0.8rem] tw:text-text-muted">
                 {version}
                 {updateAvailable && (
                   <a
@@ -182,20 +152,7 @@ const Layout: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Update Available"
-                    style={{
-                      fontSize: '0.75rem',
-                      color: '#fbbf24',
-                      textDecoration: 'none',
-                      backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      marginLeft: '4px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
+                    className="tw:ml-1 tw:flex tw:cursor-pointer tw:items-center tw:gap-1 tw:rounded-sm tw:bg-amber-400/10 tw:px-1.5 tw:py-0.5 tw:text-xs tw:font-semibold tw:text-amber-300 tw:no-underline"
                   >
                     <AlertTriangle size={12} />
                     Update
@@ -206,7 +163,7 @@ const Layout: React.FC = () => {
             <button
               type="button"
               onClick={logout}
-              className="logout-btn"
+              className="tw:ml-auto tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-1.5 tw:text-text-muted tw:transition-all tw:duration-200 tw:hover:bg-white/10 tw:hover:text-danger"
               title="Logout"
             >
               <LogOut size={18} />
@@ -214,8 +171,8 @@ const Layout: React.FC = () => {
           </div>
         </div>
       </aside>
-      <main className="content">
-        <div className="page-content">
+      <main className="tw:flex tw:flex-1 tw:flex-col tw:overflow-hidden">
+        <div className="tw:flex-1 tw:overflow-y-auto tw:p-4 tw:min-[769px]:p-[30px] tw:max-[481px]:p-3">
           <Outlet />
         </div>
       </main>

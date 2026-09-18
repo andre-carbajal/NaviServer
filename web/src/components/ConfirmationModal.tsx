@@ -28,45 +28,19 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      <div style={{ padding: '20px', maxWidth: '400px' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'start',
-            gap: '15px',
-            marginBottom: '25px',
-          }}
-        >
+      <div className="tw:max-w-[400px] tw:p-5">
+        <div className="tw:mb-[25px] tw:flex tw:items-start tw:gap-[15px]">
           {isDangerous && (
-            <div
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                padding: '10px',
-                borderRadius: '50%',
-                color: '#ef4444',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
+            <div className="tw:flex tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-red-500/10 tw:p-2.5 tw:text-red-500">
               <AlertTriangle size={24} />
             </div>
           )}
-          <p
-            style={{
-              margin: 0,
-              lineHeight: '1.5',
-              color: 'var(--text-muted)',
-            }}
-          >
+          <p className="tw:m-0 tw:leading-[1.5] tw:text-text-muted">
             {message}
           </p>
         </div>
 
-        <div
-          style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}
-        >
+        <div className="tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
           <Button variant="secondary" onClick={onClose}>
             {cancelText}
           </Button>

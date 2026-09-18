@@ -12,7 +12,6 @@ import { useParams } from 'react-router-dom';
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import '../App.css';
 import { api } from '../services/api';
 
 interface PublicServerInfo {
@@ -83,9 +82,9 @@ const PublicServer: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="login-container">
-        <div className="flex justify-center items-center text-white gap-2">
-          <Loader2 className="animate-spin" size={32} /> Loading...
+      <div className="tw:relative tw:z-[9999] tw:box-border tw:flex tw:min-h-screen tw:w-full tw:items-center tw:justify-center tw:bg-bg-dark tw:p-5">
+        <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-white">
+          <Loader2 className="tw:animate-spin" size={32} /> Loading...
         </div>
       </div>
     );
@@ -93,9 +92,9 @@ const PublicServer: React.FC = () => {
 
   if (error && !info) {
     return (
-      <div className="login-container">
-        <div className="login-card text-center text-red-500">
-          <AlertCircle size={48} className="mx-auto mb-4" />
+      <div className="tw:relative tw:z-[9999] tw:box-border tw:flex tw:min-h-screen tw:w-full tw:items-center tw:justify-center tw:bg-bg-dark tw:p-5">
+        <div className="tw:w-[90%] tw:max-w-[400px] tw:rounded-3xl tw:border tw:border-white/8 tw:bg-[rgba(30,30,35,0.6)] tw:p-8 tw:text-center tw:text-red-500 tw:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] tw:backdrop-blur-2xl tw:max-[480px]:rounded-xl tw:max-[480px]:p-6">
+          <AlertCircle size={48} className="tw:mx-auto tw:mb-4" />
           <p>{error}</p>
         </div>
       </div>
@@ -106,32 +105,14 @@ const PublicServer: React.FC = () => {
   const isStopping = info.status === 'STOPPING';
 
   return (
-    <div className="login-container">
-      <div
-        className="login-card"
-        style={{ textAlign: 'center', maxWidth: '400px', width: '90%' }}
-      >
-        <div className="mb-6 flex flex-col items-center">
-          <div
-            style={{
-              width: '96px',
-              height: '96px',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              marginBottom: '16px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
+    <div className="tw:relative tw:z-[9999] tw:box-border tw:flex tw:min-h-screen tw:w-full tw:items-center tw:justify-center tw:bg-bg-dark tw:p-5">
+      <div className="tw:w-[90%] tw:max-w-[400px] tw:rounded-3xl tw:border tw:border-white/8 tw:bg-[rgba(30,30,35,0.6)] tw:p-8 tw:text-center tw:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] tw:backdrop-blur-2xl tw:max-[480px]:rounded-xl tw:max-[480px]:p-6">
+        <div className="tw:mb-6 tw:flex tw:flex-col tw:items-center">
+          <div className="tw:mb-4 tw:h-24 tw:w-24 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-white/10 tw:bg-white/5">
             <img
               src={`${api.getServerIconUrl(info.id)}`}
               alt="Server Icon"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                imageRendering: 'pixelated',
-              }}
+              className="tw:h-full tw:w-full tw:object-contain [image-rendering:pixelated]"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 e.currentTarget.nextElementSibling?.setAttribute(
@@ -140,22 +121,23 @@ const PublicServer: React.FC = () => {
                 );
               }}
             />
-            <div style={{ display: 'none' }}>
-              {info.name.charAt(0).toUpperCase()}
-            </div>
+            <div className="tw:hidden">{info.name.charAt(0).toUpperCase()}</div>
           </div>
 
-          <h2 className="text-2xl font-bold mb-1">{info.name}</h2>
+          <h2 className="tw:mt-0 tw:mb-1 tw:text-2xl tw:font-bold">
+            {info.name}
+          </h2>
 
-          <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-            <span className="font-semibold text-white">{info.loader}</span>
+          <div className="tw:mb-4 tw:flex tw:items-center tw:gap-2 tw:text-sm tw:text-gray-400">
+            <span className="tw:font-semibold tw:text-white">
+              {info.loader}
+            </span>
             <span>•</span>
             <span>{info.version}</span>
           </div>
 
           <div
-            className={`status-badge status-${info.status.toLowerCase()} mb-4`}
-            style={{ fontSize: '0.9rem', padding: '6px 16px' }}
+            className={`tw:mb-4 tw:inline-flex tw:items-center tw:gap-2 tw:rounded-xl tw:px-4 tw:py-1.5 tw:text-[0.9rem] tw:font-bold tw:text-white tw:uppercase ${info.status === 'RUNNING' ? 'tw:bg-green-600' : info.status === 'STOPPED' ? 'tw:bg-red-500' : info.status === 'CREATING' ? 'tw:bg-blue-500' : info.status === 'STARTING' || info.status === 'STOPPING' ? 'tw:bg-orange-500' : 'tw:bg-white/10'}`}
           >
             {info.status === 'RUNNING' ? (
               <Wifi size={16} />
@@ -166,24 +148,9 @@ const PublicServer: React.FC = () => {
           </div>
 
           {info.status === 'RUNNING' && (
-            <div
-              className="text-sm text-gray-400 mb-6 flex items-center gap-2"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                padding: '4px 12px',
-                borderRadius: '999px',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-            >
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: '#22c55e',
-                }}
-              ></div>
-              <span className="text-white font-medium">
+            <div className="tw:mb-6 tw:flex tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-white/10 tw:bg-white/5 tw:px-3 tw:py-1 tw:text-sm tw:text-gray-400">
+              <div className="tw:h-2 tw:w-2 tw:rounded-full tw:bg-green-500"></div>
+              <span className="tw:font-medium tw:text-white">
                 {info.onlinePlayers || 0} / {info.maxPlayers || 0}
               </span>
               <span>Players Online</span>
@@ -192,51 +159,27 @@ const PublicServer: React.FC = () => {
         </div>
 
         {message && (
-          <div
-            className="bg-green-500/20 text-green-400 p-3 rounded-lg"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              marginTop: '16px',
-              marginBottom: '16px',
-            }}
-          >
+          <div className="tw:my-4 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:bg-green-500/20 tw:p-3 tw:text-green-400">
             <Check size={18} /> {message}
           </div>
         )}
 
         {error && (
-          <div
-            className="bg-red-500/20 text-red-400 p-3 rounded-lg"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              marginTop: '16px',
-              marginBottom: '16px',
-            }}
-          >
+          <div className="tw:my-4 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:bg-red-500/20 tw:p-3 tw:text-red-400">
             <AlertCircle size={18} /> {error}
           </div>
         )}
 
-        <div
-          className="flex gap-3 justify-center"
-          style={{ marginTop: '24px' }}
-        >
+        <div className="tw:mt-6 tw:flex tw:justify-center tw:gap-3">
           {info.status === 'OFFLINE' || info.status === 'STOPPED' ? (
             <button
               type="button"
-              className="btn btn-primary"
+              className="tw:flex tw:flex-1 tw:cursor-pointer tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:border tw:border-transparent tw:bg-primary tw:px-4 tw:py-3 tw:font-semibold tw:text-white tw:transition-all tw:duration-200 tw:hover:bg-primary-hover tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
               onClick={() => handleAction('start')}
               disabled={actionLoading}
-              style={{ flex: 1, padding: '12px' }}
             >
               {actionLoading ? (
-                <Loader2 className="animate-spin" />
+                <Loader2 className="tw:animate-spin" />
               ) : (
                 <Power size={20} />
               )}
@@ -245,21 +188,14 @@ const PublicServer: React.FC = () => {
           ) : (
             <button
               type="button"
-              className="btn btn-danger"
+              className={`tw:flex tw:flex-1 tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:border tw:border-red-500/30 tw:bg-red-500 tw:px-4 tw:py-3 tw:font-semibold tw:text-white tw:transition-all tw:duration-200 tw:hover:bg-red-600 tw:disabled:cursor-not-allowed tw:disabled:opacity-50 ${isStopping || info.status === 'STARTING' ? 'tw:opacity-50' : 'tw:cursor-pointer'}`}
               onClick={() => handleAction('stop')}
               disabled={
                 actionLoading || isStopping || info.status === 'STARTING'
               }
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                opacity: isStopping || info.status === 'STARTING' ? 0.5 : 1,
-              }}
             >
               {actionLoading ? (
-                <Loader2 className="animate-spin" />
+                <Loader2 className="tw:animate-spin" />
               ) : (
                 <Square size={20} />
               )}
@@ -269,17 +205,7 @@ const PublicServer: React.FC = () => {
         </div>
       </div>
 
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '1rem',
-          left: 0,
-          width: '100%',
-          textAlign: 'center',
-          color: '#6b7280',
-          fontSize: '0.875rem',
-        }}
-      >
+      <div className="tw:fixed tw:bottom-4 tw:left-0 tw:w-full tw:text-center tw:text-sm tw:text-gray-500">
         Powered by NaviServer
       </div>
     </div>

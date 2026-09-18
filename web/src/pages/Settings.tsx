@@ -233,35 +233,45 @@ const Settings: React.FC = () => {
   if (loading) return <div>Loading settings...</div>;
 
   return (
-    <div className="settings-page">
+    <div className="tw:flex tw:flex-col tw:gap-5">
       {modalDialog}
-      <h1>Settings</h1>
+      <h1 className="tw:m-0">Settings</h1>
 
-      <div className="card">
+      <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
         <h2>Network Configuration</h2>
         <p>
           Define the range of ports that the manager can assign to new servers.
         </p>
 
         <div>
-          <div className="form-group">
-            <label htmlFor="settings-start-port">Start Port</label>
+          <div className="tw:mb-[15px]">
+            <label
+              htmlFor="settings-start-port"
+              className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+            >
+              Start Port
+            </label>
             <input
               id="settings-start-port"
               type="number"
               name="start"
-              className="form-input"
+              className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
               value={portRange.start}
               onChange={handleChange}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="settings-end-port">End Port</label>
+          <div className="tw:mb-[15px]">
+            <label
+              htmlFor="settings-end-port"
+              className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+            >
+              End Port
+            </label>
             <input
               id="settings-end-port"
               type="number"
               name="end"
-              className="form-input"
+              className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
               value={portRange.end}
               onChange={handleChange}
             />
@@ -275,7 +285,7 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: '20px' }}>
+      <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
         <h2>Public Address</h2>
         <p>
           Configure the IP address or hostname displayed for server connections.
@@ -285,25 +295,21 @@ const Settings: React.FC = () => {
         </p>
 
         {publicIPWarning && (
-          <div
-            style={{
-              backgroundColor: 'rgba(234, 179, 8, 0.15)',
-              color: '#eab308',
-              padding: '10px 14px',
-              borderRadius: '6px',
-              marginBottom: '16px',
-              fontSize: '0.9rem',
-            }}
-          >
+          <div className="tw:mb-4 tw:rounded-md tw:bg-yellow-500/15 tw:px-3.5 tw:py-2.5 tw:text-[0.9rem] tw:text-yellow-500">
             ⚠️ {publicIPWarning}
           </div>
         )}
 
-        <div className="form-group">
-          <label htmlFor="settings-public-address">Public Address</label>
+        <div className="tw:mb-[15px]">
+          <label
+            htmlFor="settings-public-address"
+            className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+          >
+            Public Address
+          </label>
           <select
             id="settings-public-address"
-            className="form-input"
+            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
             value={publicIP}
             onChange={(e) => setPublicIP(e.target.value)}
           >
@@ -329,20 +335,23 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: '20px' }}>
+      <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
         <h2>CurseForge API</h2>
         <p>
           Configure an optional custom CurseForge API key. If set, it overrides
           the embedded build key. Modrinth remains the default source.
         </p>
-        <div className="form-group">
-          <label htmlFor="settings-curseforge-key">
+        <div className="tw:mb-[15px]">
+          <label
+            htmlFor="settings-curseforge-key"
+            className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+          >
             Custom CurseForge API Key
           </label>
           <input
             id="settings-curseforge-key"
             type="password"
-            className="form-input"
+            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
             value={curseForgeKey}
             onChange={(e) => setCurseForgeKey(e.target.value)}
             placeholder={
@@ -352,16 +361,14 @@ const Settings: React.FC = () => {
             }
           />
         </div>
-        <div
-          style={{ marginBottom: '12px', color: '#9ca3af', fontSize: '0.9rem' }}
-        >
+        <div className="tw:mb-3 tw:text-[0.9rem] tw:text-gray-400">
           <div>
             Embedded key available:{' '}
             {curseForgeKeyStatus.hasEmbeddedKey ? 'Yes' : 'No'}
           </div>
           <div>Effective source: {curseForgeKeyStatus.effectiveSource}</div>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="tw:flex tw:flex-wrap tw:gap-2.5">
           <Button
             onClick={handleSaveCurseForgeKey}
             disabled={isSavingCurseForgeKey || !curseForgeKey.trim()}
@@ -380,34 +387,35 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: '20px' }}>
+      <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
         <h2>Console Log Buffer</h2>
         <p>
           Define how many lines of console logs should be kept in memory per
           server while it is running.
         </p>
-        <div className="form-group">
-          <label htmlFor="settings-log-buffer-size">
+        <div className="tw:mb-[15px]">
+          <label
+            htmlFor="settings-log-buffer-size"
+            className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+          >
             Lines to keep in memory{' '}
-            <small style={{ fontWeight: 400 }}>(use 0 to disable)</small>
+            <small className="tw:font-normal">(use 0 to disable)</small>
           </label>
           <input
             id="settings-log-buffer-size"
             type="number"
             min={0}
             step={1}
-            className="form-input"
+            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
             value={logBufferSize || ''}
             onChange={handleLogBufferChange}
           />
           {logBufferError && (
-            <div style={{ color: 'red', marginTop: '6px' }}>
-              {logBufferError}
-            </div>
+            <div className="tw:mt-1.5 tw:text-red-500">{logBufferError}</div>
           )}
-          <div style={{ marginTop: '8px', color: '#555' }}>
+          <div className="tw:mt-2 tw:text-[#555]">
             <strong>Estimated memory usage:</strong> {humanSize(estimatedBytes)}
-            <div style={{ fontSize: '12px', marginTop: '4px' }}>
+            <div className="tw:mt-1 tw:text-xs">
               (Based on ~{BYTES_PER_LINE_ESTIMATE} bytes per line. This is an
               estimate and represents the memory used by the buffer in RAM while
               the server is running.)
@@ -428,7 +436,7 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: '20px' }}>
+      <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
         <h2>System</h2>
         <p>Manage the NaviServer Daemon process.</p>
         <div>

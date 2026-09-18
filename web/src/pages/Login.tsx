@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import '../App.css';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
@@ -102,31 +101,49 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h2>{isSetup ? 'First Time Setup' : 'Login'}</h2>
-        {error && <div className="error-message">{error}</div>}
+    <div className="tw:relative tw:z-[9999] tw:box-border tw:flex tw:min-h-screen tw:w-full tw:items-center tw:justify-center tw:bg-bg-dark tw:p-5">
+      <div className="tw:w-full tw:max-w-[440px] tw:rounded-3xl tw:border tw:border-white/8 tw:bg-[rgba(30,30,35,0.6)] tw:p-8 tw:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] tw:backdrop-blur-2xl tw:animate-[fadeIn_0.6s_ease-out] tw:max-[480px]:max-w-[calc(100%-20px)] tw:max-[480px]:rounded-xl tw:max-[480px]:p-6">
+        <h2 className="tw:mb-8 tw:mt-0 tw:bg-gradient-to-r tw:from-white tw:to-indigo-300 tw:bg-clip-text tw:text-center tw:text-[2rem] tw:font-bold tw:tracking-[-0.025em] tw:text-transparent tw:max-[480px]:mb-5 tw:max-[480px]:text-xl">
+          {isSetup ? 'First Time Setup' : 'Login'}
+        </h2>
+        {error && (
+          <div className="tw:mb-6 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-xl tw:border tw:border-red-500/20 tw:bg-red-500/10 tw:p-4 tw:text-center tw:text-[0.9rem] tw:text-red-400">
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="login-username">Username</label>
+          <div className="tw:mb-6 tw:max-[480px]:mb-4">
+            <label
+              htmlFor="login-username"
+              className="tw:mb-2 tw:block tw:text-[0.9rem] tw:font-medium tw:text-slate-400 tw:max-[480px]:text-xs"
+            >
+              Username
+            </label>
             <input
               id="login-username"
               type="text"
+              className="tw:box-border tw:w-full tw:rounded-xl tw:border tw:border-white/10 tw:bg-black/30 tw:px-4 tw:py-3 tw:text-base tw:text-white tw:outline-none tw:transition-all tw:duration-200 tw:focus:border-primary tw:focus:bg-black/50 tw:focus:ring-4 tw:focus:ring-primary/15 tw:max-[480px]:px-3.5 tw:max-[480px]:py-2.5"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
             {usernameError && (
-              <div className="error-message" style={{ marginTop: '5px' }}>
+              <div className="tw:mt-1 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-xl tw:border tw:border-red-500/20 tw:bg-red-500/10 tw:p-4 tw:text-center tw:text-[0.9rem] tw:text-red-400">
                 {usernameError}
               </div>
             )}
           </div>
-          <div className="form-group">
-            <label htmlFor="login-password">Password</label>
+          <div className="tw:mb-6 tw:max-[480px]:mb-4">
+            <label
+              htmlFor="login-password"
+              className="tw:mb-2 tw:block tw:text-[0.9rem] tw:font-medium tw:text-slate-400 tw:max-[480px]:text-xs"
+            >
+              Password
+            </label>
             <input
               id="login-password"
               type="password"
+              className="tw:box-border tw:w-full tw:rounded-xl tw:border tw:border-white/10 tw:bg-black/30 tw:px-4 tw:py-3 tw:text-base tw:text-white tw:outline-none tw:transition-all tw:duration-200 tw:focus:border-primary tw:focus:bg-black/50 tw:focus:ring-4 tw:focus:ring-primary/15 tw:max-[480px]:px-3.5 tw:max-[480px]:py-2.5"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -134,17 +151,17 @@ const Login: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="btn-primary"
+            className="tw:mt-2 tw:w-full tw:cursor-pointer tw:rounded-xl tw:border-0 tw:bg-gradient-to-r tw:from-primary tw:to-indigo-600 tw:px-4 tw:py-3.5 tw:text-base tw:font-semibold tw:text-white tw:transition-all tw:duration-300 tw:hover:-translate-y-0.5 tw:hover:shadow-[0_8px_20px_rgba(79,70,229,0.4)] tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
             disabled={!!usernameError}
           >
             {isSetup ? 'Create Admin Account' : 'Login'}
           </button>
         </form>
         {canToggle && (
-          <div className="login-footer">
+          <div className="tw:mt-6 tw:text-center">
             <button
               type="button"
-              className="btn-link"
+              className="tw:cursor-pointer tw:border-0 tw:bg-transparent tw:p-2 tw:text-[0.9rem] tw:text-slate-500 tw:transition-colors tw:hover:text-primary tw:max-[480px]:text-xs"
               onClick={() => setIsSetup(!isSetup)}
             >
               {isSetup

@@ -44,8 +44,8 @@ const EditBackupModal: React.FC<EditBackupModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Backup Association">
-      <form onSubmit={handleSubmit} className="modal-form">
-        <p style={{ marginBottom: '15px', color: 'var(--text-muted)' }}>
+      <form onSubmit={handleSubmit} className="tw:block">
+        <p className="tw:mb-[15px] tw:text-text-muted">
           Changing the associated server for: <strong>{backupName}</strong>
         </p>
         <ServerIconSelect
@@ -57,7 +57,7 @@ const EditBackupModal: React.FC<EditBackupModalProps> = ({
           noneLabel="None (Orphaned)"
         />
 
-        <div className="modal-actions">
+        <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
           <Button variant="secondary" type="button" onClick={onClose}>
             Cancel
           </Button>

@@ -46,30 +46,20 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Upload Backup">
-      <form onSubmit={handleSubmit} className="modal-form">
-        <div className="form-group">
-          <label htmlFor="backup-upload-file">Backup File (.zip, .rar)</label>
+      <form onSubmit={handleSubmit} className="tw:block">
+        <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
           <label
             htmlFor="backup-upload-file"
-            className="file-upload-zone"
-            style={{
-              border: '2px dashed var(--border-color)',
-              borderRadius: '8px',
-              padding: '20px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              marginBottom: '10px',
-            }}
+            className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted tw:max-[769px]:mb-1.5 tw:max-[769px]:text-[0.85rem]"
+          >
+            Backup File (.zip, .rar)
+          </label>
+          <label
+            htmlFor="backup-upload-file"
+            className="tw:mb-2.5 tw:cursor-pointer tw:rounded-lg tw:border-2 tw:border-dashed tw:border-border tw:p-5 tw:text-center"
           >
             {selectedFile ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                }}
-              >
+              <div className="tw:flex tw:items-center tw:justify-center tw:gap-2.5">
                 <span>{selectedFile.name}</span>
                 <Button
                   variant="secondary"
@@ -84,15 +74,7 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
                 </Button>
               </div>
             ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: 'var(--text-muted)',
-                }}
-              >
+              <div className="tw:flex tw:flex-col tw:items-center tw:gap-2 tw:text-text-muted">
                 <Upload size={24} />
                 <span>Click to select or drag and drop</span>
               </div>
@@ -104,7 +86,7 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
               ref={fileInputRef}
               onChange={handleFileChange}
               accept=".zip,.rar"
-              style={{ display: 'none' }}
+              className="tw:hidden"
             />
           </label>
         </div>
@@ -118,7 +100,7 @@ const UploadBackupModal: React.FC<UploadBackupModalProps> = ({
           noneLabel="None (Orphaned - Admin only)"
         />
 
-        <div className="modal-actions">
+        <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
           <Button variant="secondary" type="button" onClick={onClose}>
             Cancel
           </Button>

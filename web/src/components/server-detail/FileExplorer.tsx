@@ -442,12 +442,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   return (
     <div
-      className="file-explorer-container"
+      className="tw:relative tw:flex tw:h-[600px] tw:flex-col tw:rounded-lg tw:border tw:border-border tw:bg-[#1e1e1e] tw:shadow-sm tw:max-[1024px]:h-auto tw:max-[1024px]:min-h-0 tw:max-[1024px]:flex-1"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       style={{
-        position: 'relative',
         borderColor: isDragging ? '#646cff' : 'var(--border-color)',
         boxShadow: isDragging ? '0 0 0 2px rgba(100, 108, 255, 0.2)' : 'none',
       }}
@@ -460,13 +459,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         }}
         title={`Delete ${filePendingDelete?.isDirectory ? 'Folder' : 'File'}`}
       >
-        <div className="file-delete-modal-body">
+        <div className="tw:max-w-[420px] tw:pt-1 tw:[&_p]:m-0 tw:[&_p]:leading-[1.5] tw:[&_p]:text-text-muted tw:[&_strong]:text-text-main">
           <p>
             Do you want to delete{' '}
             <strong>{filePendingDelete?.name || 'this item'}</strong>?
           </p>
-          <p className="file-delete-warning">This action cannot be undone.</p>
-          <div className="modal-actions">
+          <p className="tw:mt-3! tw:rounded-lg tw:border tw:border-red-500/30 tw:bg-red-500/10 tw:p-3 tw:text-red-200!">
+            This action cannot be undone.
+          </p>
+          <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
             <Button
               variant="secondary"
               onClick={() => setFilePendingDelete(null)}
@@ -485,63 +486,34 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         </div>
       </Modal>
       {isDragging && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(100, 108, 255, 0.1)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-            borderRadius: '8px',
-          }}
-        >
-          <div
-            style={{
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '1.2rem',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
+        <div className="tw:pointer-events-none tw:absolute tw:inset-0 tw:z-50 tw:flex tw:items-center tw:justify-center tw:rounded-lg tw:bg-primary/10 tw:backdrop-blur-[2px]">
+          <div className="tw:flex tw:flex-col tw:items-center tw:gap-2.5 tw:text-[1.2rem] tw:font-bold tw:text-white">
             <Upload size={48} />
             <span>Drop files to upload</span>
           </div>
         </div>
       )}
-      <div className="file-toolbar">
-        <div className="breadcrumb-nav">
+      <div className="tw:flex tw:items-center tw:justify-between tw:border-b tw:border-border tw:p-4">
+        <div className="tw:flex tw:items-center tw:gap-2 tw:overflow-hidden tw:text-sm tw:text-gray-400 tw:max-[769px]:gap-1 tw:max-[769px]:text-xs">
           <button
             type="button"
             onClick={() => setCurrentPath('/')}
-            className="breadcrumb-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:border-0 tw:bg-transparent tw:p-0 tw:text-inherit tw:hover:text-white"
           >
-            <Home className="w-4 h-4" size={16} />
+            <Home className="tw:w-4 tw:h-4" size={16} />
           </button>
           {pathParts.map((part, index) => {
             const path = '/' + pathParts.slice(0, index + 1).join('/');
             return (
               <React.Fragment key={path}>
-                <ChevronRight className="w-4 h-4 text-gray-600" size={16} />
+                <ChevronRight
+                  className="tw:w-4 tw:h-4 tw:text-gray-600"
+                  size={16}
+                />
                 <button
                   type="button"
                   onClick={() => setCurrentPath(path)}
-                  className="breadcrumb-btn"
-                  style={{
-                    maxWidth: '150px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
+                  className="tw:flex tw:max-w-[150px] tw:cursor-pointer tw:items-center tw:overflow-hidden tw:border-0 tw:bg-transparent tw:p-0 tw:text-ellipsis tw:whitespace-nowrap tw:text-inherit tw:hover:text-white tw:max-[769px]:px-1"
                 >
                   {part}
                 </button>
@@ -549,20 +521,23 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             );
           })}
         </div>
-        <div className="toolbar-actions">
+        <div className="tw:flex tw:items-center tw:gap-2">
           <button
             type="button"
             onClick={loadFiles}
-            className="toolbar-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Refresh"
           >
-            <RefreshCw size={16} className={`${loading ? 'spin' : ''}`} />
+            <RefreshCw
+              size={16}
+              className={loading ? 'tw:animate-spin' : undefined}
+            />
           </button>
           <button
             type="button"
             onClick={handleUp}
             disabled={currentPath === '/'}
-            className="toolbar-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Go Up"
           >
             <ArrowUp size={16} />
@@ -570,7 +545,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           <button
             type="button"
             onClick={() => setCreatingDir(true)}
-            className="toolbar-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="New Folder"
           >
             <Plus size={16} />
@@ -578,12 +553,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           <button
             type="button"
             onClick={handleUploadClick}
-            className="toolbar-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Upload File"
             disabled={uploading}
           >
             {uploading ? (
-              <Loader2 size={16} className="spin" />
+              <Loader2 size={16} className="tw:animate-spin" />
             ) : (
               <Upload size={16} />
             )}
@@ -591,12 +566,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           <button
             type="button"
             onClick={handleFolderClick}
-            className="toolbar-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Upload Folder"
             disabled={uploading}
           >
             {uploading ? (
-              <Loader2 size={16} className="spin" />
+              <Loader2 size={16} className="tw:animate-spin" />
             ) : (
               <FolderUp size={16} />
             )}
@@ -606,14 +581,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             aria-label="Upload files"
             ref={fileInputRef}
             onChange={handleFileChange}
-            style={{ display: 'none' }}
+            className="tw:hidden"
           />
           <input
             type="file"
             aria-label="Upload folder"
             ref={folderInputRef}
             onChange={handleFolderChange}
-            style={{ display: 'none' }}
+            className="tw:hidden"
             {...({
               webkitdirectory: '',
               directory: '',
@@ -625,30 +600,21 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       </div>
 
       {error && (
-        <div
-          className="p-4 bg-red-900/20 text-red-400 border-b border-red-900/50"
-          style={{
-            padding: '16px',
-            backgroundColor: 'rgba(127, 29, 29, 0.2)',
-            color: '#f87171',
-            borderBottom: '1px solid rgba(127, 29, 29, 0.5)',
-          }}
-        >
+        <div className="tw:border-b tw:border-red-900/50 tw:bg-red-900/20 tw:p-4 tw:text-red-400">
           {error}
         </div>
       )}
 
       {creatingDir && (
-        <div className="new-folder-input-container">
-          <Folder size={16} style={{ color: '#818cf8', marginLeft: '8px' }} />
+        <div className="tw:flex tw:items-center tw:gap-2 tw:border-b tw:border-border tw:bg-[#252525] tw:p-2">
+          <Folder size={16} className="tw:ml-2 tw:text-indigo-400" />
           <input
             type="text"
             aria-label="New folder name"
             value={newDirName}
             onChange={(e) => setNewDirName(e.target.value)}
             placeholder="New folder name..."
-            className="form-input"
-            style={{ padding: '4px 8px', fontSize: '0.875rem' }}
+            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-2 tw:py-1 tw:text-sm tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleCreateDir();
               if (e.key === 'Escape') setCreatingDir(false);
@@ -657,88 +623,81 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
           <button
             type="button"
             onClick={handleCreateDir}
-            className="btn btn-primary"
-            style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+            className="tw:whitespace-nowrap tw:inline-flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:border tw:border-transparent tw:bg-primary tw:px-3 tw:py-1 tw:text-xs tw:leading-[1.5] tw:font-semibold tw:text-white tw:transition-all tw:duration-200"
           >
             Create
           </button>
           <button
             type="button"
             onClick={() => setCreatingDir(false)}
-            className="btn btn-secondary"
-            style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+            className="tw:whitespace-nowrap tw:inline-flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-transparent tw:px-3 tw:py-1 tw:text-xs tw:leading-[1.5] tw:font-semibold tw:text-text-main tw:transition-all tw:duration-200"
           >
             Cancel
           </button>
         </div>
       )}
 
-      <div className="file-list-container">
+      <div className="file-list-container tw:flex-1 tw:overflow-y-auto">
         {loading && (!files || files.length === 0) ? (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              color: '#6b7280',
-            }}
-          >
+          <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:text-gray-500">
             Loading...
           </div>
         ) : (
-          <table className="file-table">
+          <table className="tw:w-full tw:border-collapse tw:text-left tw:text-sm tw:[&_thead]:sticky tw:[&_thead]:top-0 tw:[&_thead]:z-10 tw:[&_thead]:bg-[#252525] tw:[&_thead]:text-xs tw:[&_thead]:text-gray-500 tw:[&_thead]:uppercase tw:[&_th]:px-4 tw:[&_th]:py-2 tw:[&_th]:font-medium tw:[&_td]:border-b tw:[&_td]:border-[#2d2d2d] tw:[&_td]:px-4 tw:[&_td]:py-3 tw:max-[769px]:[&_th]:px-2 tw:max-[769px]:[&_th]:py-1.5 tw:max-[769px]:[&_th]:text-[0.7rem] tw:max-[769px]:[&_td]:p-2 tw:max-[769px]:[&_td]:text-[0.8rem]">
             <thead>
               <tr>
-                <th style={{ width: '32px' }} aria-label="File type"></th>
+                <th className="tw:w-8" aria-label="File type"></th>
                 <th>Name</th>
-                <th style={{ width: '128px' }}>Size</th>
-                <th style={{ width: '192px' }}>Last Modified</th>
-                <th style={{ width: '96px' }}>Actions</th>
+                <th className="tw:w-32">Size</th>
+                <th className="tw:w-48">Last Modified</th>
+                <th className="tw:w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
               {currentPath !== '/' && (
-                <tr className="file-row" onClick={handleUp}>
-                  <td style={{ textAlign: 'center' }}>
-                    <Folder size={16} style={{ color: '#818cf8' }} />
+                <tr
+                  className="tw:group tw:cursor-pointer tw:transition-colors tw:duration-200 tw:hover:bg-[#252525]"
+                  onClick={handleUp}
+                >
+                  <td className="tw:text-center">
+                    <Folder size={16} className="tw:text-indigo-400" />
                   </td>
-                  <td style={{ color: '#a5b4fc', fontWeight: 500 }}>..</td>
-                  <td style={{ color: '#6b7280' }}>-</td>
-                  <td style={{ color: '#6b7280' }}>-</td>
+                  <td className="tw:font-medium tw:text-indigo-300">..</td>
+                  <td className="tw:text-gray-500">-</td>
+                  <td className="tw:text-gray-500">-</td>
                   <td aria-label="No actions available"></td>
                 </tr>
               )}
               {(files || []).map((file) => (
                 <tr
                   key={file.name}
-                  className="file-row"
+                  className="tw:group tw:cursor-pointer tw:transition-colors tw:duration-200 tw:hover:bg-[#252525]"
                   onClick={() => handleFileClick(file)}
                 >
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="tw:text-center">
                     {file.isDirectory ? (
-                      <Folder size={16} style={{ color: '#818cf8' }} />
+                      <Folder size={16} className="tw:text-indigo-400" />
                     ) : (
-                      <FileIcon size={16} style={{ color: '#9ca3af' }} />
+                      <FileIcon size={16} className="tw:text-gray-400" />
                     )}
                   </td>
                   <td
-                    style={
+                    className={
                       file.isDirectory
-                        ? { color: '#a5b4fc', fontWeight: 500 }
-                        : { color: '#d1d5db' }
+                        ? 'tw:font-medium tw:text-indigo-300'
+                        : 'tw:text-gray-300'
                     }
                   >
                     {file.name}
                   </td>
-                  <td style={{ color: '#6b7280' }}>
+                  <td className="tw:text-gray-500">
                     {file.isDirectory ? '-' : formatSize(file.size)}
                   </td>
-                  <td style={{ color: '#6b7280' }}>
+                  <td className="tw:text-gray-500">
                     {new Date(file.lastModified).toLocaleString()}
                   </td>
                   <td>
-                    <div className="row-actions">
+                    <div className="tw:flex tw:items-center tw:gap-2 tw:opacity-0 tw:transition-opacity tw:duration-200 tw:group-hover:opacity-100">
                       {!file.isDirectory && isEditable(file.name) && (
                         <button
                           type="button"
@@ -746,7 +705,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                             event.stopPropagation();
                             handleFileClick(file);
                           }}
-                          className="file-manage-btn"
+                          className="tw:cursor-pointer tw:rounded-sm tw:border-0 tw:bg-transparent tw:p-1 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#333] tw:hover:text-white"
                           title="Edit"
                         >
                           <Edit2 size={14} />
@@ -758,7 +717,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                           event.stopPropagation();
                           handleDownload(file);
                         }}
-                        className="file-manage-btn"
+                        className="tw:cursor-pointer tw:rounded-sm tw:border-0 tw:bg-transparent tw:p-1 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#333] tw:hover:text-white"
                         title="Download"
                       >
                         <Download size={14} />
@@ -769,7 +728,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                           event.stopPropagation();
                           handleDelete(file);
                         }}
-                        className="file-manage-btn delete"
+                        className="tw:cursor-pointer tw:rounded-sm tw:border-0 tw:bg-transparent tw:p-1 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#333] tw:hover:text-white tw:hover:text-red-400"
                         title="Delete"
                       >
                         <Trash2 size={14} />
@@ -782,11 +741,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
                 <tr>
                   <td
                     colSpan={5}
-                    style={{
-                      padding: '32px',
-                      textAlign: 'center',
-                      color: '#6b7280',
-                    }}
+                    className="tw:p-8 tw:text-center tw:text-gray-500"
                   >
                     Folder is empty
                   </td>

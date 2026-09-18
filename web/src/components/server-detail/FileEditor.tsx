@@ -6,6 +6,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 
 import { useModalDialog } from '../../hooks/useModalDialog';
 import { api } from '../../services/api';
+import { Button } from '../ui/Button';
 
 const getLanguage = (path: string) => {
   const ext = path.split('.').pop()?.toLowerCase();
@@ -127,50 +128,22 @@ const FileEditor: React.FC<FileEditorProps> = ({
   const renderEditorContent = () => {
     if (loading) {
       return (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%',
-            color: '#6b7280',
-          }}
-        >
-          <Loader2 className="spin" size={32} />
+        <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:text-gray-500">
+          <Loader2 className="tw:animate-spin" size={32} />
         </div>
       );
     }
 
     if (error) {
       return (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%',
-            color: '#f87171',
-            padding: '32px',
-            textAlign: 'center',
-            backgroundColor: 'rgba(127, 29, 29, 0.1)',
-          }}
-        >
+        <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:bg-red-900/10 tw:p-8 tw:text-center tw:text-red-400">
           <div>
-            <p style={{ marginBottom: '8px', fontWeight: 600 }}>
-              Error Loading File
-            </p>
-            <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>{error}</p>
+            <p className="tw:mb-2 tw:font-semibold">Error Loading File</p>
+            <p className="tw:text-sm tw:opacity-80">{error}</p>
             <button
               type="button"
               onClick={onClose}
-              style={{
-                marginTop: '16px',
-                color: '#818cf8',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-              }}
+              className="tw:mt-4 tw:cursor-pointer tw:border-0 tw:bg-transparent tw:text-indigo-400 tw:underline"
             >
               Go back
             </button>
@@ -182,8 +155,8 @@ const FileEditor: React.FC<FileEditorProps> = ({
     return (
       <Suspense
         fallback={
-          <div className="file-editor-loading">
-            <Loader2 className="spin" size={32} />
+          <div className="tw:flex tw:h-full tw:items-center tw:justify-center">
+            <Loader2 className="tw:animate-spin" size={32} />
           </div>
         }
       >
@@ -209,70 +182,57 @@ const FileEditor: React.FC<FileEditorProps> = ({
   };
 
   return (
-    <div className="file-explorer-container">
+    <div className="tw:flex tw:h-[600px] tw:flex-col tw:rounded-lg tw:border tw:border-border tw:bg-[#1e1e1e] tw:shadow-sm tw:max-[769px]:h-[400px] tw:max-[481px]:h-[300px]">
       {modalDialog}
-      <div className="editor-header">
-        <div className="editor-title">
+      <div className="tw:flex tw:items-center tw:justify-between tw:border-b tw:border-border tw:p-4">
+        <div className="tw:flex tw:items-center tw:gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="toolbar-btn"
+            className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Back to files"
           >
             <ArrowLeft size={20} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileCode size={20} style={{ color: '#818cf8' }} />
-            <span style={{ fontWeight: 500, color: 'white' }}>{fileName}</span>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                color: '#6b7280',
-                fontFamily: 'monospace',
-              }}
-              className="hidden sm:inline"
-            >
+          <div className="tw:flex tw:items-center tw:gap-2">
+            <FileCode size={20} className="tw:text-indigo-400" />
+            <span className="tw:font-medium tw:text-white">{fileName}</span>
+            <span className="tw:hidden tw:font-mono tw:text-xs tw:text-gray-500 tw:sm:inline">
               {filePath}
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="tw:flex tw:items-center tw:gap-4">
           {hasChanges && (
-            <span className="unsaved-badge">
-              <div className="unsaved-dot"></div>
-              <span className="hidden sm:inline">Unsaved Changes</span>
+            <span className="tw:flex tw:items-center tw:gap-1.5 tw:text-xs tw:text-amber-300">
+              <div className="tw:h-2 tw:w-2 tw:rounded-full tw:bg-amber-300"></div>
+              <span className="tw:hidden tw:sm:inline">Unsaved Changes</span>
             </span>
           )}
-          <button
-            type="button"
+          <Button
             onClick={handleSave}
             disabled={loading || saving || !hasChanges}
-            className={`btn btn-primary ${!hasChanges || loading || saving ? 'disabled' : ''}`}
-            style={{
-              opacity: !hasChanges ? 0.5 : 1,
-              cursor: !hasChanges ? 'not-allowed' : 'pointer',
-            }}
           >
             {saving ? (
               <>
-                <Loader2 className="spin" size={16} />
-                <span className="hidden sm:inline">Saving...</span>
+                <Loader2 className="tw:animate-spin" size={16} />
+                <span className="tw:hidden tw:sm:inline">Saving...</span>
               </>
             ) : (
               <>
                 <Save size={16} />
-                <span className="hidden sm:inline">Save</span>
+                <span className="tw:hidden tw:sm:inline">Save</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+      <div className="tw:relative tw:flex-1 tw:overflow-hidden">
         {renderEditorContent()}
       </div>
 
-      <div className="editor-footer">
+      <div className="tw:flex tw:justify-between tw:border-t tw:border-border tw:bg-[#252525] tw:p-2 tw:text-xs tw:text-gray-500">
         <span>Space: 2</span>
         <span>UTF-8</span>
         <span>{getLanguage(filePath).toUpperCase()}</span>

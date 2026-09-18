@@ -824,18 +824,28 @@ const ServerDetail: React.FC = () => {
   const addonsLabel = server?.loader === 'paper' ? 'Plugins' : 'Mods';
 
   const renderVersionUpdateProgress = () => (
-    <div className="server-v2-version-update-progress">
-      <div className="server-v2-version-update-spinner">
-        <LoaderCircle size={28} className="spin" />
+    <div className="tw:flex tw:flex-col tw:items-center tw:gap-4 tw:text-center">
+      <div className="tw:grid tw:h-14 tw:w-14 tw:place-items-center tw:rounded-[18px] tw:border tw:border-white/12 tw:bg-blue-600/18 tw:text-blue-300">
+        <LoaderCircle size={28} className="tw:animate-spin" />
       </div>
       <div>
-        <strong>Updating to {selectedVersion}</strong>
-        <p>Creating a backup, updating the server, and checking addons.</p>
+        <strong className="tw:block tw:text-base tw:text-slate-50">
+          Updating to {selectedVersion}
+        </strong>
+        <p className="tw:mb-0 tw:mt-1.5 tw:text-slate-300">
+          Creating a backup, updating the server, and checking addons.
+        </p>
       </div>
-      <div className="server-v2-version-update-steps">
-        <span>Backup server files</span>
-        <span>Install new server version</span>
-        <span>Update or disable incompatible addons</span>
+      <div className="tw:grid tw:w-full tw:gap-2">
+        <span className="tw:relative tw:rounded-xl tw:border tw:border-slate-400/18 tw:bg-slate-900/42 tw:px-3 tw:py-2.5 tw:pl-[34px] tw:text-left tw:text-blue-100 tw:before:absolute tw:before:left-3 tw:before:top-1/2 tw:before:h-2 tw:before:w-2 tw:before:-translate-y-1/2 tw:before:rounded-full tw:before:bg-blue-400 tw:before:shadow-[0_0_0_4px_rgba(96,165,250,0.16)]">
+          Backup server files
+        </span>
+        <span className="tw:relative tw:rounded-xl tw:border tw:border-slate-400/18 tw:bg-slate-900/42 tw:px-3 tw:py-2.5 tw:pl-[34px] tw:text-left tw:text-blue-100 tw:before:absolute tw:before:left-3 tw:before:top-1/2 tw:before:h-2 tw:before:w-2 tw:before:-translate-y-1/2 tw:before:rounded-full tw:before:bg-blue-400 tw:before:shadow-[0_0_0_4px_rgba(96,165,250,0.16)]">
+          Install new server version
+        </span>
+        <span className="tw:relative tw:rounded-xl tw:border tw:border-slate-400/18 tw:bg-slate-900/42 tw:px-3 tw:py-2.5 tw:pl-[34px] tw:text-left tw:text-blue-100 tw:before:absolute tw:before:left-3 tw:before:top-1/2 tw:before:h-2 tw:before:w-2 tw:before:-translate-y-1/2 tw:before:rounded-full tw:before:bg-blue-400 tw:before:shadow-[0_0_0_4px_rgba(96,165,250,0.16)]">
+          Update or disable incompatible addons
+        </span>
       </div>
     </div>
   );
@@ -848,36 +858,59 @@ const ServerDetail: React.FC = () => {
     const failedCount = addons?.failed.length ?? 0;
 
     return (
-      <div className="server-v2-version-update-result">
-        <div className="server-v2-version-update-hero success">
+      <div className="tw:flex tw:flex-col tw:gap-4">
+        <div className="tw:flex tw:items-start tw:gap-3 tw:rounded-2xl tw:border tw:border-green-500/25 tw:bg-green-500/12 tw:p-3.5 tw:text-green-300">
           <Shield size={22} />
           <div>
-            <strong>Server updated to {versionUpdateResult.version}</strong>
-            <span>Backup created before applying changes.</span>
+            <strong className="tw:block tw:text-slate-50">
+              Server updated to {versionUpdateResult.version}
+            </strong>
+            <span className="tw:mt-[3px] tw:block tw:text-slate-300">
+              Backup created before applying changes.
+            </span>
           </div>
         </div>
-        <div className="server-v2-version-update-backup">
-          <span>Backup</span>
-          <code>{versionUpdateResult.backupName}</code>
+        <div className="tw:grid tw:gap-1.5 tw:rounded-[14px] tw:border tw:border-slate-400/16 tw:bg-slate-900/38 tw:p-3">
+          <span className="tw:text-[0.76rem] tw:font-bold tw:tracking-[0.08em] tw:text-slate-400 tw:uppercase">
+            Backup
+          </span>
+          <code className="tw:break-words tw:text-sky-100">
+            {versionUpdateResult.backupName}
+          </code>
         </div>
-        <div className="server-v2-version-update-grid">
-          <div>
-            <strong>{updatedCount}</strong>
-            <span>Addons updated</span>
+        <div className="tw:grid tw:grid-cols-3 tw:gap-2.5 tw:max-[480px]:grid-cols-1">
+          <div className="tw:rounded-[14px] tw:border tw:border-slate-400/16 tw:bg-slate-900/38 tw:p-3">
+            <strong className="tw:block tw:text-xl tw:text-slate-50">
+              {updatedCount}
+            </strong>
+            <span className="tw:mt-[3px] tw:block tw:text-[0.78rem] tw:text-slate-400">
+              Addons updated
+            </span>
           </div>
-          <div>
-            <strong>{disabledCount}</strong>
-            <span>Addons disabled</span>
+          <div className="tw:rounded-[14px] tw:border tw:border-slate-400/16 tw:bg-slate-900/38 tw:p-3">
+            <strong className="tw:block tw:text-xl tw:text-slate-50">
+              {disabledCount}
+            </strong>
+            <span className="tw:mt-[3px] tw:block tw:text-[0.78rem] tw:text-slate-400">
+              Addons disabled
+            </span>
           </div>
-          <div>
-            <strong>{failedCount}</strong>
-            <span>Addon failures</span>
+          <div className="tw:rounded-[14px] tw:border tw:border-slate-400/16 tw:bg-slate-900/38 tw:p-3">
+            <strong className="tw:block tw:text-xl tw:text-slate-50">
+              {failedCount}
+            </strong>
+            <span className="tw:mt-[3px] tw:block tw:text-[0.78rem] tw:text-slate-400">
+              Addon failures
+            </span>
           </div>
         </div>
         {failedCount > 0 && addons && (
-          <div className="server-v2-version-update-failures">
+          <div className="tw:grid tw:gap-2">
             {addons.failed.slice(0, 3).map((failure) => (
-              <p key={failure.id}>
+              <p
+                key={failure.id}
+                className="tw:m-0 tw:rounded-xl tw:bg-red-400/12 tw:p-2.5 tw:text-red-200"
+              >
                 <strong>{failure.name || failure.id}:</strong> {failure.reason}
               </p>
             ))}
@@ -1176,51 +1209,55 @@ const ServerDetail: React.FC = () => {
   const isStoppedLike = server.status === 'STOPPED';
 
   return (
-    <div className="server-v2">
+    <div className="tw:flex tw:h-full tw:flex-col tw:gap-4">
       {modalDialog}
-      <header className="server-v2-header">
+      <header className="tw:flex tw:items-center tw:gap-3.5 tw:rounded-2xl tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:max-[1024px]:!flex-nowrap tw:max-[1024px]:!gap-2.5 tw:max-[1024px]:!p-3 tw:max-[640px]:!grid tw:max-[640px]:!grid-cols-[40px_minmax(0,1fr)_auto] tw:max-[640px]:!items-center tw:max-[640px]:!gap-2 tw:max-[480px]:!grid-cols-[40px_minmax(0,1fr)] tw:max-[480px]:!gap-2.5">
         <button
           type="button"
-          className="server-v2-back"
+          className="tw:flex tw:h-[42px] tw:w-[42px] tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/[0.02] tw:p-0 tw:text-text-muted tw:hover:bg-white/[0.06] tw:hover:text-text-main tw:max-[640px]:h-10 tw:max-[640px]:w-10"
           onClick={() => navigate('/')}
           title="Back to dashboard"
         >
           <ArrowLeft size={18} />
         </button>
 
-        <div className="server-v2-identity">
-          <div className="server-v2-icon-shell">
+        <div className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-3 tw:max-[1024px]:!grid tw:max-[1024px]:!grid-cols-[auto_minmax(0,1fr)] tw:max-[1024px]:!items-start tw:max-[1024px]:!gap-x-3 tw:max-[1024px]:!gap-y-2">
+          <div className="tw:h-9 tw:w-9 tw:shrink-0 tw:overflow-hidden tw:rounded">
             {!iconError ? (
               <img
                 src={`${api.getServerIconUrl(server.id)}?v=${serverIconVersion}`}
                 alt="Server Icon"
                 onError={() => setIconError(true)}
-                className="server-v2-icon"
+                className="tw:h-full tw:w-full tw:rounded tw:bg-black/20 tw:object-contain [image-rendering:pixelated]"
               />
             ) : (
-              <div className="server-v2-icon-placeholder">
+              <div className="tw:flex tw:h-full tw:w-full tw:items-center tw:justify-center tw:rounded tw:bg-white/10 tw:text-base tw:font-semibold tw:text-text-muted">
                 {server.name.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
 
-          <div className="server-v2-title-wrap">
-            <div className="server-v2-title-row">
-              <h1>{server.name}</h1>
+          <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1.5">
+            <div className="tw:flex tw:items-center tw:gap-2.5">
+              <h1 className="tw:m-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[1.8rem] tw:leading-[1.1] tw:max-[1024px]:text-2xl tw:max-[640px]:text-[1.3rem]">
+                {server.name}
+              </h1>
               <span
-                className={`server-v2-status status-${server.status.toLowerCase()}`}
+                className={`tw:rounded-full tw:px-3 tw:py-1 tw:text-[0.75rem] tw:font-bold tw:tracking-[0.04em] tw:text-white ${server.status === 'RUNNING' ? 'tw:bg-emerald-500' : server.status === 'STOPPED' ? 'tw:bg-red-500' : server.status === 'CREATING' ? 'tw:bg-blue-500' : 'tw:bg-orange-500'}`}
               >
                 {server.status}
               </span>
             </div>
-            <div className="server-v2-meta-row">
-              <span className="server-v2-loader">{server.loader}</span>
+            <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:text-[0.9rem] tw:text-text-muted tw:max-[640px]:text-[0.82rem]">
+              <span className="tw:font-semibold tw:text-text-main">
+                {server.loader}
+              </span>
               <span>•</span>
               <span>{server.version}</span>
-              <span>•</span>
+              <span className="tw:max-[1024px]:!hidden">•</span>
               <button
                 type="button"
-                className="server-v2-address"
+                className="tw:inline-flex tw:h-6 tw:max-w-40 tw:min-w-0 tw:cursor-pointer tw:items-center tw:overflow-hidden tw:rounded-[7px] tw:border tw:border-white/10 tw:bg-white/4 tw:px-2 tw:font-mono tw:text-[0.78rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:border-indigo-500/55 tw:hover:bg-indigo-500/12 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2 tw:max-[1024px]:!hidden"
                 onClick={() => copy(address)}
                 title="Click to copy"
               >
@@ -1230,33 +1267,57 @@ const ServerDetail: React.FC = () => {
                 text={address}
                 variant="secondary"
                 title="Copy address"
-                className="address-copy-btn"
+                className="tw:h-6 tw:w-6 tw:min-h-6 tw:shrink-0 tw:p-0 tw:max-[1024px]:!hidden"
               />
             </div>
           </div>
+
+          <div className="tw:col-span-full tw:hidden tw:min-w-0 tw:items-center tw:gap-1.5 tw:max-[1024px]:!flex">
+            <button
+              type="button"
+              className="tw:inline-flex tw:h-6 tw:w-full tw:min-w-0 tw:!max-w-[390px] tw:flex-1 tw:cursor-pointer tw:items-center tw:overflow-hidden tw:rounded-[7px] tw:border tw:border-white/10 tw:bg-white/4 tw:px-2 tw:font-mono tw:text-[0.78rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:border-indigo-500/55 tw:hover:bg-indigo-500/12 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2"
+              onClick={() => copy(address)}
+              title="Click to copy"
+            >
+              {address}
+            </button>
+            <CopyButton
+              text={address}
+              variant="secondary"
+              title="Copy address"
+              className="tw:h-6 tw:w-6 tw:min-h-6 tw:shrink-0 tw:p-0"
+            />
+          </div>
         </div>
 
-        <div className="server-v2-actions">
+        <div className="tw:flex tw:items-center tw:gap-2 tw:max-[640px]:!col-auto tw:max-[640px]:!w-auto tw:max-[640px]:!justify-end tw:max-[480px]:!col-span-full tw:max-[480px]:!w-full tw:max-[480px]:!justify-between">
           {(server.permissions?.canControlPower ||
             server.permissions?.canViewConsole) &&
             (isStoppedLike ? (
-              <Button onClick={handleStart} disabled={powerAction === 'start'}>
+              <Button
+                onClick={handleStart}
+                disabled={powerAction === 'start'}
+                className="tw:max-[640px]:!min-w-24 tw:max-[640px]:!justify-center tw:max-[480px]:!flex-1"
+              >
                 {powerAction === 'start' ? (
-                  <LoaderCircle size={16} className="spin" />
+                  <LoaderCircle size={16} className="tw:animate-spin" />
                 ) : (
                   <Play size={16} />
                 )}
                 Start
               </Button>
             ) : (
-              <div className="server-v2-power-menu" ref={powerMenuRef}>
+              <div
+                className="tw:relative tw:flex tw:items-center tw:gap-2"
+                ref={powerMenuRef}
+              >
                 <Button
                   variant="danger"
                   onClick={handleStop}
                   disabled={powerControlState.stopDisabled}
                 >
                   {powerAction === 'stop' ? (
-                    <LoaderCircle size={16} className="spin" />
+                    <LoaderCircle size={16} className="tw:animate-spin" />
                   ) : (
                     <Square size={16} />
                   )}
@@ -1264,16 +1325,17 @@ const ServerDetail: React.FC = () => {
                 </Button>
                 <button
                   type="button"
-                  className="server-v2-more-btn"
+                  className="tw:flex tw:h-[38px] tw:w-[38px] tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-lg tw:border tw:border-border tw:bg-white/[0.03] tw:p-0 tw:text-text-muted tw:hover:bg-white/[0.06] tw:hover:text-text-main tw:disabled:cursor-not-allowed tw:disabled:opacity-55"
                   onClick={() => setIsPowerMenuOpen((prev) => !prev)}
                   disabled={powerControlState.moreDisabled}
                 >
                   <MoreVertical size={16} />
                 </button>
                 {isPowerMenuOpen && (
-                  <div className="server-v2-dropdown">
+                  <div className="tw:absolute tw:right-0 tw:top-11 tw:z-10 tw:min-w-[140px] tw:overflow-hidden tw:rounded-[10px] tw:border tw:border-border tw:bg-bg-sidebar tw:shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
                     <button
                       type="button"
+                      className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:border-0 tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-main tw:hover:bg-white/[0.06] tw:disabled:cursor-not-allowed tw:disabled:text-text-muted tw:disabled:opacity-55"
                       onClick={handleRestart}
                       disabled={powerControlState.restartDisabled}
                     >
@@ -1281,6 +1343,7 @@ const ServerDetail: React.FC = () => {
                     </button>
                     <button
                       type="button"
+                      className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:border-0 tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-main tw:hover:bg-white/[0.06] tw:disabled:cursor-not-allowed tw:disabled:text-text-muted tw:disabled:opacity-55"
                       onClick={handleKill}
                       disabled={powerControlState.killDisabled}
                     >
@@ -1296,6 +1359,7 @@ const ServerDetail: React.FC = () => {
               variant="secondary"
               onClick={() => setIsShareModalOpen(true)}
               title="Create Public Link"
+              className="tw:max-[640px]:!h-10 tw:max-[640px]:!w-10 tw:max-[640px]:!min-w-10 tw:max-[640px]:!shrink-0 tw:max-[640px]:!p-0"
             >
               <Share2 size={16} />
             </Button>
@@ -1303,60 +1367,62 @@ const ServerDetail: React.FC = () => {
         </div>
       </header>
 
-      <div className="server-v2-body">
-        <section className="server-v2-content">
+      <div className="tw:grid tw:min-h-0 tw:flex-1 tw:grid-cols-[minmax(0,1fr)_240px] tw:gap-4 tw:max-[1024px]:flex tw:max-[1024px]:flex-col tw:max-[1024px]:gap-2.5">
+        <section className="server-v2-content tw:min-h-0 tw:overflow-x-hidden tw:overflow-y-auto tw:pr-3 tw:max-[1024px]:flex tw:max-[1024px]:min-h-0 tw:max-[1024px]:flex-1 tw:max-[1024px]:flex-col tw:max-[1024px]:overflow-visible tw:max-[1024px]:pr-0">
           {activeTab === 'performance' && (
-            <div className="server-v2-grid">
-              <div className="server-v2-card">
-                <div className="server-v2-card-label">
+            <div className="tw:grid tw:grid-cols-4 tw:content-start tw:gap-3 tw:max-[1024px]:grid-cols-2 tw:max-[640px]:grid-cols-1">
+              <div className="tw:box-border tw:flex tw:min-h-0 tw:min-w-0 tw:flex-col tw:gap-1 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3">
+                <div className="tw:inline-flex tw:items-center tw:gap-1.5 tw:text-[0.95rem] tw:font-semibold tw:leading-[1.2] tw:text-text-muted">
                   <Cpu size={16} /> CPU Usage
                 </div>
-                <div className="server-v2-card-value">
+                <div className="tw:text-[1.05rem] tw:font-bold tw:leading-[1.15] tw:tracking-[-0.01em]">
                   {server.status === 'RUNNING'
                     ? `${stats.cpu.toFixed(1)}%`
                     : 'Offline'}
                 </div>
               </div>
-              <div className="server-v2-card">
-                <div className="server-v2-card-label">
+              <div className="tw:box-border tw:flex tw:min-h-0 tw:min-w-0 tw:flex-col tw:gap-1 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3">
+                <div className="tw:inline-flex tw:items-center tw:gap-1.5 tw:text-[0.95rem] tw:font-semibold tw:leading-[1.2] tw:text-text-muted">
                   <MemoryStick size={16} /> RAM Usage
                 </div>
-                <div className="server-v2-card-value">
+                <div className="tw:text-[1.05rem] tw:font-bold tw:leading-[1.15] tw:tracking-[-0.01em]">
                   {server.status === 'RUNNING'
                     ? `${(stats.ram / 1024 / 1024).toFixed(0)} MB / ${server.ram} MB`
                     : 'Offline'}
                 </div>
               </div>
-              <div className="server-v2-card">
-                <div className="server-v2-card-label">
+              <div className="tw:box-border tw:flex tw:min-h-0 tw:min-w-0 tw:flex-col tw:gap-1 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3">
+                <div className="tw:inline-flex tw:items-center tw:gap-1.5 tw:text-[0.95rem] tw:font-semibold tw:leading-[1.2] tw:text-text-muted">
                   <Clock3 size={16} /> Uptime
                 </div>
-                <div className="server-v2-card-value">
+                <div className="tw:text-[1.05rem] tw:font-bold tw:leading-[1.15] tw:tracking-[-0.01em]">
                   {server.status === 'RUNNING'
                     ? formatDuration(stats.uptimeSeconds)
                     : 'Offline'}
                 </div>
               </div>
-              <div className="server-v2-card">
-                <div className="server-v2-card-label">
+              <div className="tw:box-border tw:flex tw:min-h-0 tw:min-w-0 tw:flex-col tw:gap-1 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3">
+                <div className="tw:inline-flex tw:items-center tw:gap-1.5 tw:text-[0.95rem] tw:font-semibold tw:leading-[1.2] tw:text-text-muted">
                   <HardDrive size={16} /> Disk
                 </div>
-                <div className="server-v2-card-value">
+                <div className="tw:text-[1.05rem] tw:font-bold tw:leading-[1.15] tw:tracking-[-0.01em]">
                   {formatBytes(stats.disk)}
                 </div>
               </div>
 
-              <div className="server-v2-chart-card">
-                <div className="server-v2-chart-header">
-                  <h2>Performance Graph</h2>
+              <div className="tw:col-span-full tw:flex tw:min-w-0 tw:flex-col tw:gap-3 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5">
+                <div className="tw:flex tw:items-center tw:justify-between tw:gap-2.5">
+                  <h2 className="tw:m-0 tw:text-[1.2rem] tw:leading-[1.2]">
+                    Performance Graph
+                  </h2>
                   {!performanceEmptyState && (
-                    <div className="server-v2-range-selector">
+                    <div className="tw:inline-flex tw:gap-1 tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:p-1">
                       {(Object.keys(RANGE_TO_MS) as ChartRange[]).map(
                         (range) => (
                           <button
                             key={range}
                             type="button"
-                            className={chartRange === range ? 'active' : ''}
+                            className={`tw:cursor-pointer tw:rounded-full tw:border-0 tw:bg-transparent tw:px-2.5 tw:py-1 tw:text-text-muted ${chartRange === range ? 'tw:bg-primary/20 tw:text-white' : ''}`}
                             onClick={() => setChartRange(range)}
                           >
                             {range}
@@ -1367,18 +1433,30 @@ const ServerDetail: React.FC = () => {
                   )}
                 </div>
 
-                <div className="server-v2-charts" ref={chartShellRef}>
+                <div
+                  className="tw:grid tw:min-w-0 tw:grid-cols-1 tw:gap-3"
+                  ref={chartShellRef}
+                >
                   {performanceEmptyState ? (
-                    <div className="server-v2-performance-empty" role="status">
+                    <div
+                      className="tw:col-span-full tw:flex tw:min-h-[280px] tw:flex-col tw:items-center tw:justify-center tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-bg-dark tw:p-6 tw:text-center tw:text-text-muted"
+                      role="status"
+                    >
                       <PowerOff size={32} aria-hidden="true" />
-                      <strong>{performanceEmptyState.title}</strong>
-                      <span>{performanceEmptyState.description}</span>
+                      <strong className="tw:text-[1.05rem] tw:text-text-main">
+                        {performanceEmptyState.title}
+                      </strong>
+                      <span className="tw:max-w-[360px]">
+                        {performanceEmptyState.description}
+                      </span>
                     </div>
                   ) : (
                     <>
-                      <section className="server-v2-chart-panel">
-                        <h3>CPU Usage</h3>
-                        <div className="server-v2-chart-shell">
+                      <section className="tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
+                        <h3 className="tw:m-0 tw:text-[0.95rem] tw:text-text-muted">
+                          CPU Usage
+                        </h3>
+                        <div className="server-v2-chart-shell tw:relative tw:h-[280px] tw:min-h-[250px] tw:min-w-0 tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-bg-dark">
                           {chartSize.width > 0 && chartSize.height > 0 ? (
                             <ResponsiveContainer
                               width="100%"
@@ -1445,16 +1523,18 @@ const ServerDetail: React.FC = () => {
                           ) : null}
 
                           {chartOverlayMessage && (
-                            <div className="server-v2-empty-chart">
+                            <div className="tw:absolute tw:inset-0 tw:flex tw:h-full tw:items-center tw:justify-center tw:bg-[rgba(26,26,26,0.4)] tw:text-text-muted tw:pointer-events-none">
                               {chartOverlayMessage}
                             </div>
                           )}
                         </div>
                       </section>
 
-                      <section className="server-v2-chart-panel">
-                        <h3>RAM Usage</h3>
-                        <div className="server-v2-chart-shell">
+                      <section className="tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
+                        <h3 className="tw:m-0 tw:text-[0.95rem] tw:text-text-muted">
+                          RAM Usage
+                        </h3>
+                        <div className="server-v2-chart-shell tw:relative tw:h-[280px] tw:min-h-[250px] tw:min-w-0 tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-bg-dark">
                           {chartSize.width > 0 && chartSize.height > 0 ? (
                             <ResponsiveContainer
                               width="100%"
@@ -1523,7 +1603,7 @@ const ServerDetail: React.FC = () => {
                           ) : null}
 
                           {chartOverlayMessage && (
-                            <div className="server-v2-empty-chart">
+                            <div className="tw:absolute tw:inset-0 tw:flex tw:h-full tw:items-center tw:justify-center tw:bg-[rgba(26,26,26,0.4)] tw:text-text-muted tw:pointer-events-none">
                               {chartOverlayMessage}
                             </div>
                           )}
@@ -1537,10 +1617,14 @@ const ServerDetail: React.FC = () => {
           )}
 
           {activeTab === 'console' && (
-            <div className="server-v2-console-wrap">
-              <div className="server-v2-console-header">
-                <h2>Console</h2>
-                <span className={isConnected ? 'ok' : 'bad'}>
+            <div className="tw:flex tw:h-full tw:min-w-0 tw:flex-col tw:gap-2.5 tw:overflow-x-hidden tw:max-[1024px]:h-auto">
+              <div className="tw:flex tw:items-center tw:justify-between">
+                <h2 className="tw:m-0">Console</h2>
+                <span
+                  className={
+                    isConnected ? 'tw:text-green-400' : 'tw:text-red-300'
+                  }
+                >
                   {isConnected ? '● Connected' : '○ Disconnected'}
                 </span>
               </div>
@@ -1549,7 +1633,7 @@ const ServerDetail: React.FC = () => {
 
               <form
                 onSubmit={handleCommandSubmit}
-                className="server-v2-console-input"
+                className="tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-2 tw:max-[1024px]:w-full tw:max-[1024px]:grid-cols-[minmax(0,1fr)_minmax(72px,auto)]"
               >
                 <input
                   type="text"
@@ -1557,13 +1641,14 @@ const ServerDetail: React.FC = () => {
                   value={commandInput}
                   onChange={(e) => setCommandInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="form-input"
+                  className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base tw:min-w-0"
                   placeholder="Type a command..."
                   disabled={!isConnected}
                 />
                 <Button
                   type="submit"
                   disabled={!isConnected || !commandInput.trim()}
+                  className="tw:shrink-0 tw:max-[1024px]:min-w-[72px] tw:max-[1024px]:px-2.5"
                 >
                   Send
                 </Button>
@@ -1572,43 +1657,44 @@ const ServerDetail: React.FC = () => {
           )}
 
           {activeTab === 'players' && (
-            <div className="server-v2-players-card">
-              <div className="server-v2-players-head">
-                <h2>Player Management</h2>
+            <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5">
+              <div className="tw:mb-2.5 tw:flex tw:items-center tw:justify-between tw:gap-2.5">
+                <h2 className="tw:m-0">Player Management</h2>
                 <span>
                   Online {stats.onlinePlayers}/{stats.maxPlayers}
                 </span>
               </div>
 
-              <div className="server-v2-players-controls">
-                <label className="server-v2-players-search">
+              <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-2.5">
+                <label className="tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:px-2.5 tw:text-text-muted">
                   <Search size={16} />
                   <input
                     type="text"
                     value={playersSearch}
                     onChange={(e) => setPlayersSearch(e.target.value)}
                     placeholder="Search players..."
+                    className="tw:w-full tw:border-0 tw:bg-transparent tw:py-2.5 tw:text-text-main tw:outline-none"
                   />
                 </label>
 
-                <div className="server-v2-players-filters">
+                <div className="tw:flex tw:flex-wrap tw:gap-2">
                   <button
                     type="button"
-                    className={playerFilter === 'all' ? 'active' : ''}
+                    className={`tw:cursor-pointer tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:px-3 tw:py-[7px] tw:text-[0.82rem] tw:text-text-muted ${playerFilter === 'all' ? 'tw:border-[rgba(167,139,250,0.45)] tw:bg-[rgba(167,139,250,0.2)] tw:text-white' : ''}`}
                     onClick={() => setPlayerFilter('all')}
                   >
                     All ({onlineItems.length})
                   </button>
                   <button
                     type="button"
-                    className={playerFilter === 'admins' ? 'active' : ''}
+                    className={`tw:cursor-pointer tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:px-3 tw:py-[7px] tw:text-[0.82rem] tw:text-text-muted ${playerFilter === 'admins' ? 'tw:border-[rgba(167,139,250,0.45)] tw:bg-[rgba(167,139,250,0.2)] tw:text-white' : ''}`}
                     onClick={() => setPlayerFilter('admins')}
                   >
                     Admins ({operatorItems.length})
                   </button>
                   <button
                     type="button"
-                    className={playerFilter === 'banned' ? 'active' : ''}
+                    className={`tw:cursor-pointer tw:rounded-full tw:border tw:border-border tw:bg-white/3 tw:px-3 tw:py-[7px] tw:text-[0.82rem] tw:text-text-muted ${playerFilter === 'banned' ? 'tw:border-[rgba(167,139,250,0.45)] tw:bg-[rgba(167,139,250,0.2)] tw:text-white' : ''}`}
                     onClick={() => setPlayerFilter('banned')}
                   >
                     Banned ({bannedItems.length})
@@ -1618,16 +1704,19 @@ const ServerDetail: React.FC = () => {
 
               {playerFilter === 'all' &&
                 (filteredOnlineItems.length === 0 ? (
-                  <div className="server-v2-empty-players">
+                  <div className="tw:p-6 tw:text-center tw:text-text-muted">
                     No players found
                   </div>
                 ) : (
-                  <ul className="server-v2-player-list">
+                  <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0">
                     {filteredOnlineItems.map((player) => (
-                      <li key={player.key}>
+                      <li
+                        key={player.key}
+                        className={`tw:flex tw:items-center tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:p-2.5 ${canModeratePlayers ? 'tw:hover:border-[rgba(167,139,250,0.45)] tw:hover:bg-[rgba(167,139,250,0.1)]' : ''}`}
+                      >
                         <button
                           type="button"
-                          className={canModeratePlayers ? 'clickable' : ''}
+                          className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5 tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:font-[inherit] tw:text-text-main"
                           disabled={!canModeratePlayers}
                           onClick={() => {
                             if (!canModeratePlayers) return;
@@ -1653,11 +1742,13 @@ const ServerDetail: React.FC = () => {
                               id: player.uuid || '',
                             }}
                           />
-                          <div>
+                          <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
                             <strong>{player.name}</strong>
-                            <small>{player.uuid || 'No UUID available'}</small>
+                            <small className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[0.72rem] tw:text-text-muted">
+                              {player.uuid || 'No UUID available'}
+                            </small>
                           </div>
-                          <span className="server-v2-player-badge online">
+                          <span className="tw:ml-auto tw:rounded-full tw:border tw:border-green-400/35 tw:bg-green-400/12 tw:px-2 tw:py-[3px] tw:text-[0.7rem] tw:text-green-400">
                             Online
                           </span>
                         </button>
@@ -1668,16 +1759,19 @@ const ServerDetail: React.FC = () => {
 
               {playerFilter === 'admins' &&
                 (filteredOperatorItems.length === 0 ? (
-                  <div className="server-v2-empty-players">
+                  <div className="tw:p-6 tw:text-center tw:text-text-muted">
                     No operators found
                   </div>
                 ) : (
-                  <ul className="server-v2-player-list">
+                  <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0">
                     {filteredOperatorItems.map((operator) => (
-                      <li key={operator.key}>
+                      <li
+                        key={operator.key}
+                        className={`tw:flex tw:items-center tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:p-2.5 ${canModeratePlayers ? 'tw:hover:border-[rgba(167,139,250,0.45)] tw:hover:bg-[rgba(167,139,250,0.1)]' : ''}`}
+                      >
                         <button
                           type="button"
-                          className={canModeratePlayers ? 'clickable' : ''}
+                          className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2.5 tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:font-[inherit] tw:text-text-main"
                           disabled={!canModeratePlayers}
                           onClick={() => {
                             if (!canModeratePlayers) return;
@@ -1696,14 +1790,14 @@ const ServerDetail: React.FC = () => {
                               id: operator.uuid || '',
                             }}
                           />
-                          <div>
+                          <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
                             <strong>{operator.name}</strong>
-                            <small>
+                            <small className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[0.72rem] tw:text-text-muted">
                               {operator.uuid || 'No UUID available'}
                             </small>
                           </div>
                           <span
-                            className={`server-v2-player-badge ${operator.isOnline ? 'online' : 'offline'}`}
+                            className={`tw:ml-auto tw:rounded-full tw:border tw:px-2 tw:py-[3px] tw:text-[0.7rem] ${operator.isOnline ? 'tw:border-green-400/35 tw:bg-green-400/12 tw:text-green-400' : 'tw:border-border tw:bg-white/3 tw:text-text-muted'}`}
                           >
                             {operator.isOnline ? 'Online' : 'Offline'}
                           </span>
@@ -1715,23 +1809,26 @@ const ServerDetail: React.FC = () => {
 
               {playerFilter === 'banned' &&
                 (filteredBannedItems.length === 0 ? (
-                  <div className="server-v2-empty-players">
+                  <div className="tw:p-6 tw:text-center tw:text-text-muted">
                     No banned entries
                   </div>
                 ) : (
-                  <ul className="server-v2-player-list">
+                  <ul className="tw:m-0 tw:flex tw:list-none tw:flex-col tw:gap-2.5 tw:p-0">
                     {filteredBannedItems.map((item) => (
-                      <li key={item.key}>
-                        <div className="server-v2-player-icon">
+                      <li
+                        key={item.key}
+                        className="tw:flex tw:items-center tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/3 tw:p-2.5"
+                      >
+                        <div className="tw:flex tw:h-7 tw:w-7 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-md tw:border tw:border-border tw:bg-white/4 tw:text-text-muted">
                           {item.type === 'player' ? (
                             <Ban size={16} />
                           ) : (
                             <Globe size={16} />
                           )}
                         </div>
-                        <div>
+                        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-0.5">
                           <strong>{item.label}</strong>
-                          <small>
+                          <small className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[0.72rem] tw:text-text-muted">
                             {item.type === 'player'
                               ? item.uuid || item.detail || 'Banned player'
                               : item.detail || 'Banned IP'}
@@ -1739,7 +1836,7 @@ const ServerDetail: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          className="server-v2-pardon-btn"
+                          className="tw:ml-auto tw:cursor-pointer tw:rounded-lg tw:border tw:border-emerald-400/35 tw:bg-emerald-400/12 tw:px-2.5 tw:py-1.5 tw:text-emerald-300 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
                           onClick={() => handlePardon(item)}
                           disabled={
                             !canModeratePlayers || isPlayerActionLoading
@@ -1753,7 +1850,7 @@ const ServerDetail: React.FC = () => {
                 ))}
 
               {!canModeratePlayers && (
-                <p className="server-v2-players-note">
+                <p className="tw:mb-0 tw:mt-2.5 tw:text-[0.82rem] tw:text-text-muted">
                   You can view players, but moderation actions require console
                   permission.
                 </p>
@@ -1764,7 +1861,7 @@ const ServerDetail: React.FC = () => {
           {activeTab === 'files' && (
             <Suspense
               fallback={
-                <div className="server-v2-settings-card">
+                <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
                   <p>Loading files...</p>
                 </div>
               }
@@ -1774,28 +1871,39 @@ const ServerDetail: React.FC = () => {
           )}
 
           {activeTab === 'addons' && supportsAddons && (
-            <AddonsPanel server={server} canManage={canModeratePlayers} />
+            <AddonsPanel
+              server={server}
+              canManage={canModeratePlayers}
+              confirmAction={(title, message, confirmText) =>
+                showConfirm({
+                  title,
+                  message,
+                  confirmText,
+                  variant: 'danger',
+                })
+              }
+            />
           )}
 
           {activeTab === 'settings' && (
-            <div className="server-v2-settings-layout">
+            <div className="tw:flex tw:flex-col tw:gap-4">
               {!canEditSettings && (
-                <div className="server-v2-settings-card">
+                <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
                   <h2>Server Settings</h2>
                   <p>Only admins can edit server settings.</p>
                 </div>
               )}
               {canEditSettings && (isLoadingSettings || !settingsDraft) && (
-                <div className="server-v2-settings-card">
+                <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
                   <p>Loading settings...</p>
                 </div>
               )}
               {canEditSettings && !isLoadingSettings && settingsDraft && (
                 <>
-                  <div className="server-v2-settings-dual-grid">
-                    <div className="server-v2-settings-panel">
-                      <div className="server-v2-settings-panel-head">
-                        <div className="server-v2-settings-panel-icon">
+                  <div className="tw:grid tw:grid-cols-2 tw:gap-4 tw:max-[1024px]:grid-cols-1">
+                    <div className="tw:rounded-[14px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-4 tw:max-[640px]:p-3">
+                      <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                        <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                           <Gamepad2 size={18} />
                         </div>
                         <div>
@@ -1804,8 +1912,8 @@ const ServerDetail: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="server-v2-settings-form-grid">
-                        <label className="server-v2-settings-full">
+                      <div className="tw:grid tw:grid-cols-2 tw:gap-3 tw:max-[1024px]:grid-cols-1 tw:[&_label]:flex tw:[&_label]:flex-col tw:[&_label]:gap-1.5 tw:[&_label>span]:inline-flex tw:[&_label>span]:items-center tw:[&_label>span]:gap-1.5 tw:[&_label>span]:text-[0.9rem] tw:[&_label>span]:text-text-muted tw:[&_input[type=range]]:accent-purple-500">
+                        <label className="tw:col-span-full">
                           <span>
                             Server Name{' '}
                             <span title="Display name used across NaviServer.">
@@ -1813,7 +1921,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             value={settingsDraft.name}
                             onChange={(e) =>
                               updateSettingsField('name', e.target.value)
@@ -1831,7 +1939,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <select
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             value={settingsDraft.gamemode}
                             onChange={(e) =>
                               updateSettingsField(
@@ -1856,7 +1964,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <select
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             value={settingsDraft.difficulty}
                             onChange={(e) =>
                               updateSettingsField(
@@ -1873,7 +1981,7 @@ const ServerDetail: React.FC = () => {
                           </select>
                         </label>
 
-                        <label className="server-v2-settings-full">
+                        <label className="tw:col-span-full">
                           <span>
                             Server Message (MOTD){' '}
                             <span title="Server list message players see.">
@@ -1881,7 +1989,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             value={settingsDraft.motd}
                             onChange={(e) =>
                               updateSettingsField('motd', e.target.value)
@@ -1898,7 +2006,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             type="number"
                             min={0}
                             value={settingsDraft.spawnProtection ?? 16}
@@ -1912,9 +2020,10 @@ const ServerDetail: React.FC = () => {
                           />
                         </label>
 
-                        <label className="server-v2-settings-toggle">
+                        <label className="tw:col-span-1 tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-2.5">
                           <input
                             type="checkbox"
+                            className="tw:relative tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:text-current tw:transition-all tw:duration-200 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
                             checked={settingsDraft.onlineMode}
                             onChange={(e) =>
                               updateSettingsField(
@@ -1929,9 +2038,10 @@ const ServerDetail: React.FC = () => {
                           </span>
                         </label>
 
-                        <label className="server-v2-settings-toggle">
+                        <label className="tw:col-span-1 tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-2.5">
                           <input
                             type="checkbox"
+                            className="tw:relative tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:text-current tw:transition-all tw:duration-200 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
                             checked={settingsDraft.pvp}
                             onChange={(e) =>
                               updateSettingsField('pvp', e.target.checked)
@@ -1941,9 +2051,10 @@ const ServerDetail: React.FC = () => {
                           <span>Enable PvP</span>
                         </label>
 
-                        <label className="server-v2-settings-toggle">
+                        <label className="tw:col-span-1 tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-2.5">
                           <input
                             type="checkbox"
+                            className="tw:relative tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:text-current tw:transition-all tw:duration-200 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
                             checked={settingsDraft.allowFlight}
                             onChange={(e) =>
                               updateSettingsField(
@@ -1956,9 +2067,10 @@ const ServerDetail: React.FC = () => {
                           <span>Allow Flying</span>
                         </label>
 
-                        <label className="server-v2-settings-toggle">
+                        <label className="tw:col-span-1 tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-2.5">
                           <input
                             type="checkbox"
+                            className="tw:relative tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:text-current tw:transition-all tw:duration-200 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
                             checked={settingsDraft.enableCommandBlock}
                             onChange={(e) =>
                               updateSettingsField(
@@ -1971,9 +2083,10 @@ const ServerDetail: React.FC = () => {
                           <span>Enable Command Blocks</span>
                         </label>
 
-                        <label className="server-v2-settings-toggle">
+                        <label className="tw:col-span-1 tw:flex tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-2.5">
                           <input
                             type="checkbox"
+                            className="tw:relative tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:text-current tw:transition-all tw:duration-200 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
                             checked={settingsDraft.hardcore}
                             onChange={(e) =>
                               updateSettingsField('hardcore', e.target.checked)
@@ -1985,9 +2098,9 @@ const ServerDetail: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="server-v2-settings-panel">
-                      <div className="server-v2-settings-panel-head">
-                        <div className="server-v2-settings-panel-icon">
+                    <div className="tw:rounded-[14px] tw:border tw:border-border tw:bg-white/[0.02] tw:p-4 tw:max-[640px]:p-3">
+                      <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                        <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                           <Gauge size={18} />
                         </div>
                         <div>
@@ -1996,7 +2109,7 @@ const ServerDetail: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="server-v2-settings-form-grid">
+                      <div className="tw:grid tw:grid-cols-2 tw:gap-3 tw:max-[1024px]:grid-cols-1 tw:[&_label]:flex tw:[&_label]:flex-col tw:[&_label]:gap-1.5 tw:[&_label>span]:inline-flex tw:[&_label>span]:items-center tw:[&_label>span]:gap-1.5 tw:[&_label>span]:text-[0.9rem] tw:[&_label>span]:text-text-muted tw:[&_input[type=range]]:accent-purple-500">
                         <label>
                           <span>
                             Max Players{' '}
@@ -2005,7 +2118,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             type="number"
                             min={1}
                             max={1000}
@@ -2028,7 +2141,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             type="number"
                             min={2}
                             max={32}
@@ -2051,7 +2164,7 @@ const ServerDetail: React.FC = () => {
                             </span>
                           </span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             type="number"
                             min={2}
                             max={32}
@@ -2069,7 +2182,7 @@ const ServerDetail: React.FC = () => {
                         <label>
                           <span>RAM Allocation (MB)</span>
                           <input
-                            className="form-input"
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                             type="number"
                             min={RAM_MIN_MB}
                             max={ramAllocationMaxMb}
@@ -2085,7 +2198,7 @@ const ServerDetail: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="server-v2-settings-toolbar">
+                  <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-3">
                     <Button
                       type="button"
                       onClick={handleSaveSettings}
@@ -2101,16 +2214,16 @@ const ServerDetail: React.FC = () => {
                       {isSavingSettings ? 'Saving...' : 'Save Settings'}
                     </Button>
                     {!isServerStopped && (
-                      <p>
+                      <p className="tw:m-0 tw:text-[0.85rem] tw:text-amber-300">
                         Stop the server first to modify gameplay or performance
                         settings.
                       </p>
                     )}
                   </div>
 
-                  <div className="server-v2-settings-card">
-                    <div className="server-v2-settings-panel-head">
-                      <div className="server-v2-settings-panel-icon">
+                  <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
+                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                      <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                         <Upload size={18} />
                       </div>
                       <div>
@@ -2118,8 +2231,8 @@ const ServerDetail: React.FC = () => {
                         <p>Upload a new icon for this server</p>
                       </div>
                     </div>
-                    <div className="server-v2-icon-upload-row">
-                      <div className="server-v2-icon-upload-preview">
+                    <div className="tw:flex tw:flex-wrap tw:items-start tw:gap-3.5 tw:max-[640px]:flex-nowrap tw:max-[640px]:gap-2.5">
+                      <div className="tw:flex tw:h-16 tw:w-16 tw:shrink-0 tw:items-center tw:justify-center tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-white/4 [&_img]:h-full [&_img]:w-full [&_img]:object-fill [&_img]:[image-rendering:pixelated] [&_span]:text-[1.35rem] [&_span]:font-bold [&_span]:text-text-muted">
                         {settingsIconPreview && (
                           <img
                             src={settingsIconPreview}
@@ -2137,7 +2250,7 @@ const ServerDetail: React.FC = () => {
                           <span>{server.name.charAt(0).toUpperCase()}</span>
                         )}
                       </div>
-                      <div className="server-v2-icon-upload-actions">
+                      <div className="tw:flex tw:min-w-0 tw:flex-1 tw:flex-col tw:gap-2 tw:max-[640px]:w-auto">
                         <input
                           ref={settingsIconInputRef}
                           type="file"
@@ -2146,7 +2259,7 @@ const ServerDetail: React.FC = () => {
                           onChange={handleSettingsIconSelected}
                           hidden
                         />
-                        <div className="server-v2-settings-actions-inline">
+                        <div className="tw:flex tw:flex-wrap tw:justify-start tw:gap-2.5 tw:max-[640px]:!flex-col tw:max-[640px]:!items-stretch tw:max-[640px]:!gap-2">
                           <Button
                             type="button"
                             variant="secondary"
@@ -2172,16 +2285,16 @@ const ServerDetail: React.FC = () => {
                               : 'Upload Icon'}
                           </Button>
                         </div>
-                        <p className="server-v2-settings-hint">
+                        <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
                           Recommended size: 64x64. Supported formats: PNG, JPG.
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="server-v2-settings-card">
-                    <div className="server-v2-settings-panel-head">
-                      <div className="server-v2-settings-panel-icon">
+                  <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
+                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                      <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/4">
                         <Download size={18} />
                       </div>
                       <div>
@@ -2189,7 +2302,7 @@ const ServerDetail: React.FC = () => {
                         <p>Update the Minecraft version for this server</p>
                       </div>
                     </div>
-                    <div className="server-v2-settings-form-grid">
+                    <div className="tw:grid tw:grid-cols-2 tw:gap-3 tw:max-[1024px]:grid-cols-1 tw:[&_label]:flex tw:[&_label]:flex-col tw:[&_label]:gap-1.5 tw:[&_label>span]:inline-flex tw:[&_label>span]:items-center tw:[&_label>span]:gap-1.5 tw:[&_label>span]:text-[0.9rem] tw:[&_label>span]:text-text-muted tw:[&_input[type=range]]:accent-purple-500">
                       <label>
                         <span>
                           Select New Version{' '}
@@ -2198,7 +2311,7 @@ const ServerDetail: React.FC = () => {
                           </span>
                         </span>
                         <select
-                          className="form-input"
+                          className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
                           value={selectedVersion}
                           onChange={(e) => setSelectedVersion(e.target.value)}
                           disabled={!canApplySettings || isUpdatingVersion}
@@ -2216,7 +2329,7 @@ const ServerDetail: React.FC = () => {
                           )}
                         </select>
                       </label>
-                      <div className="server-v2-settings-actions-inline">
+                      <div className="tw:flex tw:flex-wrap tw:justify-start tw:gap-2.5">
                         <Button
                           type="button"
                           onClick={handleVersionUpdate}
@@ -2231,7 +2344,7 @@ const ServerDetail: React.FC = () => {
                         </Button>
                       </div>
                       {versionOptions.length === 0 && (
-                        <p className="server-v2-settings-hint">
+                        <p className="tw:col-span-full tw:m-0 tw:text-[0.85rem] tw:text-text-muted">
                           Current version ({server.version}) is already the
                           latest available.
                         </p>
@@ -2239,9 +2352,9 @@ const ServerDetail: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="server-v2-settings-card danger-card">
-                    <div className="server-v2-settings-panel-head">
-                      <div className="server-v2-settings-panel-icon danger">
+                  <div className="tw:box-border tw:min-w-0 tw:rounded-[14px] tw:border tw:border-rose-500/35 tw:bg-bg-card tw:p-3.5 tw:[&_h2]:mt-0 tw:[&_h2]:mb-2">
+                    <div className="tw:mb-4 tw:flex tw:items-center tw:gap-3 tw:max-[640px]:items-start">
+                      <div className="tw:flex tw:h-10 tw:w-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-rose-500/35 tw:bg-rose-500/12 tw:text-rose-300">
                         <Trash2 size={18} />
                       </div>
                       <div>
@@ -2249,7 +2362,7 @@ const ServerDetail: React.FC = () => {
                         <p>Permanently delete this server and all its files</p>
                       </div>
                     </div>
-                    <p className="server-v2-delete-warning">
+                    <p className="tw:my-2 tw:mb-3.5 tw:rounded-[10px] tw:border tw:border-rose-500/35 tw:bg-rose-500/15 tw:p-3 tw:text-rose-200">
                       Warning: this action cannot be undone. All worlds,
                       configurations, and related files will be deleted.
                     </p>
@@ -2274,10 +2387,10 @@ const ServerDetail: React.FC = () => {
           )}
         </section>
 
-        <aside className="server-v2-sidebar">
+        <aside className="tw:box-border tw:flex tw:h-fit tw:flex-col tw:gap-2 tw:rounded-[14px] tw:border tw:border-border tw:bg-bg-card tw:p-2.5 tw:max-[1024px]:order-[-1] tw:max-[1024px]:flex-row tw:max-[1024px]:flex-wrap tw:max-[1024px]:overflow-visible tw:max-[640px]:grid tw:max-[640px]:grid-cols-2 tw:max-[640px]:gap-2 tw:max-[640px]:p-2">
           <button
             type="button"
-            className={activeTab === 'performance' ? 'active' : ''}
+            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'performance' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
             onClick={() => setActiveTab('performance')}
           >
             <BarChart3 size={16} />
@@ -2285,7 +2398,7 @@ const ServerDetail: React.FC = () => {
           </button>
           <button
             type="button"
-            className={activeTab === 'console' ? 'active' : ''}
+            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'console' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
             onClick={() => setActiveTab('console')}
           >
             <Terminal size={16} />
@@ -2293,7 +2406,7 @@ const ServerDetail: React.FC = () => {
           </button>
           <button
             type="button"
-            className={activeTab === 'players' ? 'active' : ''}
+            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'players' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
             onClick={() => setActiveTab('players')}
           >
             <Users size={16} />
@@ -2301,7 +2414,7 @@ const ServerDetail: React.FC = () => {
           </button>
           <button
             type="button"
-            className={activeTab === 'files' ? 'active' : ''}
+            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'files' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
             onClick={() => setActiveTab('files')}
           >
             <HardDrive size={16} />
@@ -2310,7 +2423,7 @@ const ServerDetail: React.FC = () => {
           {supportsAddons && (
             <button
               type="button"
-              className={activeTab === 'addons' ? 'active' : ''}
+              className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'addons' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
               onClick={() => setActiveTab('addons')}
             >
               <Package size={16} />
@@ -2319,7 +2432,7 @@ const ServerDetail: React.FC = () => {
           )}
           <button
             type="button"
-            className={activeTab === 'settings' ? 'active' : ''}
+            className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-transparent tw:bg-transparent tw:px-3 tw:py-2.5 tw:text-left tw:text-text-muted tw:max-[1024px]:min-w-0 tw:max-[1024px]:flex-[1_1_calc(33.333%_-_8px)] tw:max-[640px]:justify-start tw:max-[640px]:px-2.5 tw:max-[640px]:py-[9px] tw:max-[640px]:text-[0.9rem] ${activeTab === 'settings' ? 'tw:!border-primary tw:!bg-[rgba(100,108,255,0.12)] tw:!text-white' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
             <Settings2 size={16} />
@@ -2333,15 +2446,16 @@ const ServerDetail: React.FC = () => {
         onClose={() => setIsPlayerActionsOpen(false)}
         title="Player Actions"
       >
-        <div className="server-v2-player-actions-modal">
-          <p>
+        <div className="tw:px-5 tw:pb-5">
+          <p className="tw:mt-0 tw:text-text-muted">
             Select an action for{' '}
             <strong>{selectedPlayer?.name || 'player'}</strong>.
           </p>
 
-          <div className="server-v2-player-actions-list">
+          <div className="tw:flex tw:flex-col tw:gap-2.5">
             <button
               type="button"
+              className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/4 tw:px-3 tw:py-2.5 tw:text-text-main tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
               disabled={isPlayerActionLoading || !selectedPlayer?.isOnline}
               title={
                 selectedPlayer?.isOnline === false
@@ -2359,6 +2473,7 @@ const ServerDetail: React.FC = () => {
             </button>
             <button
               type="button"
+              className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-border tw:bg-white/4 tw:px-3 tw:py-2.5 tw:text-text-main tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
               disabled={isPlayerActionLoading || !selectedPlayer}
               onClick={async () => {
                 if (!selectedPlayer) return;
@@ -2373,7 +2488,7 @@ const ServerDetail: React.FC = () => {
             </button>
             <button
               type="button"
-              className="danger"
+              className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-pink-400/35 tw:bg-pink-400/10 tw:px-3 tw:py-2.5 tw:text-pink-300 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
               disabled={isPlayerActionLoading || !selectedPlayer}
               onClick={async () => {
                 if (!selectedPlayer) return;
@@ -2386,7 +2501,7 @@ const ServerDetail: React.FC = () => {
             </button>
             <button
               type="button"
-              className="danger"
+              className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-pink-400/35 tw:bg-pink-400/10 tw:px-3 tw:py-2.5 tw:text-pink-300 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
               disabled={isPlayerActionLoading || !selectedPlayer}
               onClick={async () => {
                 if (!selectedPlayer) return;
@@ -2399,7 +2514,7 @@ const ServerDetail: React.FC = () => {
             </button>
             <button
               type="button"
-              className="danger-subtle"
+              className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-[10px] tw:border tw:border-red-300/35 tw:bg-red-300/10 tw:px-3 tw:py-2.5 tw:text-red-200 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
               disabled={
                 isPlayerActionLoading ||
                 !selectedPlayer ||
@@ -2424,9 +2539,9 @@ const ServerDetail: React.FC = () => {
         onClose={() => setIsSettingsModalOpen(false)}
         title={settingsModalTitle}
       >
-        <div className="server-v2-delete-modal">
+        <div className="tw:flex tw:flex-col tw:gap-3">
           <p>{settingsModalMessage}</p>
-          <div className="modal-actions">
+          <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -2446,24 +2561,28 @@ const ServerDetail: React.FC = () => {
         title={versionUpdateModalTitle}
         hideCloseButton={isUpdatingVersion}
       >
-        <div className="server-v2-delete-modal">
+        <div className="tw:flex tw:flex-col tw:gap-3">
           {isUpdatingVersion && renderVersionUpdateProgress()}
           {!isUpdatingVersion &&
             versionUpdateResult &&
             renderVersionUpdateResult()}
           {!isUpdatingVersion && versionUpdateError && (
-            <div className="server-v2-version-update-result">
-              <div className="server-v2-version-update-hero danger">
+            <div className="tw:flex tw:flex-col tw:gap-4">
+              <div className="tw:flex tw:items-start tw:gap-3 tw:rounded-2xl tw:border tw:border-red-400/25 tw:bg-red-400/12 tw:p-3.5 tw:text-red-300">
                 <Ban size={22} />
                 <div>
-                  <strong>Update failed</strong>
-                  <span>{versionUpdateError}</span>
+                  <strong className="tw:block tw:text-slate-50">
+                    Update failed
+                  </strong>
+                  <span className="tw:mt-[3px] tw:block tw:text-slate-300">
+                    {versionUpdateError}
+                  </span>
                 </div>
               </div>
             </div>
           )}
           {!isUpdatingVersion && (
-            <div className="modal-actions">
+            <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2">
               <Button
                 type="button"
                 variant="secondary"
@@ -2481,12 +2600,12 @@ const ServerDetail: React.FC = () => {
         onClose={() => setIsIconUploadModalOpen(false)}
         title={iconUploadModalTitle}
       >
-        <div className="server-v2-delete-modal">
+        <div className="tw:flex tw:flex-col tw:gap-3">
           <p>{iconUploadModalMessage}</p>
-          <div className="modal-actions">
+          <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2">
             <Button
               type="button"
-              variant="secondary"
+              variant="primary"
               onClick={() => setIsIconUploadModalOpen(false)}
             >
               OK
@@ -2500,19 +2619,19 @@ const ServerDetail: React.FC = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         title="Delete Server"
       >
-        <div className="server-v2-delete-modal">
+        <div className="tw:flex tw:flex-col tw:gap-3">
           <p>
             Do you want to delete server <strong>{server?.name}</strong>?
           </p>
           <p>Type the server name to confirm deletion.</p>
           <input
-            className="form-input"
+            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
             aria-label="Confirm server name"
             value={deleteConfirmName}
             onChange={(e) => setDeleteConfirmName(e.target.value)}
             placeholder="Type the server name"
           />
-          <div className="modal-actions">
+          <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2">
             <Button
               type="button"
               variant="secondary"

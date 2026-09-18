@@ -59,119 +59,70 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="dashboard">
-      <div className="modal-header">
-        <h1>Dashboard</h1>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+    <div className="tw:flex tw:flex-col">
+      <div className="tw:mb-5 tw:flex tw:items-center tw:justify-between tw:gap-3">
+        <h1 className="tw:m-0">Dashboard</h1>
+        <Button
+          className="tw:shrink-0"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
           <Plus size={20} /> Create Server
         </Button>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '15px',
-          marginBottom: '30px',
-        }}
-      >
-        <div
-          className="card"
-          style={{
-            padding: '15px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '15px',
-          }}
-        >
-          <div
-            style={{
-              padding: '10px',
-              borderRadius: '8px',
-              background: 'rgba(59, 130, 246, 0.1)',
-              color: '#3b82f6',
-            }}
-          >
+      <div className="tw:mb-[30px] tw:grid tw:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] tw:gap-[15px]">
+        <div className="tw:flex tw:items-center tw:gap-[15px] tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-[15px]">
+          <div className="tw:rounded-lg tw:bg-blue-500/10 tw:p-2.5 tw:text-blue-500">
             <Cpu size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <div className="tw:text-[0.85rem] tw:text-text-muted">
               Total CPU Usage
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+            <div className="tw:text-[1.2rem] tw:font-semibold">
               {systemStats.cpu.toFixed(1)}%
             </div>
           </div>
         </div>
-        <div
-          className="card"
-          style={{
-            padding: '15px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '15px',
-          }}
-        >
-          <div
-            style={{
-              padding: '10px',
-              borderRadius: '8px',
-              background: 'rgba(168, 85, 247, 0.1)',
-              color: '#a855f7',
-            }}
-          >
+        <div className="tw:flex tw:items-center tw:gap-[15px] tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-[15px]">
+          <div className="tw:rounded-lg tw:bg-purple-500/10 tw:p-2.5 tw:text-purple-500">
             <MemoryStick size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <div className="tw:text-[0.85rem] tw:text-text-muted">
               Total RAM Usage
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+            <div className="tw:text-[1.2rem] tw:font-semibold">
               {formatBytes(systemStats.ram)}
             </div>
           </div>
         </div>
-        <div
-          className="card"
-          style={{
-            padding: '15px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '15px',
-          }}
-        >
-          <div
-            style={{
-              padding: '10px',
-              borderRadius: '8px',
-              background: 'rgba(234, 179, 8, 0.1)',
-              color: '#eab308',
-            }}
-          >
+        <div className="tw:flex tw:items-center tw:gap-[15px] tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-[15px]">
+          <div className="tw:rounded-lg tw:bg-yellow-500/10 tw:p-2.5 tw:text-yellow-500">
             <HardDrive size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <div className="tw:text-[0.85rem] tw:text-text-muted">
               Total Disk Usage
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+            <div className="tw:text-[1.2rem] tw:font-semibold">
               {formatBytes(systemStats.disk)}
             </div>
           </div>
         </div>
       </div>
 
-      <h2 style={{ marginBottom: '20px', fontSize: '1.5rem', fontWeight: 600 }}>
+      <h2 className="tw:mb-5 tw:text-[1.5rem] tw:font-semibold">
         Lista de servidores
       </h2>
 
       {servers.length === 0 && !loading ? (
-        <div className="card">
+        <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
           <ServerIcon size={48} />
           <p>No servers found. Create your first server to get started!</p>
         </div>
       ) : (
-        <div className="server-list">
+        <div className="tw:flex tw:flex-col tw:gap-3">
           {servers.map((server) => (
             <ServerListItem
               key={server.id}

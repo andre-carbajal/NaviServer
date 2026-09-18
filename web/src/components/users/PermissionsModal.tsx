@@ -1,9 +1,11 @@
-import { Key, X } from 'lucide-react';
+import { Key } from 'lucide-react';
 
 import React, { useEffect, useState } from 'react';
 
 import { api } from '../../services/api';
 import type { Permission, Server, User } from '../../types';
+import { Button } from '../ui/Button';
+import { Modal } from '../ui/Modal';
 
 interface Props {
   user: User;
@@ -86,94 +88,88 @@ const PermissionsModal: React.FC<Props> = ({ user, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '700px' }}>
-        <div className="modal-header">
-          <h2 className="modal-title flex items-center gap-4">
-            <Key size={24} className="text-blue-500" />
-            Permissions for {user.username}
-          </h2>
-          <button type="button" className="icon-action" onClick={onClose}>
-            <X size={20} />
-          </button>
+    <Modal
+      isOpen
+      onClose={onClose}
+      contentClassName="tw:max-w-[700px]!"
+      title={
+        <span className="tw:flex tw:items-center tw:gap-4">
+          <Key size={24} className="tw:text-blue-500" />
+          Permissions for {user.username}
+        </span>
+      }
+    >
+      {error && (
+        <div className="tw:mb-6 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-xl tw:border tw:border-red-600/20 tw:bg-red-600/10 tw:p-4 tw:text-center tw:text-[0.9rem] tw:text-red-400">
+          {error}
         </div>
+      )}
 
-        {error && <div className="error-message">{error}</div>}
-
-        {loading ? (
-          <div>Loading...</div>
-        ) : (
-          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Server</th>
-                  <th className="text-center">Power Control</th>
-                  <th className="text-center">Console & Files</th>
-                </tr>
-              </thead>
-              <tbody>
-                {servers.map((server) => {
-                  const perm = permissions[server.id] || {};
-                  return (
-                    <tr key={server.id}>
-                      <td>{server.name}</td>
-                      <td className="text-center">
-                        <input
-                          type="checkbox"
-                          aria-label={`${server.name} power control permission`}
-                          checked={perm.canControlPower || false}
-                          onChange={(e) =>
-                            handleCheck(
-                              server.id,
-                              'canControlPower',
-                              e.target.checked,
-                            )
-                          }
-                        />
-                      </td>
-                      <td className="text-center">
-                        <input
-                          type="checkbox"
-                          aria-label={`${server.name} console and files permission`}
-                          checked={perm.canViewConsole || false}
-                          onChange={(e) =>
-                            handleCheck(
-                              server.id,
-                              'canViewConsole',
-                              e.target.checked,
-                            )
-                          }
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="modal-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onClose}
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save Permissions'}
-          </button>
+      {loading ? (
+        <div>Loading...</div>
+      ) : (
+        <div className="tw:max-h-[60vh] tw:overflow-y-auto">
+          <table className="tw:w-full tw:border-collapse tw:text-left tw:[&_th]:border-b tw:[&_th]:border-border tw:[&_th]:bg-black/10 tw:[&_th]:px-4 tw:[&_th]:py-3 tw:[&_th]:text-xs tw:[&_th]:font-semibold tw:[&_th]:text-text-muted tw:[&_th]:uppercase tw:[&_td]:border-b tw:[&_td]:border-border tw:[&_td]:px-4 tw:[&_td]:py-3 tw:[&_tbody_tr]:transition-colors tw:[&_tbody_tr:hover]:bg-white/3">
+            <thead>
+              <tr>
+                <th>Server</th>
+                <th className="tw:text-center">Power Control</th>
+                <th className="tw:text-center">Console & Files</th>
+              </tr>
+            </thead>
+            <tbody>
+              {servers.map((server) => {
+                const perm = permissions[server.id] || {};
+                return (
+                  <tr key={server.id}>
+                    <td>{server.name}</td>
+                    <td className="tw:text-center">
+                      <input
+                        type="checkbox"
+                        className="tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:p-0 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
+                        aria-label={`${server.name} power control permission`}
+                        checked={perm.canControlPower || false}
+                        onChange={(e) =>
+                          handleCheck(
+                            server.id,
+                            'canControlPower',
+                            e.target.checked,
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="tw:text-center">
+                      <input
+                        type="checkbox"
+                        className="tw:grid tw:h-5 tw:w-5 tw:shrink-0 tw:cursor-pointer tw:appearance-none tw:place-content-center tw:rounded tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:p-0 tw:before:block tw:before:h-[0.65em] tw:before:w-[0.65em] tw:before:scale-0 tw:before:origin-center tw:before:content-['✓'] tw:before:text-xs tw:before:font-bold tw:before:text-white tw:checked:border-blue-500 tw:checked:bg-blue-500 tw:checked:before:scale-100 tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
+                        aria-label={`${server.name} console and files permission`}
+                        checked={perm.canViewConsole || false}
+                        onChange={(e) =>
+                          handleCheck(
+                            server.id,
+                            'canViewConsole',
+                            e.target.checked,
+                          )
+                        }
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
+        <Button variant="secondary" onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Permissions'}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 };
 

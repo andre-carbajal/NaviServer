@@ -22,14 +22,14 @@ const ServerIconImage: React.FC<{ server: Server }> = ({ server }) => {
       <img
         src={api.getServerIconUrl(server.id)}
         alt={`${server.name} icon`}
-        className="server-icon-select-image"
+        className="tw:h-6 tw:w-6 tw:rounded-md tw:object-contain [image-rendering:pixelated]"
         onError={() => setError(true)}
       />
     );
   }
 
   return (
-    <div className="server-icon-select-fallback">
+    <div className="tw:inline-flex tw:h-6 tw:w-6 tw:items-center tw:justify-center tw:rounded-md tw:bg-white/10 tw:text-xs tw:font-semibold tw:text-text-muted [image-rendering:pixelated]">
       {server.name.charAt(0).toUpperCase()}
     </div>
   );
@@ -66,15 +66,14 @@ const ServerIconSelect: React.FC<ServerIconSelectProps> = ({
   const canOpen = !disabled;
 
   return (
-    <div className="form-group">
-      <label>{label}</label>
-      <div
-        ref={rootRef}
-        className={`server-icon-select ${disabled ? 'is-disabled' : ''}`}
-      >
+    <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+      <label className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted tw:max-[769px]:mb-1.5 tw:max-[769px]:text-[0.85rem]">
+        {label}
+      </label>
+      <div ref={rootRef} className="tw:relative">
         <button
           type="button"
-          className="server-icon-select-trigger"
+          className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-bg-card tw:p-2.5 tw:text-text-main tw:disabled:cursor-not-allowed tw:disabled:opacity-60"
           onClick={() => {
             if (canOpen) {
               setOpen((prev) => !prev);
@@ -85,29 +84,33 @@ const ServerIconSelect: React.FC<ServerIconSelectProps> = ({
           {selectedServer ? (
             <>
               <ServerIconImage server={selectedServer} />
-              <span className="server-icon-select-text">
+              <span className="tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">
                 {selectedServer.name}
               </span>
             </>
           ) : (
-            <span className="server-icon-select-placeholder">
+            <span className="tw:text-text-muted">
               {allowNone && value === '' ? noneLabel : placeholder}
             </span>
           )}
-          <span className="server-icon-select-caret">{open ? '▲' : '▼'}</span>
+          <span className="tw:ml-auto tw:text-xs tw:text-text-muted">
+            {open ? '▲' : '▼'}
+          </span>
         </button>
         {open && (
-          <div className="server-icon-select-menu">
+          <div className="tw:absolute tw:z-60 tw:mt-1.5 tw:max-h-[220px] tw:w-full tw:overflow-auto tw:rounded-lg tw:border tw:border-border tw:bg-bg-card tw:shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
             {allowNone && (
               <button
                 type="button"
-                className="server-icon-select-option"
+                className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2.5 tw:border-0 tw:border-b tw:border-border tw:bg-transparent tw:px-2.5 tw:py-[9px] tw:text-left tw:text-text-main tw:last:border-b-0 tw:hover:bg-white/6"
                 onClick={() => {
                   onChange('');
                   setOpen(false);
                 }}
               >
-                <div className="server-icon-select-fallback">-</div>
+                <div className="tw:inline-flex tw:h-6 tw:w-6 tw:items-center tw:justify-center tw:rounded-md tw:bg-white/10 tw:text-xs tw:font-semibold tw:text-text-muted [image-rendering:pixelated]">
+                  -
+                </div>
                 <span>{noneLabel}</span>
               </button>
             )}
@@ -115,14 +118,14 @@ const ServerIconSelect: React.FC<ServerIconSelectProps> = ({
               <button
                 type="button"
                 key={server.id}
-                className={`server-icon-select-option ${value === server.id ? 'is-selected' : ''}`}
+                className={`tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2.5 tw:border-0 tw:border-b tw:border-border tw:bg-transparent tw:px-2.5 tw:py-[9px] tw:text-left tw:text-text-main tw:last:border-b-0 tw:hover:bg-white/6 ${value === server.id ? 'tw:bg-white/6' : ''}`}
                 onClick={() => {
                   onChange(server.id);
                   setOpen(false);
                 }}
               >
                 <ServerIconImage server={server} />
-                <div className="server-icon-select-option-text">
+                <div className="tw:flex tw:min-w-0 tw:flex-col tw:[&_span]:overflow-hidden tw:[&_span]:text-ellipsis tw:[&_span]:whitespace-nowrap tw:[&_small]:text-xs tw:[&_small]:text-text-muted">
                   <span>{server.name}</span>
                   <small>{server.id}</small>
                 </div>

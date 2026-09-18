@@ -65,7 +65,9 @@ const App = () => {
       <ServerProvider>
         <BrowserRouter>
           {notification.visible && (
-            <div className={`notification ${notification.type}`}>
+            <div
+              className={`tw:fixed tw:right-5 tw:top-5 tw:z-[1000] tw:rounded-lg tw:px-5 tw:py-[15px] tw:text-white tw:shadow-[0_4px_8px_rgba(0,0,0,0.2)] tw:animate-[fadeIn_0.5s_0s_both,fadeOut_0.5s_4.5s_both] tw:max-[768px]:top-2.5 tw:max-[768px]:right-2.5 tw:max-[768px]:left-2.5 tw:max-[768px]:max-w-none ${notification.type === 'error' ? 'tw:bg-danger' : 'tw:bg-primary'}`}
+            >
               {notification.message}
             </div>
           )}
@@ -88,18 +90,5 @@ const App = () => {
     </AuthProvider>
   );
 };
-
-const styleSheet = document.createElement('style');
-styleSheet.innerText = `
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeOut {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(-20px); }
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default App;

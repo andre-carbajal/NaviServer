@@ -121,9 +121,11 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
       title={`Restore Backup: ${backupName}`}
     >
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <span className="form-label">Restore To</span>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+        <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+          <span className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted">
+            Restore To
+          </span>
+          <div className="tw:mb-2.5 tw:flex tw:gap-2.5">
             <label>
               <input
                 type="radio"
@@ -148,7 +150,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
         </div>
 
         {mode === 'existing' ? (
-          <div className="form-group">
+          <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
             <ServerIconSelect
               label="Select Server (Must be STOPPED)"
               value={selectedServer}
@@ -156,42 +158,40 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
               servers={stoppedServers}
             />
             {stoppedServers.length === 0 && (
-              <p
-                style={{
-                  color: 'var(--danger)',
-                  fontSize: '0.8em',
-                  marginTop: '5px',
-                }}
-              >
+              <p className="tw:mt-[5px] tw:text-[0.8em] tw:text-danger">
                 No stopped servers available.
               </p>
             )}
           </div>
         ) : (
           <>
-            <div className="form-group">
-              <label htmlFor="restore-new-server-name">New Server Name</label>
+            <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+              <label
+                htmlFor="restore-new-server-name"
+                className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted tw:max-[769px]:mb-1.5 tw:max-[769px]:text-[0.85rem]"
+              >
+                New Server Name
+              </label>
               <input
                 id="restore-new-server-name"
                 type="text"
-                className="form-input"
+                className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
                 value={newServerName}
                 onChange={(e) => setNewServerName(e.target.value)}
                 required
               />
             </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '15px',
-              }}
-            >
-              <div className="form-group">
-                <label htmlFor="restore-new-server-loader">Loader</label>
+            <div className="tw:grid tw:grid-cols-2 tw:gap-[15px]">
+              <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+                <label
+                  htmlFor="restore-new-server-loader"
+                  className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted tw:max-[769px]:mb-1.5 tw:max-[769px]:text-[0.85rem]"
+                >
+                  Loader
+                </label>
                 <select
                   id="restore-new-server-loader"
-                  className="form-select"
+                  className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
                   value={newServerLoader}
                   onChange={(e) => setNewServerLoader(e.target.value)}
                 >
@@ -202,11 +202,16 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label htmlFor="restore-new-server-version">Version</label>
+              <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+                <label
+                  htmlFor="restore-new-server-version"
+                  className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted tw:max-[769px]:mb-1.5 tw:max-[769px]:text-[0.85rem]"
+                >
+                  Version
+                </label>
                 <select
                   id="restore-new-server-version"
-                  className="form-select"
+                  className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
                   value={newServerVersion}
                   onChange={(e) => setNewServerVersion(e.target.value)}
                 >
@@ -218,12 +223,17 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
                 </select>
               </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="restore-new-server-ram">RAM (MB)</label>
+            <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+              <label
+                htmlFor="restore-new-server-ram"
+                className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted tw:max-[769px]:mb-1.5 tw:max-[769px]:text-[0.85rem]"
+              >
+                RAM (MB)
+              </label>
               <input
                 id="restore-new-server-ram"
                 type="number"
-                className="form-input"
+                className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
                 value={newServerRam}
                 onChange={(e) => setNewServerRam(Number(e.target.value))}
                 min="1024"
@@ -233,7 +243,7 @@ const RestoreBackupModal: React.FC<RestoreBackupModalProps> = ({
           </>
         )}
 
-        <div className="modal-actions">
+        <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
           <Button
             type="button"
             variant="secondary"

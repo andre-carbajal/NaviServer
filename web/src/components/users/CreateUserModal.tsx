@@ -47,39 +47,53 @@ const CreateUserModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Create New User">
-      <div style={{ padding: '5px 0' }}>
-        {error && <div className="error-message">{error}</div>}
+      <div className="tw:py-[5px]">
+        {error && (
+          <div className="tw:mb-6 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-xl tw:border tw:border-red-600/20 tw:bg-red-600/10 tw:p-4 tw:text-center tw:text-[0.9rem] tw:text-red-400">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="create-user-username">Username</label>
+          <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+            <label
+              className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+              htmlFor="create-user-username"
+            >
+              Username
+            </label>
             <input
               id="create-user-username"
               type="text"
-              className="form-input"
+              className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
             {usernameError && (
-              <div className="error-message" style={{ marginTop: '5px' }}>
+              <div className="tw:mt-[5px] tw:mb-6 tw:flex tw:items-center tw:justify-center tw:gap-2 tw:rounded-xl tw:border tw:border-red-600/20 tw:bg-red-600/10 tw:p-4 tw:text-center tw:text-[0.9rem] tw:text-red-400">
                 {usernameError}
               </div>
             )}
           </div>
-          <div className="form-group">
-            <label htmlFor="create-user-password">Password</label>
+          <div className="tw:mb-[15px] tw:max-[769px]:mb-3">
+            <label
+              className="tw:mb-2 tw:block tw:text-[0.9rem] tw:text-text-muted"
+              htmlFor="create-user-password"
+            >
+              Password
+            </label>
             <input
               id="create-user-password"
               type="password"
-              className="form-input"
+              className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:max-[769px]:px-3 tw:max-[769px]:py-2.5 tw:max-[769px]:text-base"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          <div className="modal-actions">
+          <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2 tw:max-[769px]:[&_button]:w-full">
             <Button
               type="button"
               variant="secondary"

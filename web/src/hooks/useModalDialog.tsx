@@ -55,19 +55,15 @@ export const useModalDialog = () => {
       isOpen
       onClose={() => closeDialog(false)}
       title={dialogState.title}
-      contentClassName="app-dialog-content"
+      contentClassName="tw:max-w-[460px]!"
     >
-      <div className="app-dialog-body">
+      <div className="tw:w-full tw:max-w-[420px] tw:mx-auto">
         <p
-          className={
-            dialogState.variant === 'danger'
-              ? 'app-dialog-message danger'
-              : 'app-dialog-message'
-          }
+          className={`tw:m-0 tw:leading-[1.5] ${dialogState.variant === 'danger' ? 'tw:rounded-lg tw:border tw:border-danger/30 tw:bg-danger/10 tw:p-3 tw:text-red-200' : 'tw:text-text-muted'}`}
         >
           {dialogState.message}
         </p>
-        <div className="modal-actions">
+        <div className="tw:mt-[25px] tw:flex tw:justify-end tw:gap-2.5 tw:max-[769px]:flex-col tw:max-[769px]:gap-2">
           {dialogState.type === 'confirm' && (
             <Button variant="secondary" onClick={() => closeDialog(false)}>
               {dialogState.cancelText || 'Cancel'}

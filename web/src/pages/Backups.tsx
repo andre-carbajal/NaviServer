@@ -531,57 +531,35 @@ const Backups: React.FC = () => {
 
   return (
     <div
-      className={`backups-page ${isDragging ? 'dragging' : ''}`}
+      className={`tw:relative tw:flex tw:min-h-full tw:flex-col tw:gap-4 ${isDragging ? 'tw:rounded-xl tw:border-2 tw:border-dashed tw:border-primary tw:shadow-[0_0_0_2px_rgba(100,108,255,0.2)]' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      style={{
-        position: 'relative',
-        borderColor: isDragging ? '#646cff' : 'transparent',
-        boxShadow: isDragging ? '0 0 0 2px rgba(100, 108, 255, 0.2)' : 'none',
-      }}
     >
       {modalDialog}
-      <div className="modal-header">
-        <h1>Backups</h1>
-        <div className="backup-actions-header">
-          <Button onClick={handleUploadClick} variant="secondary">
-            <Upload size={20} /> <span className="btn-text">Upload Backup</span>
+      <div className="tw:mb-5 tw:flex tw:items-center tw:justify-between tw:gap-3 tw:max-[640px]:items-stretch">
+        <h1 className="tw:m-0">Backups</h1>
+        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2.5 tw:max-[640px]:w-full tw:max-[640px]:flex-nowrap">
+          <Button
+            className="tw:max-[640px]:min-w-0 tw:max-[640px]:flex-1 tw:max-[640px]:justify-center tw:max-[640px]:px-2"
+            onClick={handleUploadClick}
+            variant="secondary"
+          >
+            <Upload size={20} />{' '}
+            <span className="tw:max-[640px]:hidden">Upload Backup</span>
           </Button>
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus size={20} /> <span className="btn-text">Create Backup</span>
+          <Button
+            className="tw:max-[640px]:min-w-0 tw:max-[640px]:flex-1 tw:max-[640px]:justify-center tw:max-[640px]:px-2"
+            onClick={() => setCreateModalOpen(true)}
+          >
+            <Plus size={20} />{' '}
+            <span className="tw:max-[640px]:hidden">Create Backup</span>
           </Button>
         </div>
       </div>
       {isDragging && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(100, 108, 255, 0.1)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-            borderRadius: '12px',
-          }}
-        >
-          <div
-            style={{
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '1.2rem',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
+        <div className="tw:absolute tw:inset-0 tw:z-50 tw:flex tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:backdrop-blur-sm tw:pointer-events-none">
+          <div className="tw:flex tw:flex-col tw:items-center tw:gap-2.5 tw:text-[1.2rem] tw:font-bold tw:text-white">
             <Upload size={48} />
             <span>Drop backups to upload (.zip, .rar)</span>
           </div>
@@ -595,18 +573,18 @@ const Backups: React.FC = () => {
         onSave={handleSaveAutoBackup}
       />
 
-      <div className="card">
-        <h2 className="backup-section-title">Backups</h2>
+      <div className="tw:rounded-xl tw:border tw:border-border tw:bg-bg-card tw:p-5">
+        <h2 className="tw:mb-3 tw:mt-0">Backups</h2>
         <input
           type="file"
           aria-label="Upload backup files"
           ref={fileInputRef}
           onChange={handleFileChange}
-          style={{ display: 'none' }}
+          className="tw:hidden"
           accept=".zip,.rar"
           multiple
         />
-        <table className="data-table backups-table">
+        <table className="tw:box-border tw:mt-2.5 tw:w-full tw:border-collapse tw:text-[0.95rem] tw:[&_th]:border-b tw:[&_th]:border-border tw:[&_th]:p-4 tw:[&_th]:text-left tw:[&_th]:text-[0.8rem] tw:[&_th]:font-semibold tw:[&_th]:tracking-[0.05em] tw:[&_th]:text-text-muted tw:[&_th]:uppercase tw:[&_td]:border-b tw:[&_td]:border-border tw:[&_td]:p-4 tw:[&_td]:text-left tw:[&_tr:last-child_td]:border-b-0 tw:[&_tbody_tr]:transition-colors tw:[&_tbody_tr:hover]:bg-white/[0.03] tw:max-[1100px]:[&_thead]:hidden tw:max-[1100px]:[&_tbody]:block tw:max-[1100px]:[&_tr]:mb-2.5 tw:max-[1100px]:[&_tr]:block tw:max-[1100px]:[&_tr]:rounded-[10px] tw:max-[1100px]:[&_tr]:border tw:max-[1100px]:[&_tr]:border-border tw:max-[1100px]:[&_tr]:p-2 tw:max-[1100px]:[&_td]:block tw:max-[1100px]:[&_td]:box-border tw:max-[1100px]:[&_td]:w-full tw:max-[1100px]:[&_td]:!border-0 tw:max-[1100px]:[&_td]:!p-[6px_4px] tw:max-[1100px]:[&_td]:before:mb-0.5 tw:max-[1100px]:[&_td]:before:block tw:max-[1100px]:[&_td]:before:text-[0.72rem] tw:max-[1100px]:[&_td]:before:text-text-muted tw:max-[1100px]:[&_td]:before:uppercase tw:max-[1100px]:[&_td]:before:content-[attr(data-label)]">
           <thead>
             <tr>
               <th>Name</th>
@@ -620,32 +598,18 @@ const Backups: React.FC = () => {
             {uploadingBackups.map((upload) => (
               <tr key={upload.id}>
                 <td data-label="Name">
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <Loader2 className="spin" size={16} />
+                  <div className="tw:flex tw:items-center tw:gap-2">
+                    <Loader2 className="tw:animate-spin" size={16} />
                     <div>
                       <div>{upload.name}</div>
-                      <div
-                        style={{
-                          fontSize: '0.8em',
-                          color: 'var(--text-muted)',
-                        }}
-                      >
+                      <div className="tw:text-[0.8em] tw:text-text-muted">
                         Uploading...
                       </div>
                     </div>
                   </div>
-                  <div
-                    className="progress-bar-container"
-                    style={{ marginTop: '4px', height: '4px' }}
-                  >
+                  <div className="tw:h-1 tw:w-full tw:overflow-hidden tw:rounded tw:bg-white/10">
                     <div
-                      className="progress-bar-fill"
+                      className="tw:h-full tw:rounded tw:bg-primary tw:transition-[width] tw:duration-300"
                       style={{ width: `${upload.progress}%` }}
                     />
                   </div>
@@ -659,33 +623,19 @@ const Backups: React.FC = () => {
             {visibleCreatingBackups.map((backup) => (
               <tr key={backup.requestId}>
                 <td data-label="Name">
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <Loader2 className="spin" size={16} />
+                  <div className="tw:flex tw:items-center tw:gap-2">
+                    <Loader2 className="tw:animate-spin" size={16} />
                     <div>
                       <div>{backup.name}</div>
-                      <div
-                        style={{
-                          fontSize: '0.8em',
-                          color: 'var(--text-muted)',
-                        }}
-                      >
+                      <div className="tw:text-[0.8em] tw:text-text-muted">
                         {backup.progressMessage}
                       </div>
                     </div>
                   </div>
                   {backup.progress !== undefined && (
-                    <div
-                      className="progress-bar-container"
-                      style={{ marginTop: '4px', height: '4px' }}
-                    >
+                    <div className="tw:h-1 tw:w-full tw:overflow-hidden tw:rounded tw:bg-white/10">
                       <div
-                        className="progress-bar-fill"
+                        className="tw:h-full tw:rounded tw:bg-primary tw:transition-[width] tw:duration-300"
                         style={{ width: `${backup.progress}%` }}
                       />
                     </div>
@@ -695,7 +645,7 @@ const Backups: React.FC = () => {
                 <td data-label="Date & Time">-</td>
                 <td data-label="Size">-</td>
                 <td data-label="Actions">
-                  <div style={{ display: 'flex', gap: '5px' }}>
+                  <div className="tw:flex tw:gap-[5px]">
                     <Button
                       variant="secondary"
                       onClick={() => handleCancelBackup(backup.requestId!)}
@@ -712,12 +662,12 @@ const Backups: React.FC = () => {
                 <td data-label="Name">{backup.name}</td>
                 <td data-label="Server">
                   {backup.serverName ? (
-                    <div className="backup-server-cell">
+                    <div className="tw:flex tw:items-center tw:gap-2">
                       {serverForBackup(backup.serverId) ? (
                         <img
                           src={api.getServerIconUrl(backup.serverId!)}
                           alt="Server icon"
-                          className="backup-server-icon"
+                          className="tw:h-7 tw:w-7 tw:shrink-0 tw:rounded-md tw:object-contain [image-rendering:pixelated]"
                           onError={(event) => {
                             event.currentTarget.style.display = 'none';
                           }}
@@ -726,7 +676,7 @@ const Backups: React.FC = () => {
                       <span>{backup.serverName}</span>
                     </div>
                   ) : (
-                    <span className="text-muted">None</span>
+                    <span className="tw:text-text-muted">None</span>
                   )}
                 </td>
                 <td data-label="Date & Time">
@@ -736,14 +686,11 @@ const Backups: React.FC = () => {
                   {(backup.size / 1024 / 1024).toFixed(2)} MB
                 </td>
                 <td data-label="Actions">
-                  <div
-                    className="actions-group"
-                    style={{ border: 'none', padding: 0, margin: 0 }}
-                  >
+                  <div className="tw:flex tw:min-w-[180px] tw:flex-wrap tw:items-center tw:gap-3">
                     {user?.role === 'admin' && (
                       <button
                         type="button"
-                        className="icon-action"
+                        className="tw:flex tw:h-9 tw:w-9 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded tw:border-0 tw:bg-transparent tw:p-0 tw:text-text-muted tw:transition-all tw:duration-200 tw:hover:bg-white/10 tw:hover:text-white"
                         title="Edit Association"
                         onClick={() => handleEditClick(backup)}
                       >
@@ -751,7 +698,7 @@ const Backups: React.FC = () => {
                       </button>
                     )}
                     <a
-                      className="icon-action"
+                      className="tw:flex tw:h-9 tw:w-9 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded tw:border-0 tw:bg-transparent tw:p-0 tw:text-text-muted tw:transition-all tw:duration-200 tw:hover:bg-white/10 tw:hover:text-white"
                       title="Download"
                       href={api.getBackupDownloadUrl(backup.name)}
                       target="_blank"
@@ -761,7 +708,7 @@ const Backups: React.FC = () => {
                     </a>
                     <button
                       type="button"
-                      className="icon-action"
+                      className="tw:flex tw:h-9 tw:w-9 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded tw:border-0 tw:bg-transparent tw:p-0 tw:text-text-muted tw:transition-all tw:duration-200 tw:hover:bg-white/10 tw:hover:text-white"
                       title="Restore"
                       onClick={() => handleRestoreClick(backup.name)}
                     >
@@ -769,7 +716,7 @@ const Backups: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      className="icon-action danger"
+                      className="tw:flex tw:h-9 tw:w-9 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded tw:border-0 tw:bg-transparent tw:p-0 tw:text-text-muted tw:transition-all tw:duration-200 tw:hover:bg-red-500/10 tw:hover:text-red-500"
                       title="Delete"
                       onClick={() => handleDelete(backup.name)}
                     >
@@ -785,11 +732,7 @@ const Backups: React.FC = () => {
                 <tr>
                   <td
                     colSpan={5}
-                    style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: 'var(--text-muted)',
-                    }}
+                    className="tw:!p-5 tw:!text-center tw:!text-text-muted"
                   >
                     No backups found.
                   </td>

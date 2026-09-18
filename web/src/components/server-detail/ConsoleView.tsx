@@ -100,8 +100,11 @@ const ConsoleView: React.FC<ConsoleViewProps> = ({ logs }) => {
   }, [logs, terminalReady]);
 
   return (
-    <div className="console-view">
-      <div ref={terminalRef} className="console-view-terminal" />
+    <div className="tw:h-full tw:min-h-[300px] tw:w-full tw:min-w-0 tw:overflow-hidden tw:rounded-lg tw:bg-[#1e1e1e] tw:p-2.5 tw:max-[1025px]:h-[50vh] tw:max-[1025px]:min-h-[400px]">
+      <div
+        ref={terminalRef}
+        className="console-view-terminal tw:h-full tw:max-w-full tw:min-w-0 tw:overflow-hidden"
+      />
     </div>
   );
 };
