@@ -1008,9 +1008,9 @@ const ServerDetail: React.FC = () => {
   const isStoppedLike = server.status === 'STOPPED';
 
   return (
-    <div className="tw:flex tw:h-full tw:flex-col tw:gap-4">
+    <div className="tw:flex tw:h-full tw:min-w-0 tw:flex-col tw:gap-4">
       {modalDialog}
-      <header className="tw:flex tw:items-center tw:gap-3.5 tw:rounded-2xl tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:max-[1024px]:!flex-nowrap tw:max-[1024px]:!gap-2.5 tw:max-[1024px]:!p-3 tw:max-[640px]:!grid tw:max-[640px]:!grid-cols-[40px_minmax(0,1fr)_auto] tw:max-[640px]:!items-center tw:max-[640px]:!gap-2 tw:max-[480px]:!grid-cols-[40px_minmax(0,1fr)] tw:max-[480px]:!gap-2.5">
+      <header className="tw:flex tw:min-w-0 tw:items-center tw:gap-3.5 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:max-[1024px]:!flex-nowrap tw:max-[1024px]:!gap-2.5 tw:max-[1024px]:!p-3 tw:max-[640px]:!grid tw:max-[640px]:!grid-cols-[40px_minmax(0,1fr)_auto] tw:max-[640px]:!items-center tw:max-[640px]:!gap-2 tw:max-[480px]:!grid-cols-[40px_minmax(0,1fr)] tw:max-[480px]:!gap-2.5">
         <button
           type="button"
           className="tw:flex tw:h-[42px] tw:w-[42px] tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/[0.02] tw:p-0 tw:text-text-muted tw:hover:bg-white/[0.06] tw:hover:text-text-main tw:max-[640px]:h-10 tw:max-[640px]:w-10"
@@ -1037,8 +1037,8 @@ const ServerDetail: React.FC = () => {
           </div>
 
           <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1.5">
-            <div className="tw:flex tw:items-center tw:gap-2.5">
-              <h1 className="tw:m-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[1.8rem] tw:leading-[1.1] tw:max-[1024px]:text-2xl tw:max-[640px]:text-[1.3rem]">
+            <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2.5">
+              <h1 className="tw:m-0 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[1.8rem] tw:leading-[1.1] tw:max-[1024px]:text-2xl tw:max-[640px]:text-[1.3rem]">
                 {server.name}
               </h1>
               <span
@@ -1047,7 +1047,7 @@ const ServerDetail: React.FC = () => {
                 {server.status}
               </span>
             </div>
-            <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2 tw:text-[0.9rem] tw:text-text-muted tw:max-[640px]:text-[0.82rem]">
+            <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2 tw:text-[0.9rem] tw:text-text-muted tw:max-[640px]:text-[0.82rem]">
               <span className="tw:font-semibold tw:text-text-main">
                 {server.loader}
               </span>
@@ -1071,7 +1071,7 @@ const ServerDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="tw:col-span-full tw:hidden tw:min-w-0 tw:items-center tw:gap-1.5 tw:max-[1024px]:!flex">
+          <div className="tw:col-span-full tw:hidden tw:w-full tw:min-w-0 tw:items-center tw:gap-1.5 tw:max-[1024px]:!flex">
             <button
               type="button"
               className="tw:inline-flex tw:h-6 tw:w-full tw:min-w-0 tw:!max-w-[390px] tw:flex-1 tw:cursor-pointer tw:items-center tw:overflow-hidden tw:rounded-[7px] tw:border tw:border-white/10 tw:bg-white/4 tw:px-2 tw:font-mono tw:text-[0.78rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:border-indigo-500/55 tw:hover:bg-indigo-500/12 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2"

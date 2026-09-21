@@ -28,7 +28,6 @@
 
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
   background-color: var(--bg-dark);
   color: var(--text-main);
