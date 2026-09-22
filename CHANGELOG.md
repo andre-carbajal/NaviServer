@@ -23,9 +23,26 @@
     - Added an installation preview that lists missing required dependencies
       with their source, version, filename, and project icon.
 
+- Upload management:
+    - Added queued file, folder, backup, and server-icon uploads with 5 MB
+      chunks, progress tracking, retry and cancel handling, drag-and-drop
+      directory support, target validation, permission checks, and CORS support
+      for chunked requests.
+
+- Server management:
+    - Added per-server Java runtime selection with automatic resolution and
+      managed Java 8, 17, 21, and 25 options; persisted the selection, applied
+      it to server and loader operations, and displayed the required version
+      with a warning for incompatible overrides.
+
 - Web UI polish:
     - Replaced native browser `alert` and `confirm` dialogs with in-app modals
       across files, backups, settings, users, and server player actions.
+    - Added a responsive mobile navigation drawer with overlay, Escape/close
+      controls, and automatic close after navigation.
+    - Reworked dashboard server cards and Server Detail headers for narrow
+      screens, adding server-address icons, clearer resource/player metrics,
+      and larger touch-friendly actions.
     - Fixed server address copy controls on the dashboard and server detail page
       so they match the dark UI and truncate long addresses cleanly.
     - Reset native `<dialog>` styling for app modals to remove the unwanted
@@ -53,6 +70,8 @@
       headless shutdown waits for cleanup to finish.
 
 - Reliability:
+    - Added unit coverage for automatic/configured Java version resolution and
+      supported-version validation.
     - Updated Bash conditionals in the build, installation, migration, and
       uninstallation scripts to use Bash's safer `[[ ... ]]` syntax.
     - Made JSX spacing explicit around inline controls and standardized numeric
