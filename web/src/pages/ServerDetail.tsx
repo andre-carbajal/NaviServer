@@ -16,6 +16,7 @@ import {
   Play,
   PowerOff,
   RotateCcw,
+  Server as ServerIcon,
   Settings2,
   Share2,
   Shield,
@@ -1031,94 +1032,112 @@ const ServerDetail: React.FC = () => {
   return (
     <div className="tw:flex tw:h-full tw:min-w-0 tw:flex-col tw:gap-4">
       {modalDialog}
-      <header className="tw:flex tw:min-w-0 tw:items-center tw:gap-3.5 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:max-[1024px]:!flex-nowrap tw:max-[1024px]:!gap-2.5 tw:max-[1024px]:!p-3 tw:max-[640px]:!grid tw:max-[640px]:!grid-cols-[40px_minmax(0,1fr)_auto] tw:max-[640px]:!items-center tw:max-[640px]:!gap-2 tw:max-[480px]:!grid-cols-[40px_minmax(0,1fr)] tw:max-[480px]:!gap-2.5">
-        <button
-          type="button"
-          className="tw:flex tw:h-[42px] tw:w-[42px] tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/[0.02] tw:p-0 tw:text-text-muted tw:hover:bg-white/[0.06] tw:hover:text-text-main tw:max-[640px]:h-10 tw:max-[640px]:w-10"
-          onClick={() => navigate('/')}
-          title="Back to dashboard"
-        >
-          <ArrowLeft size={18} />
-        </button>
+      <header className="tw:flex tw:min-w-0 tw:items-center tw:gap-3.5 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-bg-card tw:p-3.5 tw:max-[1024px]:!flex-col tw:max-[1024px]:!items-stretch tw:max-[1024px]:!gap-2.5 tw:max-[1024px]:!p-3">
+        <div className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-3.5 tw:max-[1024px]:!w-full tw:max-[480px]:!gap-2">
+          <button
+            type="button"
+            className="tw:flex tw:h-[42px] tw:w-[42px] tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-border tw:bg-white/[0.02] tw:p-0 tw:text-text-muted tw:hover:bg-white/[0.06] tw:hover:text-text-main tw:max-[640px]:h-12 tw:max-[640px]:w-12"
+            onClick={() => navigate('/')}
+            title="Back to dashboard"
+          >
+            <ArrowLeft size={22} />
+          </button>
 
-        <div className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-3 tw:max-[1024px]:!grid tw:max-[1024px]:!grid-cols-[auto_minmax(0,1fr)] tw:max-[1024px]:!items-start tw:max-[1024px]:!gap-x-3 tw:max-[1024px]:!gap-y-2">
-          <div className="tw:h-9 tw:w-9 tw:shrink-0 tw:overflow-hidden tw:rounded">
-            {!iconError ? (
-              <img
-                src={`${api.getServerIconUrl(server.id)}?v=${serverIconVersion}`}
-                alt="Server Icon"
-                onError={() => setIconError(true)}
-                className="tw:h-full tw:w-full tw:rounded tw:bg-black/20 tw:object-contain [image-rendering:pixelated]"
-              />
-            ) : (
-              <div className="tw:flex tw:h-full tw:w-full tw:items-center tw:justify-center tw:rounded tw:bg-white/10 tw:text-base tw:font-semibold tw:text-text-muted">
-                {server.name.charAt(0).toUpperCase()}
+          <div className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-3 tw:max-[640px]:!gap-2.5">
+            <div className="tw:h-9 tw:w-9 tw:shrink-0 tw:overflow-hidden tw:rounded tw:max-[640px]:h-11 tw:max-[640px]:w-11">
+              {!iconError ? (
+                <img
+                  src={`${api.getServerIconUrl(server.id)}?v=${serverIconVersion}`}
+                  alt="Server Icon"
+                  onError={() => setIconError(true)}
+                  className="tw:h-full tw:w-full tw:rounded tw:bg-black/20 tw:object-contain [image-rendering:pixelated]"
+                />
+              ) : (
+                <div className="tw:flex tw:h-full tw:w-full tw:items-center tw:justify-center tw:rounded tw:bg-white/10 tw:text-base tw:font-semibold tw:text-text-muted">
+                  {server.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1.5">
+              <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2.5">
+                <h1 className="tw:m-0 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[1.8rem] tw:leading-[1.1] tw:max-[1024px]:text-2xl tw:max-[640px]:text-2xl">
+                  {server.name}
+                </h1>
+                <span
+                  className={`tw:rounded-full tw:px-3 tw:py-1 tw:text-[0.75rem] tw:font-bold tw:tracking-[0.04em] tw:text-white tw:max-[640px]:px-3.5 tw:max-[640px]:py-1.5 tw:max-[640px]:text-[0.8rem] ${server.status === 'RUNNING' ? 'tw:bg-emerald-500' : server.status === 'STOPPED' ? 'tw:bg-red-500' : server.status === 'CREATING' ? 'tw:bg-blue-500' : 'tw:bg-orange-500'}`}
+                >
+                  {server.status}
+                </span>
               </div>
-            )}
-          </div>
-
-          <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1.5">
-            <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2.5">
-              <h1 className="tw:m-0 tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-[1.8rem] tw:leading-[1.1] tw:max-[1024px]:text-2xl tw:max-[640px]:text-[1.3rem]">
-                {server.name}
-              </h1>
-              <span
-                className={`tw:rounded-full tw:px-3 tw:py-1 tw:text-[0.75rem] tw:font-bold tw:tracking-[0.04em] tw:text-white ${server.status === 'RUNNING' ? 'tw:bg-emerald-500' : server.status === 'STOPPED' ? 'tw:bg-red-500' : server.status === 'CREATING' ? 'tw:bg-blue-500' : 'tw:bg-orange-500'}`}
-              >
-                {server.status}
-              </span>
-            </div>
-            <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2 tw:text-[0.9rem] tw:text-text-muted tw:max-[640px]:text-[0.82rem]">
-              <span className="tw:font-semibold tw:text-text-main">
-                {server.loader}
-              </span>
-              <span>•</span>
-              <span>{server.version}</span>
-              <span className="tw:max-[1024px]:!hidden">•</span>
-              <button
-                type="button"
-                className="tw:inline-flex tw:h-6 tw:max-w-40 tw:min-w-0 tw:cursor-pointer tw:items-center tw:overflow-hidden tw:rounded-[7px] tw:border tw:border-white/10 tw:bg-white/4 tw:px-2 tw:font-mono tw:text-[0.78rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:border-indigo-500/55 tw:hover:bg-indigo-500/12 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2 tw:max-[1024px]:!hidden"
-                onClick={() => copy(address)}
-                title="Click to copy"
-              >
-                {address}
-              </button>
-              <CopyButton
-                text={address}
-                variant="secondary"
-                title="Copy address"
-                className="tw:h-6 tw:w-6 tw:min-h-6 tw:min-w-6 tw:shrink-0 tw:p-0 tw:max-[1024px]:!hidden"
-              />
+              <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2 tw:text-[0.9rem] tw:text-text-muted tw:max-[640px]:text-[0.82rem]">
+                <span className="tw:font-semibold tw:text-text-main">
+                  {server.loader}
+                </span>
+                <span>•</span>
+                <span>{server.version}</span>
+                <span className="tw:max-[1024px]:!hidden">•</span>
+                <div className="tw:inline-flex tw:h-6 tw:max-w-[180px] tw:min-w-0 tw:items-center tw:gap-1.5 tw:overflow-hidden tw:rounded-[7px] tw:border tw:border-white/10 tw:bg-white/4 tw:px-2 tw:max-[1024px]:!hidden">
+                  <ServerIcon
+                    size={14}
+                    aria-hidden="true"
+                    className="tw:shrink-0 tw:text-text-muted"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Copiar dirección"
+                    className="tw:h-full tw:min-w-0 tw:flex-1 tw:cursor-pointer tw:appearance-none tw:overflow-hidden tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:font-mono tw:text-[0.78rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2"
+                    onClick={() => copy(address)}
+                    title="Click to copy"
+                  >
+                    {address}
+                  </button>
+                </div>
+                <CopyButton
+                  text={address}
+                  variant="secondary"
+                  title="Copy address"
+                  className="tw:h-6 tw:w-6 tw:min-h-6 tw:min-w-6 tw:shrink-0 tw:p-0 tw:max-[1024px]:!hidden"
+                />
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="tw:col-span-full tw:hidden tw:w-full tw:min-w-0 tw:items-center tw:gap-1.5 tw:max-[1024px]:!flex">
+        <div className="tw:hidden tw:w-full tw:min-w-0 tw:items-center tw:gap-2 tw:max-[1024px]:!flex">
+          <div className="tw:flex tw:h-8 tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:overflow-hidden tw:rounded-lg tw:border tw:border-white/10 tw:bg-white/4 tw:px-2.5">
+            <ServerIcon
+              size={18}
+              aria-hidden="true"
+              className="tw:shrink-0 tw:text-text-muted"
+            />
             <button
               type="button"
-              className="tw:inline-flex tw:h-6 tw:w-full tw:min-w-0 tw:!max-w-[390px] tw:flex-1 tw:cursor-pointer tw:items-center tw:overflow-hidden tw:rounded-[7px] tw:border tw:border-white/10 tw:bg-white/4 tw:px-2 tw:font-mono tw:text-[0.78rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:border-indigo-500/55 tw:hover:bg-indigo-500/12 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2"
+              aria-label="Copiar dirección"
+              className="tw:h-full tw:min-w-0 tw:flex-1 tw:cursor-pointer tw:appearance-none tw:overflow-hidden tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:font-mono tw:text-[0.82rem] tw:leading-none tw:text-ellipsis tw:whitespace-nowrap tw:text-text-muted tw:transition-all tw:duration-150 tw:hover:text-text-main tw:focus-visible:outline-2 tw:focus-visible:outline-indigo-500/70 tw:focus-visible:outline-offset-2"
               onClick={() => copy(address)}
               title="Click to copy"
             >
               {address}
             </button>
-            <CopyButton
-              text={address}
-              variant="secondary"
-              title="Copy address"
-              iconSize={16}
-              className="tw:h-6 tw:w-6 tw:min-h-6 tw:min-w-6 tw:shrink-0 tw:p-0 tw:text-text-main"
-            />
           </div>
+          <CopyButton
+            text={address}
+            variant="secondary"
+            title="Copy address"
+            iconSize={16}
+            className="tw:!h-8 tw:!w-8 tw:!min-h-8 tw:!min-w-8 tw:shrink-0 tw:rounded-lg tw:p-0 tw:text-text-main"
+          />
         </div>
 
-        <div className="tw:flex tw:items-center tw:gap-2 tw:max-[640px]:!col-auto tw:max-[640px]:!w-auto tw:max-[640px]:!justify-end tw:max-[480px]:!col-span-full tw:max-[480px]:!w-full tw:max-[480px]:!justify-between">
+        <div className="tw:flex tw:items-center tw:gap-2 tw:max-[1024px]:!w-full tw:max-[1024px]:!justify-between">
           {(server.permissions?.canControlPower ||
             server.permissions?.canViewConsole) &&
             (isStoppedLike ? (
               <Button
                 onClick={handleStart}
                 disabled={powerAction === 'start'}
-                className="tw:max-[640px]:!min-w-24 tw:max-[640px]:!justify-center tw:max-[480px]:!flex-1"
+                className="tw:max-[1024px]:!h-12 tw:max-[1024px]:!min-w-0 tw:max-[1024px]:!flex-1 tw:max-[1024px]:!justify-center tw:max-[1024px]:!text-base"
               >
                 {powerAction === 'start' ? (
                   <LoaderCircle size={16} className="tw:animate-spin" />
@@ -1180,7 +1199,7 @@ const ServerDetail: React.FC = () => {
               variant="secondary"
               onClick={() => setIsShareModalOpen(true)}
               title="Create Public Link"
-              className="tw:max-[640px]:!h-10 tw:max-[640px]:!w-10 tw:max-[640px]:!min-w-10 tw:max-[640px]:!shrink-0 tw:max-[640px]:!p-0"
+              className="tw:max-[1024px]:!h-12 tw:max-[1024px]:!w-12 tw:max-[1024px]:!min-w-12 tw:max-[1024px]:!shrink-0 tw:max-[1024px]:!rounded-xl tw:max-[1024px]:!p-0"
             >
               <Share2 size={16} />
             </Button>
