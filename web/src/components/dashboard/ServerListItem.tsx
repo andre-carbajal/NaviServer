@@ -61,8 +61,8 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
 
   if (server.status === 'CREATING') {
     return (
-      <div className="tw:flex tw:min-h-0 tw:flex-col tw:items-start tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-bg-card tw:px-4 tw:py-3 tw:transition-colors tw:duration-200 tw:hover:bg-white/5 tw:min-[1025px]:min-h-[72px] tw:min-[1025px]:flex-row tw:min-[1025px]:items-center tw:min-[1025px]:px-5 tw:min-[1025px]:py-4">
-        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-4 tw:max-[1025px]:w-full">
+      <div className="tw:flex tw:min-h-0 tw:flex-col tw:items-start tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-bg-card tw:px-4 tw:py-3 tw:transition-colors tw:duration-200 tw:hover:bg-white/5 tw:min-[1350px]:min-h-[72px] tw:min-[1350px]:flex-row tw:min-[1350px]:items-center tw:min-[1350px]:px-5 tw:min-[1350px]:py-4">
+        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-4 tw:max-[1349px]:w-full">
           <div className="tw:h-2.5 tw:w-2.5 tw:shrink-0 tw:animate-pulse tw:rounded-full tw:bg-blue-500"></div>
 
           <div className="tw:box-border tw:flex tw:aspect-square tw:h-9 tw:w-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-sm tw:bg-white/10 tw:text-base tw:font-semibold tw:text-text-muted">
@@ -94,8 +94,8 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
   const isRunning = server.status === 'RUNNING';
 
   return (
-    <div className="tw:flex tw:min-h-0 tw:flex-col tw:items-start tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-bg-card tw:px-4 tw:py-3 tw:transition-colors tw:duration-200 tw:hover:bg-white/5 tw:min-[1025px]:min-h-[72px] tw:min-[1025px]:flex-row tw:min-[1025px]:items-center tw:min-[1025px]:px-5 tw:min-[1025px]:py-4">
-      <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-4 tw:max-[1025px]:w-full tw:min-[1025px]:flex-1">
+    <div className="tw:flex tw:min-h-0 tw:flex-col tw:items-start tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-bg-card tw:px-4 tw:py-3 tw:transition-colors tw:duration-200 tw:hover:bg-white/5 tw:min-[1350px]:min-h-[72px] tw:min-[1350px]:flex-row tw:min-[1350px]:items-center tw:min-[1350px]:px-5 tw:min-[1350px]:py-4">
+      <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-4 tw:max-[1349px]:w-full tw:min-[1350px]:flex-1">
         <div
           className={`tw:h-2.5 tw:w-2.5 tw:shrink-0 tw:rounded-full ${isRunning ? 'tw:bg-emerald-500 tw:shadow-[0_0_10px_rgba(16,185,129,0.4)]' : 'tw:bg-red-500'}`}
         ></div>
@@ -113,7 +113,7 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
           </div>
         )}
 
-        <div className="tw:flex tw:min-w-0 tw:overflow-hidden tw:flex-col tw:gap-1 tw:max-[1024px]:flex-1 tw:min-[1025px]:flex-1 tw:min-[1025px]:overflow-visible">
+        <div className="tw:flex tw:min-w-0 tw:overflow-hidden tw:flex-col tw:gap-1 tw:max-[1349px]:flex-1 tw:min-[1350px]:flex-1 tw:min-[1350px]:overflow-visible">
           <div className="tw:flex tw:items-center tw:gap-2">
             <span className="tw:overflow-hidden tw:text-[1.1rem] tw:font-semibold tw:text-ellipsis tw:whitespace-nowrap tw:text-text-main">
               {server.name}
@@ -157,67 +157,67 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
         </div>
       </div>
 
-      <div className="tw:grid tw:w-full tw:shrink-0 tw:grid-cols-4 tw:items-center tw:gap-3 tw:border-t tw:border-border tw:pt-3 tw:min-[1025px]:ml-auto tw:min-[1025px]:flex tw:min-[1025px]:w-auto tw:min-[1025px]:shrink tw:min-[1025px]:gap-4 tw:min-[1025px]:border-0 tw:min-[1025px]:pt-0">
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:border-r tw:border-border tw:pr-3 tw:min-[1025px]:min-w-[70px] tw:min-[1025px]:items-end tw:min-[1025px]:border-0 tw:min-[1025px]:p-0">
+      <div className="tw:grid tw:w-full tw:shrink-0 tw:grid-cols-4 tw:items-center tw:gap-3 tw:border-t tw:border-border tw:pt-3 tw:min-[1350px]:ml-auto tw:min-[1350px]:flex tw:min-[1350px]:w-auto tw:min-[1350px]:shrink tw:min-[1350px]:gap-4 tw:min-[1350px]:border-0 tw:min-[1350px]:pt-0">
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:border-r tw:border-border tw:pr-3 tw:min-[1350px]:min-w-[70px]">
           <Cpu size={22} aria-hidden="true" className="tw:text-text-muted" />
-          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1025px]:text-xs">
+          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1350px]:text-xs">
             CPU
           </div>
-          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1025px]:text-[0.95rem]">
+          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1350px]:text-[0.95rem]">
             {isRunning && stats ? `${stats.cpu.toFixed(1)}%` : '0.0%'}
           </div>
         </div>
 
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:border-r tw:border-border tw:pr-3 tw:min-[1025px]:min-w-[70px] tw:min-[1025px]:items-end tw:min-[1025px]:border-0 tw:min-[1025px]:p-0">
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:border-r tw:border-border tw:pr-3 tw:min-[1350px]:min-w-[70px]">
           <MemoryStick
             size={22}
             aria-hidden="true"
             className="tw:text-text-muted"
           />
-          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1025px]:text-xs">
+          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1350px]:text-xs">
             Memory
           </div>
-          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1025px]:text-[0.95rem]">
+          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1350px]:text-[0.95rem]">
             {isRunning && stats
               ? `${formatBytes(stats.ram)} / ${formatBytes(server.ram * 1024 * 1024)}`
               : `0 B / ${formatBytes(server.ram * 1024 * 1024)}`}
           </div>
         </div>
 
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:border-r tw:border-border tw:pr-3 tw:min-[1025px]:min-w-[70px] tw:min-[1025px]:items-end tw:min-[1025px]:border-0 tw:min-[1025px]:p-0">
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:border-r tw:border-border tw:pr-3 tw:min-[1350px]:min-w-[70px]">
           <HardDrive
             size={22}
             aria-hidden="true"
             className="tw:text-text-muted"
           />
-          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1025px]:text-xs">
+          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1350px]:text-xs">
             Disk
           </div>
-          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1025px]:text-[0.95rem]">
+          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1350px]:text-[0.95rem]">
             {stats ? formatBytes(stats.disk) : '0 B'}
           </div>
         </div>
 
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:min-[1025px]:min-w-[70px] tw:min-[1025px]:items-end">
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:items-center tw:gap-1 tw:min-[1350px]:min-w-[70px]">
           <Users size={22} aria-hidden="true" className="tw:text-text-muted" />
-          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1025px]:text-xs">
+          <div className="tw:text-[0.65rem] tw:font-medium tw:tracking-[0.02em] tw:text-text-muted tw:uppercase tw:min-[1350px]:text-xs">
             Players
           </div>
-          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1025px]:text-[0.95rem]">
+          <div className="tw:font-mono tw:text-[0.75rem] tw:font-semibold tw:text-text-main tw:min-[1350px]:text-[0.95rem]">
             {isRunning && stats
               ? `${stats.onlinePlayers} / ${stats.maxPlayers}`
               : '0 / 0'}
           </div>
         </div>
 
-        <div className="tw:col-span-full tw:flex tw:w-full tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border tw:pt-3 tw:min-[1025px]:ml-3 tw:min-[1025px]:w-auto tw:min-[1025px]:min-w-[180px] tw:min-[1025px]:flex-nowrap tw:min-[1025px]:justify-start tw:min-[1025px]:border-t-0 tw:min-[1025px]:border-l tw:min-[1025px]:pt-0 tw:min-[1025px]:pl-3">
+        <div className="tw:col-span-full tw:flex tw:w-full tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border tw:pt-3 tw:min-[1350px]:ml-3 tw:min-[1350px]:w-auto tw:min-[1350px]:min-w-[180px] tw:min-[1350px]:flex-nowrap tw:min-[1350px]:justify-start tw:min-[1350px]:border-t-0 tw:min-[1350px]:border-l tw:min-[1350px]:pt-0 tw:min-[1350px]:pl-3">
           {(server.permissions?.canControlPower ||
             server.permissions?.canViewConsole) &&
             (isRunning ? (
               <Button
                 variant="danger"
                 onClick={() => onStop(server.id)}
-                className="tw:max-[1024px]:h-14 tw:max-[1024px]:flex-1 tw:max-[1024px]:text-base"
+                className="tw:max-[1349px]:h-14 tw:max-[1349px]:flex-1 tw:max-[1349px]:text-base"
               >
                 <Square size={20} fill="currentColor" /> Stop
               </Button>
@@ -225,7 +225,7 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
               <Button
                 onClick={() => onStart(server.id)}
                 disabled={server.status !== 'STOPPED'}
-                className="tw:max-[1024px]:h-14 tw:max-[1024px]:flex-1 tw:max-[1024px]:text-base"
+                className="tw:max-[1349px]:h-14 tw:max-[1349px]:flex-1 tw:max-[1349px]:text-base"
               >
                 <Play size={20} /> Start
               </Button>
@@ -235,7 +235,7 @@ const ServerListItem: React.FC<ServerListItemProps> = ({
             <Link
               to={`/servers/${server.id}`}
               aria-label="Ver detalles del servidor"
-              className="tw:flex tw:h-9 tw:w-9 tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-sm tw:border-0 tw:bg-white/10 tw:p-0 tw:text-white tw:transition-all tw:duration-200 tw:hover:bg-white/20 tw:max-[1024px]:h-14 tw:max-[1024px]:w-14 tw:max-[1024px]:rounded-lg"
+              className="tw:flex tw:h-9 tw:w-9 tw:shrink-0 tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-sm tw:border-0 tw:bg-white/10 tw:p-0 tw:text-white tw:transition-all tw:duration-200 tw:hover:bg-white/20 tw:max-[1349px]:h-14 tw:max-[1349px]:w-14 tw:max-[1349px]:rounded-lg"
               title="Open server dashboard"
             >
               <BarChart3 size={24} />
