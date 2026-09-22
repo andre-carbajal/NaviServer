@@ -84,6 +84,7 @@ import type {
 import { getApiErrorMessage } from '../utils/apiError';
 import {
   FALLBACK_RAM_MAX_MB,
+  MANAGED_JAVA_VERSIONS,
   RAM_MIN_MB,
   clampRamAllocation,
   getPowerControlState,
@@ -1819,6 +1820,49 @@ const ServerDetail: React.FC = () => {
                             }
                             disabled={!canApplySettings}
                           />
+                        </label>
+
+                        <label>
+                          <span>
+                            Java Version{' '}
+                            <span title="Java runtime used by this server and its managed loader operations.">
+                              <CircleHelp size={14} />
+                            </span>
+                          </span>
+                          <select
+                            className="tw:box-border tw:w-full tw:rounded-lg tw:border tw:border-[rgb(32,36,43)] tw:bg-bg-dark tw:px-4 tw:py-3 tw:text-[0.95rem] tw:text-gray-200 tw:outline-none tw:transition-all tw:duration-200 tw:ease-[ease] tw:focus:border-bg-dark tw:focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] tw:placeholder:text-gray-400 tw:disabled:cursor-not-allowed tw:disabled:opacity-60 tw:max-[1024px]:text-base"
+                            value={settingsDraft.javaVersion}
+                            onChange={(e) =>
+                              updateSettingsField(
+                                'javaVersion',
+                                Number(e.target.value),
+                              )
+                            }
+                            disabled={!canApplySettings}
+                          >
+                            <option value={0}>
+                              Automatic
+                              {settingsDraft.requiredJavaVersion > 0
+                                ? ` (Java ${settingsDraft.requiredJavaVersion})`
+                                : ''}
+                            </option>
+                            {MANAGED_JAVA_VERSIONS.map((version) => (
+                              <option key={version} value={version}>
+                                Java {version}
+                              </option>
+                            ))}
+                          </select>
+                          {settingsDraft.javaVersion > 0 &&
+                            settingsDraft.requiredJavaVersion > 0 &&
+                            settingsDraft.javaVersion <
+                              settingsDraft.requiredJavaVersion && (
+                              <span className="tw:text-[0.8rem] tw:text-amber-300">
+                                Java {settingsDraft.javaVersion} is below the
+                                required Java{' '}
+                                {settingsDraft.requiredJavaVersion} version and
+                                may fail to start this server.
+                              </span>
+                            )}
                         </label>
                       </div>
                     </div>

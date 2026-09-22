@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"naviserver/internal/domain"
+	"naviserver/internal/jvm"
 	"naviserver/internal/loader"
 	"path/filepath"
 	"strconv"
@@ -24,23 +25,25 @@ var validDifficulties = map[string]bool{
 }
 
 type ServerSettings struct {
-	Name               string `json:"name"`
-	RAM                int    `json:"ram"`
-	CustomArgs         string `json:"customArgs"`
-	Loader             string `json:"loader"`
-	Version            string `json:"version"`
-	Gamemode           string `json:"gamemode"`
-	Difficulty         string `json:"difficulty"`
-	MOTD               string `json:"motd"`
-	OnlineMode         bool   `json:"onlineMode"`
-	SpawnProtection    int    `json:"spawnProtection"`
-	PvP                bool   `json:"pvp"`
-	AllowFlight        bool   `json:"allowFlight"`
-	EnableCommandBlock bool   `json:"enableCommandBlock"`
-	Hardcore           bool   `json:"hardcore"`
-	MaxPlayers         int    `json:"maxPlayers"`
-	ViewDistance       int    `json:"viewDistance"`
-	SimulationDistance int    `json:"simulationDistance"`
+	Name                string `json:"name"`
+	RAM                 int    `json:"ram"`
+	CustomArgs          string `json:"customArgs"`
+	Loader              string `json:"loader"`
+	Version             string `json:"version"`
+	JavaVersion         int    `json:"javaVersion"`
+	RequiredJavaVersion int    `json:"requiredJavaVersion"`
+	Gamemode            string `json:"gamemode"`
+	Difficulty          string `json:"difficulty"`
+	MOTD                string `json:"motd"`
+	OnlineMode          bool   `json:"onlineMode"`
+	SpawnProtection     int    `json:"spawnProtection"`
+	PvP                 bool   `json:"pvp"`
+	AllowFlight         bool   `json:"allowFlight"`
+	EnableCommandBlock  bool   `json:"enableCommandBlock"`
+	Hardcore            bool   `json:"hardcore"`
+	MaxPlayers          int    `json:"maxPlayers"`
+	ViewDistance        int    `json:"viewDistance"`
+	SimulationDistance  int    `json:"simulationDistance"`
 }
 
 func (m *Manager) serverRootByID(id string) (string, error) {
@@ -79,23 +82,25 @@ func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
 	}
 
 	settings := &ServerSettings{
-		Name:               srv.Name,
-		RAM:                srv.RAM,
-		CustomArgs:         srv.CustomArgs,
-		Loader:             srv.Loader,
-		Version:            srv.Version,
-		Gamemode:           "survival",
-		Difficulty:         "easy",
-		MOTD:               "A Minecraft Server",
-		OnlineMode:         true,
-		SpawnProtection:    16,
-		PvP:                true,
-		AllowFlight:        false,
-		EnableCommandBlock: false,
-		Hardcore:           false,
-		MaxPlayers:         20,
-		ViewDistance:       10,
-		SimulationDistance: 10,
+		Name:                srv.Name,
+		RAM:                 srv.RAM,
+		CustomArgs:          srv.CustomArgs,
+		Loader:              srv.Loader,
+		Version:             srv.Version,
+		JavaVersion:         srv.JavaVersion,
+		RequiredJavaVersion: jvm.GetJavaVersionForMC(srv.Version),
+		Gamemode:            "survival",
+		Difficulty:          "easy",
+		MOTD:                "A Minecraft Server",
+		OnlineMode:          true,
+		SpawnProtection:     16,
+		PvP:                 true,
+		AllowFlight:         false,
+		EnableCommandBlock:  false,
+		Hardcore:            false,
+		MaxPlayers:          20,
+		ViewDistance:        10,
+		SimulationDistance:  10,
 	}
 
 	if val, ok := props.Get("gamemode"); ok && val != "" {
@@ -192,7 +197,7 @@ func (m *Manager) UpdateServerSettings(id string, next ServerSettings) error {
 
 	name := strings.TrimSpace(next.Name)
 	customArgs := strings.TrimSpace(next.CustomArgs)
-	if err := m.Store.UpdateServer(id, &name, &next.RAM, &customArgs); err != nil {
+	if err := m.Store.UpdateServer(id, &name, &next.RAM, &customArgs, &next.JavaVersion); err != nil {
 		return err
 	}
 
@@ -283,7 +288,7 @@ func (m *Manager) ApplyServerVersionUpdate(id, version string) (string, error) {
 
 	loadOptions, err := m.prepareLoaderOptions(srv.Loader, downloader, loader.LoaderOptions{
 		MCVersion: version,
-	}, version)
+	}, version, srv.JavaVersion)
 	if err != nil {
 		return "", fmt.Errorf("version update failed: %w", err)
 	}
@@ -309,6 +314,9 @@ func validateSettings(next ServerSettings) error {
 	}
 	if next.RAM < 512 || next.RAM > 262144 {
 		return fmt.Errorf("ram must be between 512 and 262144 MB")
+	}
+	if !jvm.IsSupportedJavaVersion(next.JavaVersion) {
+		return fmt.Errorf("invalid java version")
 	}
 
 	gamemode := strings.ToLower(strings.TrimSpace(next.Gamemode))

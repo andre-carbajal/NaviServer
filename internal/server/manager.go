@@ -36,7 +36,7 @@ func NewManager(serversPath string, store *storage.GormStore, java JavaEnsurer) 
 	}
 }
 
-func (m *Manager) prepareLoaderOptions(loaderType string, downloader loader.ServerLoader, options loader.LoaderOptions, version string) (loader.LoaderOptions, error) {
+func (m *Manager) prepareLoaderOptions(loaderType string, downloader loader.ServerLoader, options loader.LoaderOptions, version string, configuredJava int) (loader.LoaderOptions, error) {
 	if loaderType != "forge" && loaderType != "neoforge" {
 		return options, nil
 	}
@@ -59,7 +59,7 @@ func (m *Manager) prepareLoaderOptions(loaderType string, downloader loader.Serv
 		targetVersion = versions[0]
 	}
 
-	javaPath, err := m.Java.EnsureJava(jvm.GetJavaVersionForMC(targetVersion))
+	javaPath, err := m.Java.EnsureJava(jvm.ResolveJavaVersion(targetVersion, configuredJava))
 	if err != nil {
 		return options, fmt.Errorf("error preparing Java for %s: %w", targetVersion, err)
 	}
@@ -133,7 +133,7 @@ func (m *Manager) CreateServer(name string, loaderType string, options loader.Lo
 	if err != nil {
 		return nil, err
 	}
-	options, err = m.prepareLoaderOptions(loaderType, downloader, options, version)
+	options, err = m.prepareLoaderOptions(loaderType, downloader, options, version, 0)
 	if err != nil {
 		return nil, err
 	}

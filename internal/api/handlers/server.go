@@ -194,7 +194,7 @@ func (h *ServerHandler) HandleUpdateServer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.Store.UpdateServer(id, req.Name, req.RAM, req.CustomArgs); err != nil {
+	if err := h.Store.UpdateServer(id, req.Name, req.RAM, req.CustomArgs, nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -12,6 +12,7 @@ type Server struct {
 	RAM                     int         `json:"ram"`
 	Status                  string      `json:"status"`
 	CustomArgs              string      `json:"customArgs"`
+	JavaVersion             int         `json:"-"`
 	CreatedAt               time.Time   `json:"created_at"`
 	AutoBackupEnabled       bool        `json:"autoBackupEnabled"`
 	AutoBackupIntervalValue int         `json:"autoBackupIntervalValue"`

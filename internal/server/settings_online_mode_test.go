@@ -70,6 +70,12 @@ func TestGetServerSettingsOnlineModeDefaultsTrueWhenMissing(t *testing.T) {
 	if settings.SpawnProtection != 16 {
 		t.Fatalf("expected spawnProtection default 16 when key is missing, got %d", settings.SpawnProtection)
 	}
+	if settings.JavaVersion != 0 {
+		t.Fatalf("expected Java automatic mode by default, got %d", settings.JavaVersion)
+	}
+	if settings.RequiredJavaVersion != 21 {
+		t.Fatalf("expected required Java 21, got %d", settings.RequiredJavaVersion)
+	}
 }
 
 func TestUpdateServerSettingsWritesOnlineMode(t *testing.T) {
@@ -88,6 +94,7 @@ func TestUpdateServerSettingsWritesOnlineMode(t *testing.T) {
 		CustomArgs:         "",
 		Loader:             "vanilla",
 		Version:            "1.21.1",
+		JavaVersion:        8,
 		Gamemode:           "survival",
 		Difficulty:         "normal",
 		MOTD:               "Test",
@@ -115,5 +122,13 @@ func TestUpdateServerSettingsWritesOnlineMode(t *testing.T) {
 	}
 	if !strings.Contains(string(updated), "spawn-protection=8") {
 		t.Fatalf("expected spawn-protection=8 in properties file, got:\n%s", string(updated))
+	}
+
+	settings, err := manager.GetServerSettings("srv-1")
+	if err != nil {
+		t.Fatalf("failed to reload settings: %v", err)
+	}
+	if settings.JavaVersion != 8 {
+		t.Fatalf("expected persisted Java 8, got %d", settings.JavaVersion)
 	}
 }

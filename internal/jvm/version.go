@@ -5,6 +5,28 @@ import (
 	"strings"
 )
 
+var supportedJavaVersions = map[int]struct{}{
+	0:  {},
+	8:  {},
+	17: {},
+	21: {},
+	25: {},
+}
+
+// IsSupportedJavaVersion reports whether a configured Java version is managed by NaviServer.
+func IsSupportedJavaVersion(version int) bool {
+	_, ok := supportedJavaVersions[version]
+	return ok
+}
+
+// ResolveJavaVersion returns the configured version or the automatic minimum for the Minecraft version.
+func ResolveJavaVersion(mcVersion string, configured int) int {
+	if configured > 0 {
+		return configured
+	}
+	return GetJavaVersionForMC(mcVersion)
+}
+
 // GetJavaVersionForMC returns the minimum Java version required by a Minecraft version.
 func GetJavaVersionForMC(mcVersion string) int {
 	parts := strings.Split(mcVersion, ".")

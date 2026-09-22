@@ -110,6 +110,8 @@ export interface ServerSettings {
   customArgs: string;
   loader: string;
   version: string;
+  javaVersion: number;
+  requiredJavaVersion: number;
   gamemode: 'survival' | 'creative' | 'adventure' | 'spectator';
   difficulty: 'peaceful' | 'easy' | 'normal' | 'hard';
   motd: string;

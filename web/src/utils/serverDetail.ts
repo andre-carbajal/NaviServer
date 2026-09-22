@@ -4,6 +4,7 @@ const MINEATAR_BASE_URL = 'https://api.mineatar.io/head';
 const STEVE_UUID = '8667ba71-b85a-4004-af54-457a9734eed7';
 export const RAM_MIN_MB = 512;
 export const FALLBACK_RAM_MAX_MB = 262144;
+export const MANAGED_JAVA_VERSIONS = [8, 17, 21, 25] as const;
 
 export type ServerPowerAction = null | 'start' | 'stop' | 'restart' | 'kill';
 
@@ -77,6 +78,15 @@ export const normalizeServerSettings = (
 ): ServerSettings => ({
   ...settings,
   ram: clampRamAllocation(settings.ram, maxRamMb),
+  javaVersion:
+    Number.isInteger(settings.javaVersion) && settings.javaVersion >= 0
+      ? settings.javaVersion
+      : 0,
+  requiredJavaVersion:
+    Number.isInteger(settings.requiredJavaVersion) &&
+    settings.requiredJavaVersion > 0
+      ? settings.requiredJavaVersion
+      : 0,
   onlineMode: settings.onlineMode ?? true,
   spawnProtection:
     Number.isFinite(settings.spawnProtection) && settings.spawnProtection >= 0

@@ -217,8 +217,8 @@ func (s *Supervisor) StartServer(serverID string) error {
 		slog.Warn("Could not update server.properties", "error", err)
 	}
 
-	requiredJava := GetJavaVersionForMC(srv.Version)
-	javaPath, err := s.JVM.EnsureJava(requiredJava)
+	javaVersion := jvm.ResolveJavaVersion(srv.Version, srv.JavaVersion)
+	javaPath, err := s.JVM.EnsureJava(javaVersion)
 	if err != nil {
 		return fmt.Errorf("error preparing Java: %w", err)
 	}

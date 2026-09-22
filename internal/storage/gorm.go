@@ -16,16 +16,17 @@ import (
 )
 
 type Server struct {
-	ID         string `gorm:"primaryKey"`
-	Name       string
-	FolderName string
-	Version    string
-	Loader     string
-	Port       int
-	RAM        int
-	Status     string
-	CustomArgs string
-	CreatedAt  time.Time
+	ID          string `gorm:"primaryKey"`
+	Name        string
+	FolderName  string
+	Version     string
+	Loader      string
+	Port        int
+	RAM         int
+	Status      string
+	CustomArgs  string
+	JavaVersion int `gorm:"not null;default:0"`
+	CreatedAt   time.Time
 
 	AutoBackupEnabled       bool   `gorm:"not null;default:false"`
 	AutoBackupIntervalValue int    `gorm:"not null;default:24"`
@@ -177,6 +178,7 @@ func (s *GormStore) SaveServer(srv *domain.Server) error {
 		RAM:                     srv.RAM,
 		Status:                  srv.Status,
 		CustomArgs:              srv.CustomArgs,
+		JavaVersion:             srv.JavaVersion,
 		CreatedAt:               srv.CreatedAt,
 		AutoBackupEnabled:       enabled,
 		AutoBackupIntervalValue: intervalValue,
@@ -188,8 +190,8 @@ func (s *GormStore) SaveServer(srv *domain.Server) error {
 	return s.db.Create(gormServer).Error
 }
 
-func (s *GormStore) UpdateServer(id string, name *string, ram *int, customArgs *string) error {
-	if name == nil && ram == nil && customArgs == nil {
+func (s *GormStore) UpdateServer(id string, name *string, ram *int, customArgs *string, javaVersion *int) error {
+	if name == nil && ram == nil && customArgs == nil && javaVersion == nil {
 		return errors.New("no fields to update")
 	}
 
@@ -202,6 +204,9 @@ func (s *GormStore) UpdateServer(id string, name *string, ram *int, customArgs *
 	}
 	if customArgs != nil {
 		updates["custom_args"] = *customArgs
+	}
+	if javaVersion != nil {
+		updates["java_version"] = *javaVersion
 	}
 
 	return s.db.Model(&Server{}).Where("id = ?", id).Updates(updates).Error
@@ -263,6 +268,7 @@ func (s *GormStore) ListServers() ([]domain.Server, error) {
 			RAM:                     gs.RAM,
 			Status:                  gs.Status,
 			CustomArgs:              gs.CustomArgs,
+			JavaVersion:             gs.JavaVersion,
 			CreatedAt:               gs.CreatedAt,
 			AutoBackupEnabled:       enabled,
 			AutoBackupIntervalValue: intervalValue,
@@ -301,6 +307,7 @@ func (s *GormStore) GetServerByID(id string) (*domain.Server, error) {
 		RAM:                     gormServer.RAM,
 		Status:                  gormServer.Status,
 		CustomArgs:              gormServer.CustomArgs,
+		JavaVersion:             gormServer.JavaVersion,
 		CreatedAt:               gormServer.CreatedAt,
 		AutoBackupEnabled:       enabled,
 		AutoBackupIntervalValue: intervalValue,

@@ -4,7 +4,7 @@ import "time"
 
 type ServerRepository interface {
 	SaveServer(srv *Server) error
-	UpdateServer(id string, name *string, ram *int, customArgs *string) error
+	UpdateServer(id string, name *string, ram *int, customArgs *string, javaVersion *int) error
 	UpdateServerPort(id string, port int) error
 	UpdateServerAutoBackupConfig(id string, enabled bool, intervalValue int, intervalUnit string, maxBackups int, lastRunAt *time.Time) error
 	UpdateServerAutoBackupLastRun(id string, lastRunAt time.Time) error

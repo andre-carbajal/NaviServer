@@ -65,8 +65,23 @@ describe('server detail utilities', () => {
 
     expect(normalizeServerSettings(settings, 4096)).toMatchObject({
       ram: 512,
+      javaVersion: 0,
+      requiredJavaVersion: 0,
       onlineMode: true,
       spawnProtection: 16,
+    });
+  });
+
+  it('preserves the Java override and required version', () => {
+    const settings = {
+      javaVersion: 8,
+      requiredJavaVersion: 17,
+      ram: 2048,
+    } as unknown as ServerSettings;
+
+    expect(normalizeServerSettings(settings)).toMatchObject({
+      javaVersion: 8,
+      requiredJavaVersion: 17,
     });
   });
 

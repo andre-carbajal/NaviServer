@@ -48,6 +48,7 @@ func TestPrepareLoaderOptionsUsesManagedAbsoluteJavaForForge(t *testing.T) {
 		supportedVersionsLoader{versions: []string{"1.20.4"}},
 		loader.LoaderOptions{JavaPath: "/untrusted/client/path"},
 		"",
+		0,
 	)
 	if err != nil {
 		t.Fatalf("prepareLoaderOptions failed: %v", err)
@@ -63,6 +64,30 @@ func TestPrepareLoaderOptionsUsesManagedAbsoluteJavaForForge(t *testing.T) {
 	}
 }
 
+func TestPrepareLoaderOptionsUsesConfiguredJavaVersion(t *testing.T) {
+	managedRoot := t.TempDir()
+	javaPath, err := filepath.Abs(filepath.Join(managedRoot, "java-8", "bin", "java"))
+	if err != nil {
+		t.Fatalf("failed to resolve managed Java path: %v", err)
+	}
+	java := &recordingJavaEnsurer{path: javaPath}
+	manager := &Manager{Java: java}
+
+	_, err = manager.prepareLoaderOptions(
+		"forge",
+		supportedVersionsLoader{versions: []string{"1.21.1"}},
+		loader.LoaderOptions{},
+		"",
+		8,
+	)
+	if err != nil {
+		t.Fatalf("prepareLoaderOptions failed: %v", err)
+	}
+	if java.version != 8 {
+		t.Fatalf("expected configured Java 8, got %d", java.version)
+	}
+}
+
 func TestPrepareLoaderOptionsRejectsForgeWithoutManagedJava(t *testing.T) {
 	manager := &Manager{}
 	_, err := manager.prepareLoaderOptions(
@@ -70,6 +95,7 @@ func TestPrepareLoaderOptionsRejectsForgeWithoutManagedJava(t *testing.T) {
 		supportedVersionsLoader{versions: []string{"1.21.1"}},
 		loader.LoaderOptions{},
 		"1.21.1",
+		0,
 	)
 	if err == nil {
 		t.Fatal("expected Forge-family installation to require managed Java")
