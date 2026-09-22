@@ -194,12 +194,26 @@ func (h *ServerHandler) HandleUpdateServer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.Store.UpdateServer(id, req.Name, req.RAM, req.CustomArgs, nil); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.Manager.UpdateServer(id, req.Name, req.RAM, req.CustomArgs, nil); err != nil {
+		writeServerUpdateError(w, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func writeServerUpdateError(w http.ResponseWriter, err error) {
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "not found"):
+		http.Error(w, err.Error(), http.StatusNotFound)
+	case strings.Contains(msg, "must be stopped"), strings.Contains(msg, "already exists"):
+		http.Error(w, err.Error(), http.StatusConflict)
+	case strings.Contains(msg, "invalid"), strings.Contains(msg, "must be"), strings.Contains(msg, "required"):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (h *ServerHandler) HandleUpdateServerAutoBackup(w http.ResponseWriter, r *http.Request) {
@@ -292,22 +306,7 @@ func (h *ServerHandler) HandleUpdateServerSettings(w http.ResponseWriter, r *htt
 	}
 
 	if err := h.Manager.UpdateServerSettings(id, req); err != nil {
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "not found") {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		if strings.Contains(msg, "must be stopped") {
-			http.Error(w, err.Error(), http.StatusConflict)
-			return
-		}
-		if strings.Contains(msg, "invalid") ||
-			strings.Contains(msg, "must be") ||
-			strings.Contains(msg, "required") {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeServerUpdateError(w, err)
 		return
 	}
 

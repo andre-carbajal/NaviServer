@@ -55,11 +55,7 @@ func (m *Manager) serverRootByID(id string) (string, error) {
 		return "", fmt.Errorf("server not found")
 	}
 
-	folderName := srv.FolderName
-	if folderName == "" {
-		folderName = id
-	}
-	return filepath.Join(m.ServersPath, folderName), nil
+	return m.serverDirectory(srv)
 }
 
 func (m *Manager) GetServerSettings(id string) (*ServerSettings, error) {
@@ -165,7 +161,16 @@ func (m *Manager) UpdateServerSettings(id string, next ServerSettings) error {
 		return err
 	}
 
-	root, err := m.serverRootByID(id)
+	name := strings.TrimSpace(next.Name)
+	var rename *serverFolderRename
+	if name != srv.Name {
+		rename, err = m.prepareServerFolderRename(srv, name)
+		if err != nil {
+			return err
+		}
+	}
+
+	root, err := m.serverDirectory(srv)
 	if err != nil {
 		return err
 	}
@@ -191,13 +196,34 @@ func (m *Manager) UpdateServerSettings(id string, next ServerSettings) error {
 		"simulation-distance":  strconv.Itoa(next.SimulationDistance),
 	})
 
+	var rollback func() error
+	if rename != nil {
+		rollback, err = applyServerFolderRename(rename)
+		if err != nil {
+			return fmt.Errorf("failed to rename server folder: %w", err)
+		}
+		path = filepath.Join(rename.to, "server.properties")
+	}
 	if err := props.Write(path); err != nil {
+		if rollback != nil {
+			if rollbackErr := rollback(); rollbackErr != nil {
+				return fmt.Errorf("failed to write server.properties: %w (failed to restore server folder: %v)", err, rollbackErr)
+			}
+		}
 		return fmt.Errorf("failed to write server.properties: %w", err)
 	}
 
-	name := strings.TrimSpace(next.Name)
 	customArgs := strings.TrimSpace(next.CustomArgs)
-	if err := m.Store.UpdateServer(id, &name, &next.RAM, &customArgs, &next.JavaVersion); err != nil {
+	var folderName *string
+	if rename != nil {
+		folderName = &rename.folderName
+	}
+	if err := m.Store.UpdateServer(id, &name, &next.RAM, &customArgs, &next.JavaVersion, folderName); err != nil {
+		if rollback != nil {
+			if rollbackErr := rollback(); rollbackErr != nil {
+				return fmt.Errorf("%w (failed to restore server folder: %v)", err, rollbackErr)
+			}
+		}
 		return err
 	}
 

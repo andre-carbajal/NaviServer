@@ -190,8 +190,8 @@ func (s *GormStore) SaveServer(srv *domain.Server) error {
 	return s.db.Create(gormServer).Error
 }
 
-func (s *GormStore) UpdateServer(id string, name *string, ram *int, customArgs *string, javaVersion *int) error {
-	if name == nil && ram == nil && customArgs == nil && javaVersion == nil {
+func (s *GormStore) UpdateServer(id string, name *string, ram *int, customArgs *string, javaVersion *int, folderName *string) error {
+	if name == nil && ram == nil && customArgs == nil && javaVersion == nil && folderName == nil {
 		return errors.New("no fields to update")
 	}
 
@@ -208,8 +208,18 @@ func (s *GormStore) UpdateServer(id string, name *string, ram *int, customArgs *
 	if javaVersion != nil {
 		updates["java_version"] = *javaVersion
 	}
+	if folderName != nil {
+		updates["folder_name"] = *folderName
+	}
 
-	return s.db.Model(&Server{}).Where("id = ?", id).Updates(updates).Error
+	result := s.db.Model(&Server{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("server not found")
+	}
+	return nil
 }
 
 func (s *GormStore) UpdateServerPort(id string, port int) error {
