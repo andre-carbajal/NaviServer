@@ -61,6 +61,7 @@ import { Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
 import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useUploads } from '../context/UploadContext';
 import { useConsole } from '../hooks/useConsole';
 import { useCopy } from '../hooks/useCopy';
 import { useModalDialog } from '../hooks/useModalDialog';
@@ -146,6 +147,7 @@ const ServerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { enqueueUpload } = useUploads();
   const { showAlert, showConfirm, modalDialog } = useModalDialog();
 
   const [server, setServer] = useState<Server | null>(null);
@@ -563,20 +565,39 @@ const ServerDetail: React.FC = () => {
 
   const handleUploadSettingsIcon = async () => {
     if (!server || !selectedSettingsIcon) return;
+    const file = selectedSettingsIcon;
     try {
       setIsUploadingSettingsIcon(true);
-      await api.uploadServerIcon(server.id, selectedSettingsIcon);
-      setServerIconVersion(Date.now());
-      setIconError(false);
-      setSettingsIconError(false);
+      await enqueueUpload(
+        {
+          file,
+          name: file.name,
+          target: { kind: 'server-icon', serverId: server.id },
+          contentType: file.type,
+        },
+        {
+          onComplete: () => {
+            setIsUploadingSettingsIcon(false);
+            setServerIconVersion(Date.now());
+            setIconError(false);
+            setSettingsIconError(false);
+            setIconUploadModalTitle('Icon Updated');
+            setIconUploadModalMessage('Server icon uploaded successfully.');
+            setIsIconUploadModalOpen(true);
+          },
+          onError: (message) => {
+            setIsUploadingSettingsIcon(false);
+            setIconUploadModalTitle('Icon Upload Failed');
+            setIconUploadModalMessage(message);
+            setIsIconUploadModalOpen(true);
+          },
+        },
+      );
       setSelectedSettingsIcon(null);
       setSettingsIconPreview(null);
       if (settingsIconInputRef.current) {
         settingsIconInputRef.current.value = '';
       }
-      setIconUploadModalTitle('Icon Updated');
-      setIconUploadModalMessage('Server icon uploaded successfully.');
-      setIsIconUploadModalOpen(true);
     } catch (err) {
       console.error('Failed to upload server icon:', err);
       let errorMessage = 'Failed to upload server icon.';
@@ -595,7 +616,6 @@ const ServerDetail: React.FC = () => {
       setIconUploadModalTitle('Icon Upload Failed');
       setIconUploadModalMessage(errorMessage);
       setIsIconUploadModalOpen(true);
-    } finally {
       setIsUploadingSettingsIcon(false);
     }
   };

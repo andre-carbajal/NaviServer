@@ -8,7 +8,6 @@ import {
   Folder,
   FolderUp,
   Home,
-  Loader2,
   Plus,
   RefreshCw,
   Trash2,
@@ -17,6 +16,7 @@ import {
 
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { useUploads } from '../../context/UploadContext';
 import { useModalDialog } from '../../hooks/useModalDialog';
 import { api } from '../../services/api';
 import type { FileEntry } from '../../types';
@@ -26,27 +26,18 @@ import {
   isEditableFile,
   joinServerPath,
 } from '../../utils/fileExplorer';
+import {
+  type UploadEntry,
+  getDroppedUploadEntries,
+  getRootFolders,
+  getUploadEntries,
+} from '../../utils/uploadEntries';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import FileEditor from './FileEditor';
 
 interface FileExplorerProps {
   serverId: string;
-}
-
-interface ExtendedFile extends File {
-  webkitRelativePath: string;
-}
-
-interface FileSystemEntry {
-  isFile: boolean;
-  isDirectory: boolean;
-  name: string;
-  fullPath: string;
-  file: (callback: (file: File) => void) => void;
-  createReader: () => {
-    readEntries: (callback: (entries: FileSystemEntry[]) => void) => void;
-  };
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
@@ -57,7 +48,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [creatingDir, setCreatingDir] = useState(false);
   const [newDirName, setNewDirName] = useState('');
-  const [uploading, setUploading] = useState(false);
   const [filePendingDelete, setFilePendingDelete] = useState<FileEntry | null>(
     null,
   );
@@ -65,6 +55,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
   const { showAlert, showConfirm, modalDialog } = useModalDialog();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const folderInputRef = React.useRef<HTMLInputElement>(null);
+  const { enqueueUploads } = useUploads();
 
   const loadFiles = useCallback(async () => {
     setLoading(true);
@@ -172,22 +163,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const uploadFiles = async (filesToUpload: FileList | File[]) => {
-    if (!filesToUpload.length) return;
+  const handleUploadEntries = async (entries: UploadEntry[]) => {
+    if (entries.length === 0) return;
 
-    // Check if we are uploading a folder (using button)
-    const foldersToUpload = new Set<string>();
-    for (const file of filesToUpload) {
-      const relativePath = (file as ExtendedFile).webkitRelativePath;
-      if (relativePath) {
-        const rootFolder = relativePath.split('/')[0];
-        if (rootFolder) foldersToUpload.add(rootFolder);
-      }
-    }
-
-    for (const folderName of foldersToUpload) {
-      // Use the 'files' state (existing files) to check for duplicates
-      if (files.some((f) => f.name === folderName && f.isDirectory)) {
+    for (const folderName of getRootFolders(entries)) {
+      if (files.some((file) => file.name === folderName && file.isDirectory)) {
         await showAlert({
           title: 'Folder Already Exists',
           message: `A folder named "${folderName}" already exists. Please delete it or rename it before uploading.`,
@@ -197,27 +177,39 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
       }
     }
 
-    const confirmMessage =
-      filesToUpload.length === 1
-        ? `Are you sure you want to upload ${filesToUpload[0].name}?`
-        : `Are you sure you want to upload ${filesToUpload.length} items?`;
-
     const shouldUpload = await showConfirm({
       title: 'Upload Files',
-      message: confirmMessage,
+      message:
+        entries.length === 1
+          ? `Are you sure you want to upload ${entries[0].file.name}?`
+          : `Are you sure you want to upload ${entries.length} items?`,
       confirmText: 'Upload',
     });
     if (!shouldUpload) return;
 
-    setUploading(true);
     try {
-      for (const file of filesToUpload) {
-        const relativePath = (file as ExtendedFile).webkitRelativePath;
-        await api.uploadFile(serverId, currentPath, file, relativePath);
-      }
-      await loadFiles();
+      const lastEntryIndex = entries.length - 1;
+      await enqueueUploads(
+        entries.map((entry, index) => ({
+          input: {
+            file: entry.file,
+            name: entry.file.name,
+            target: {
+              kind: 'server-file',
+              serverId,
+              directoryPath: currentPath,
+              relativePath: entry.relativePath,
+            },
+            contentType: entry.file.type,
+          },
+          callbacks:
+            index === lastEntryIndex
+              ? { onComplete: () => void loadFiles() }
+              : undefined,
+        })),
+      );
     } catch (err: unknown) {
-      let errorMessage = 'Failed to upload file';
+      let errorMessage = 'Failed to queue file';
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (err && typeof err === 'object' && 'response' in err) {
@@ -229,8 +221,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
         message: errorMessage,
         variant: 'danger',
       });
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -244,14 +234,14 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      await uploadFiles(e.target.files);
+      await handleUploadEntries(getUploadEntries(e.target.files));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleFolderChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      await uploadFiles(e.target.files);
+      await handleUploadEntries(getUploadEntries(e.target.files));
       if (folderInputRef.current) folderInputRef.current.value = '';
     }
   };
@@ -273,100 +263,18 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
     e.stopPropagation();
     setIsDragging(false);
 
-    const items = e.dataTransfer.items;
-    if (!items) return;
-
-    // Check for existing folders before processing
-    for (const item of items) {
-      const entry = item.webkitGetAsEntry() as FileSystemEntry | null;
-      if (entry?.isDirectory) {
-        if (files.some((f) => f.name === entry.name && f.isDirectory)) {
-          await showAlert({
-            title: 'Folder Already Exists',
-            message: `A folder named "${entry.name}" already exists. Please delete it or rename it before uploading.`,
-            variant: 'danger',
-          });
-          return;
-        }
-      }
-    }
-
-    const confirmMessage =
-      items.length === 1
-        ? `Are you sure you want to upload the dropped item?`
-        : `Are you sure you want to upload ${items.length} dropped items?`;
-
-    const shouldUploadDroppedItems = await showConfirm({
-      title: 'Upload Dropped Items',
-      message: confirmMessage,
-      confirmText: 'Upload',
-    });
-    if (!shouldUploadDroppedItems) return;
-
-    const filesToUpload: { file: File; relativePath?: string }[] = [];
-
-    const traverseFileTree = async (
-      entry: FileSystemEntry,
-      path: string = '',
-    ) => {
-      if (entry.isFile) {
-        const file = await new Promise<File>((resolve) => entry.file(resolve));
-        filesToUpload.push({
-          file,
-          relativePath: path ? `${path}/${file.name}` : undefined,
-        });
-      } else if (entry.isDirectory) {
-        const dirReader = entry.createReader();
-        const entries = await new Promise<FileSystemEntry[]>((resolve) => {
-          dirReader.readEntries(resolve);
-        });
-        for (const childEntry of entries) {
-          await traverseFileTree(
-            childEntry,
-            path ? `${path}/${entry.name}` : entry.name,
-          );
-        }
-      }
-    };
-
-    const promises = [];
-    for (const item of items) {
-      if (item.kind === 'file') {
-        const entry = item.webkitGetAsEntry() as FileSystemEntry | null;
-        if (entry) {
-          promises.push(traverseFileTree(entry));
-        }
-      }
-    }
-
-    setUploading(true);
-    await Promise.all(promises);
-
     try {
-      for (const item of filesToUpload) {
-        await api.uploadFile(
-          serverId,
-          currentPath,
-          item.file,
-          item.relativePath,
-        );
-      }
-      loadFiles();
+      await handleUploadEntries(
+        await getDroppedUploadEntries(e.dataTransfer.items),
+      );
     } catch (err: unknown) {
-      let errorMessage = 'Failed to upload files';
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as AxiosError<string>;
-        errorMessage = axiosError.response?.data || errorMessage;
-      }
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to read dropped files';
       await showAlert({
         title: 'Upload Failed',
         message: errorMessage,
         variant: 'danger',
       });
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -521,26 +429,16 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             onClick={handleUploadClick}
             className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Upload File"
-            disabled={uploading}
           >
-            {uploading ? (
-              <Loader2 size={16} className="tw:animate-spin" />
-            ) : (
-              <Upload size={16} />
-            )}
+            <Upload size={16} />
           </button>
           <button
             type="button"
             onClick={handleFolderClick}
             className="tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:rounded-md tw:border-0 tw:bg-transparent tw:p-2 tw:text-gray-400 tw:transition-all tw:duration-200 tw:hover:bg-[#2d2d2d] tw:hover:text-white tw:disabled:cursor-not-allowed tw:disabled:bg-transparent tw:disabled:opacity-50 tw:disabled:text-gray-400"
             title="Upload Folder"
-            disabled={uploading}
           >
-            {uploading ? (
-              <Loader2 size={16} className="tw:animate-spin" />
-            ) : (
-              <FolderUp size={16} />
-            )}
+            <FolderUp size={16} />
           </button>
           <input
             type="file"
@@ -548,6 +446,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ serverId }) => {
             ref={fileInputRef}
             onChange={handleFileChange}
             className="tw:hidden"
+            multiple
           />
           <input
             type="file"

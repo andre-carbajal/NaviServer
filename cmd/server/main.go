@@ -28,6 +28,7 @@ import (
 	"naviserver/internal/server"
 	"naviserver/internal/storage"
 	"naviserver/internal/updater"
+	"naviserver/internal/upload"
 	"naviserver/internal/ws"
 
 	"github.com/emersion/go-autostart"
@@ -237,6 +238,16 @@ func startDaemonService(ctx context.Context) {
 	supervisor := runner.NewSupervisor(store, jvmMgr, hubManager, cfg.ServersPath)
 	backupManager := backup.NewManager(cfg.ServersPath, cfg.BackupsPath, store)
 	addonsManager := addons.NewManager(srvMgr, store)
+	uploadManager, err := upload.NewManager(srvMgr, backupManager, hubManager)
+	if err != nil {
+		log.Printf("Fatal upload manager error: %v", err)
+		return
+	}
+	defer func() {
+		if err := uploadManager.Close(); err != nil {
+			log.Printf("Upload temp cleanup error: %v", err)
+		}
+	}()
 
 	if err := backupManager.SyncBackups(); err != nil {
 		log.Printf("Warning syncing backups: %v", err)
@@ -247,7 +258,16 @@ func startDaemonService(ctx context.Context) {
 		log.Printf("Warning resetting states: %v", err)
 	}
 
-	apiServer := api.NewAPIServer(srvMgr, supervisor, store, hubManager, backupManager, addonsManager, cfg)
+	apiServer := api.NewAPIServer(
+		srvMgr,
+		supervisor,
+		store,
+		hubManager,
+		backupManager,
+		addonsManager,
+		uploadManager,
+		cfg,
+	)
 	listenAddr := net.JoinHostPort(cfg.API.Host, strconv.Itoa(cfg.API.Port))
 
 	httpServer := apiServer.CreateHTTPServer(listenAddr)

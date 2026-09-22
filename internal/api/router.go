@@ -9,6 +9,7 @@ import (
 	"naviserver/internal/runner"
 	"naviserver/internal/server"
 	"naviserver/internal/storage"
+	"naviserver/internal/upload"
 	"naviserver/internal/ws"
 	"net"
 	"net/http"
@@ -25,6 +26,7 @@ type Server struct {
 	HubManager    *ws.HubManager
 	BackupManager *backup.Manager
 	AddonsManager *addons.Manager
+	UploadManager *upload.Manager
 	Config        *config.Config
 }
 
@@ -35,6 +37,7 @@ func NewAPIServer(
 	hubManager *ws.HubManager,
 	backupManager *backup.Manager,
 	addonsManager *addons.Manager,
+	uploadManager *upload.Manager,
 	cfg *config.Config,
 ) *Server {
 	return &Server{
@@ -44,6 +47,7 @@ func NewAPIServer(
 		HubManager:    hubManager,
 		BackupManager: backupManager,
 		AddonsManager: addonsManager,
+		UploadManager: uploadManager,
 		Config:        cfg,
 	}
 }
@@ -103,6 +107,10 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	wsHandler := &handlers.WSHandler{BaseHandler: baseHandler}
 	loadersHandler := &handlers.LoadersHandler{BaseHandler: baseHandler}
 	addonsHandler := &handlers.AddonsHandler{BaseHandler: baseHandler}
+	uploadHandler := &handlers.UploadHandler{
+		BaseHandler:   baseHandler,
+		UploadManager: api.UploadManager,
+	}
 
 	mux.HandleFunc("POST /auth/login", authHandler.HandleLogin)
 	mux.HandleFunc("POST /auth/logout", authHandler.HandleLogout)
@@ -118,6 +126,11 @@ func (api *Server) CreateHTTPServer(listenAddr string) *http.Server {
 	mux.Handle("DELETE /public-links/{token}", protect(linksHandler.HandleDeletePublicLink, ""))
 
 	mux.Handle("GET /auth/me", protect(authHandler.HandleMe, ""))
+	mux.Handle("POST /uploads", protect(uploadHandler.HandleCreate, ""))
+	mux.Handle("GET /uploads/{id}", protect(uploadHandler.HandleGet, ""))
+	mux.Handle("PUT /uploads/{id}/chunk", protect(uploadHandler.HandleChunk, ""))
+	mux.Handle("POST /uploads/{id}/complete", protect(uploadHandler.HandleComplete, ""))
+	mux.Handle("DELETE /uploads/{id}", protect(uploadHandler.HandleDelete, ""))
 
 	mux.Handle("GET /loaders", protect(loadersHandler.HandleGetLoaders, ""))
 	mux.Handle("GET /loaders/{name}/versions", protect(loadersHandler.HandleGetLoaderVersions, ""))
@@ -235,7 +248,7 @@ func (api *Server) corsMiddleware(next http.Handler) http.Handler {
 		}
 		w.Header().Add("Vary", "Origin")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Range, Authorization, X-Requested-With")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if r.Method == "OPTIONS" {

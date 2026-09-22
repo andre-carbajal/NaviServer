@@ -1,7 +1,9 @@
 package api
 
 import (
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -25,5 +27,30 @@ func TestWantsHTMLDocument(t *testing.T) {
 				t.Fatalf("wantsHTMLDocument() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestCorsMiddlewareAllowsUploadChunkHeaders(t *testing.T) {
+	api := &Server{}
+	handler := api.corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("preflight should not reach the wrapped handler")
+	}))
+
+	req := httptest.NewRequest(http.MethodOptions, "/uploads/upload-1/chunk", nil)
+	req.Header.Set("Origin", "http://localhost:5173")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPut)
+	req.Header.Set("Access-Control-Request-Headers", "content-type,content-range")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("preflight status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
+		t.Fatalf("allow origin = %q, want %q", got, "http://localhost:5173")
+	}
+	if got := strings.ToLower(rr.Header().Get("Access-Control-Allow-Headers")); !strings.Contains(got, "content-range") {
+		t.Fatalf("allow headers = %q, want Content-Range", got)
 	}
 }

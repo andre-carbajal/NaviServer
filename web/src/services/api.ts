@@ -13,17 +13,49 @@ import type {
   ServerSettings,
   ServerStats,
   ServerVersionUpdateResult,
+  UploadStatusResponse,
+  UploadTarget,
 } from '../types';
 import { resolveApiBaseUrl, resolveWsBaseUrl } from '../utils/apiUrls';
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env, window.location);
 export const WS_BASE_URL = resolveWsBaseUrl(API_BASE_URL, import.meta.env);
-const NETWORK_ERROR_COOLDOWN_MS = 8000;
+const NETWORK_OUTAGE_GRACE_MS = 8000;
+const UPLOAD_CHUNK_TIMEOUT_MS = 60000;
+const UPLOAD_COMPLETE_TIMEOUT_MS = 30000;
 const ADDON_SYNC_TIMEOUT_MS = 30000;
 const ADDON_DOWNLOAD_TIMEOUT_MS = 300000;
 
-let lastNetworkErrorAt = 0;
-let isBackendOffline = false;
+let networkOutageStartedAt: number | null = null;
+let networkOutageTimer: number | null = null;
+let networkErrorAnnounced = false;
+
+const clearNetworkOutage = () => {
+  if (networkOutageTimer !== null) {
+    window.clearTimeout(networkOutageTimer);
+  }
+  networkOutageStartedAt = null;
+  networkOutageTimer = null;
+  networkErrorAnnounced = false;
+};
+
+const startNetworkOutage = () => {
+  if (networkOutageStartedAt !== null) return;
+
+  networkOutageStartedAt = Date.now();
+  networkOutageTimer = window.setTimeout(() => {
+    if (networkOutageStartedAt === null) return;
+    networkErrorAnnounced = true;
+    networkOutageTimer = null;
+    window.dispatchEvent(
+      new CustomEvent('network-error', {
+        detail: {
+          message: 'Backend unavailable. Make sure NaviServer is running.',
+        },
+      }),
+    );
+  }, NETWORK_OUTAGE_GRACE_MS);
+};
 
 const apiInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -36,25 +68,18 @@ const apiInstance = axios.create({
 
 apiInstance.interceptors.response.use(
   (response) => {
-    if (isBackendOffline) {
-      isBackendOffline = false;
-      window.dispatchEvent(new CustomEvent('network-recovered'));
+    if (networkOutageStartedAt !== null) {
+      const shouldAnnounceRecovery = networkErrorAnnounced;
+      clearNetworkOutage();
+      if (shouldAnnounceRecovery) {
+        window.dispatchEvent(new CustomEvent('network-recovered'));
+      }
     }
     return response;
   },
   (error) => {
     if (error.code === 'ERR_NETWORK') {
-      const now = Date.now();
-      if (now - lastNetworkErrorAt >= NETWORK_ERROR_COOLDOWN_MS) {
-        lastNetworkErrorAt = now;
-        const event = new CustomEvent('network-error', {
-          detail: {
-            message: 'Backend unavailable. Make sure NaviServer is running.',
-          },
-        });
-        window.dispatchEvent(event);
-      }
-      isBackendOffline = true;
+      startNetworkOutage();
     }
     return Promise.reject(error);
   },
@@ -89,15 +114,6 @@ export const api = {
   getAllServerStats: () =>
     apiInstance.get<Record<string, ServerStats>>('/servers-stats'),
   getServerIconUrl: (id: string) => `${API_BASE_URL}/servers/${id}/icon`,
-  uploadServerIcon: (id: string, file: File) => {
-    const formData = new FormData();
-    formData.append('icon', file);
-    return apiInstance.post(`/servers/${id}/icon`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
   createServer: (data: {
     name: string;
     loader: string;
@@ -168,22 +184,59 @@ export const api = {
   listBackups: (serverId: string) =>
     apiInstance.get<Backup[]>(`/servers/${serverId}/backups`),
   listAllBackups: () => apiInstance.get<Backup[]>('/backups'),
-  uploadBackup: (
-    file: File,
-    onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
-    serverId?: string,
-  ) => {
-    const formData = new FormData();
-    formData.append('backup', file);
-    if (serverId) {
-      formData.append('serverId', serverId);
-    }
-    return apiInstance.post('/backups/upload', formData, {
+  createUpload: (
+    data: {
+      clientId: string;
+      filename: string;
+      totalBytes: number;
+      contentType?: string;
+      target: UploadTarget;
+    },
+    signal?: AbortSignal,
+  ) =>
+    apiInstance.post<UploadStatusResponse>(
+      '/uploads',
+      {
+        clientId: data.clientId,
+        filename: data.filename,
+        totalBytes: data.totalBytes,
+        contentType: data.contentType,
+        ...data.target,
+      },
+      { signal },
+    ),
+  getUpload: (id: string, signal?: AbortSignal) =>
+    apiInstance.get<UploadStatusResponse>(`/uploads/${id}`, { signal }),
+  uploadChunk: (
+    id: string,
+    start: number,
+    end: number,
+    totalBytes: number,
+    chunk: Blob,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
+    signal?: AbortSignal,
+  ) =>
+    apiInstance.put<UploadStatusResponse>(`/uploads/${id}/chunk`, chunk, {
+      timeout: UPLOAD_CHUNK_TIMEOUT_MS,
+      signal,
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/octet-stream',
+        'Content-Range': `bytes ${start}-${end - 1}/${totalBytes}`,
       },
       onUploadProgress,
-    });
+    }),
+  completeUpload: (id: string, signal?: AbortSignal) =>
+    apiInstance.post<UploadStatusResponse>(`/uploads/${id}/complete`, null, {
+      timeout: UPLOAD_COMPLETE_TIMEOUT_MS,
+      signal,
+    }),
+  cancelUpload: (id: string) => apiInstance.delete(`/uploads/${id}`),
+  cancelUploadKeepAlive: (id: string) => {
+    void fetch(`${API_BASE_URL}/uploads/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      keepalive: true,
+    }).catch(() => undefined);
   },
   createBackup: (serverId: string, name?: string, requestId?: string) =>
     apiInstance.post<{
@@ -240,21 +293,6 @@ export const api = {
       params: { path },
       responseType: 'blob',
     }),
-  uploadFile: (
-    serverId: string,
-    path: string,
-    file: File,
-    relativePath?: string,
-  ) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return apiInstance.post(`/servers/${serverId}/files/upload`, formData, {
-      params: { path, relative_path: relativePath },
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
   listAddons: (serverId: string) =>
     apiInstance.get<AddonListResponse>(`/servers/${serverId}/addons`, {
       timeout: ADDON_SYNC_TIMEOUT_MS,

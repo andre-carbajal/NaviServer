@@ -74,47 +74,46 @@ body {
   overflow-x: hidden !important;
 }
 
-.server-v2-content,
-.file-list-container,
-.console-view-terminal .xterm-viewport {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 108, 255, 0.75) rgba(255, 255, 255, 0.08);
-}
-
-.server-v2-content::-webkit-scrollbar,
-.file-list-container::-webkit-scrollbar,
-.console-view-terminal .xterm-viewport::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-.server-v2-content::-webkit-scrollbar-track,
-.file-list-container::-webkit-scrollbar-track,
-.console-view-terminal .xterm-viewport::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-}
-
-.server-v2-content::-webkit-scrollbar-thumb,
-.file-list-container::-webkit-scrollbar-thumb,
-.console-view-terminal .xterm-viewport::-webkit-scrollbar-thumb {
-  background: linear-gradient(
+:root {
+  --scrollbar-track: rgba(255, 255, 255, 0.06);
+  --scrollbar-thumb: linear-gradient(
     180deg,
     rgba(100, 108, 255, 0.95),
     rgba(139, 92, 246, 0.9)
   );
-  border: 2px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-}
-
-.server-v2-content::-webkit-scrollbar-thumb:hover,
-.file-list-container::-webkit-scrollbar-thumb:hover,
-.console-view-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
+  --scrollbar-thumb-hover: linear-gradient(
     180deg,
     rgba(129, 140, 248, 0.98),
     rgba(168, 85, 247, 0.95)
   );
+}
+
+html,
+body,
+#root,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 108, 255, 0.75) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Recharts renders these labels outside React's className tree. */

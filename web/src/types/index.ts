@@ -72,6 +72,38 @@ export interface FileEntry {
   lastModified: string;
 }
 
+export type UploadKind = 'server-file' | 'backup' | 'server-icon';
+
+export type UploadStatus =
+  | 'pending'
+  | 'uploading'
+  | 'ready'
+  | 'processing'
+  | 'completed'
+  | 'error'
+  | 'cancelled';
+
+export interface UploadTarget {
+  kind: UploadKind;
+  serverId?: string;
+  directoryPath?: string;
+  relativePath?: string;
+}
+
+export interface UploadStatusResponse {
+  id: string;
+  clientId: string;
+  kind: UploadKind;
+  serverId?: string;
+  filename: string;
+  status: UploadStatus;
+  receivedBytes: number;
+  totalBytes: number;
+  progress: number;
+  message?: string;
+  error?: string;
+}
+
 export interface ServerSettings {
   name: string;
   ram: number;

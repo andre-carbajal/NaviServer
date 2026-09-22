@@ -25,6 +25,7 @@ import RestoreBackupModal from '../components/backups/RestoreBackupModal';
 import UploadBackupModal from '../components/backups/UploadBackupModal';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+import { useUploads } from '../context/UploadContext';
 import { useModalDialog } from '../hooks/useModalDialog';
 import { useServers } from '../hooks/useServers';
 import { WS_BASE_URL, api } from '../services/api';
@@ -35,21 +36,18 @@ import {
   readCreatingBackups,
   writeCreatingBackups,
 } from '../utils/backups';
-
-interface UploadingBackup {
-  id: string;
-  name: string;
-  progress: number;
-}
+import {
+  type UploadEntry,
+  getDroppedUploadEntries,
+  getUploadEntries,
+} from '../utils/uploadEntries';
 
 const Backups: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { token, user } = useAuth();
+  const { enqueueUploads } = useUploads();
   const [backups, setBackups] = useState<Backup[]>([]);
   const [creatingBackups, setCreatingBackups] = useState<CreatingBackup[]>([]);
-  const [uploadingBackups, setUploadingBackups] = useState<UploadingBackup[]>(
-    [],
-  );
   const [isDragging, setIsDragging] = useState(false);
   const { servers, refresh: refreshServers } = useServers();
   const { showAlert, modalDialog } = useModalDialog();
@@ -91,9 +89,20 @@ const Backups: React.FC = () => {
     event.preventDefault();
     event.stopPropagation();
     setIsDragging(false);
-    const files = event.dataTransfer.files;
-    if (files && files.length > 0) {
-      await uploadFiles(files, id && id !== 'all' ? id : undefined);
+    try {
+      await uploadFiles(
+        await getDroppedUploadEntries(event.dataTransfer.items),
+        id && id !== 'all' ? id : undefined,
+      );
+    } catch (error) {
+      await showAlert({
+        title: 'Upload Failed',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to read dropped files',
+        variant: 'danger',
+      });
     }
   };
 
@@ -285,12 +294,12 @@ const Backups: React.FC = () => {
     setUploadModalOpen(true);
   };
 
-  const uploadFiles = async (files: FileList | File[], serverId?: string) => {
-    if (!files || files.length === 0) return;
+  const uploadFiles = async (entries: UploadEntry[], serverId?: string) => {
+    if (entries.length === 0) return;
 
-    for (const file of files) {
+    const uploadItems: Parameters<typeof enqueueUploads>[0] = [];
+    for (const { file } of entries) {
       const ext = file.name.split('.').pop()?.toLowerCase();
-
       if (ext !== 'zip' && ext !== 'rar') {
         await showAlert({
           title: 'Invalid Backup File',
@@ -299,50 +308,32 @@ const Backups: React.FC = () => {
         });
         continue;
       }
-
-      const uploadId = uuidv4();
-      const newUploadingBackup: UploadingBackup = {
-        id: uploadId,
-        name: file.name,
-        progress: 0,
-      };
-      setUploadingBackups((prev) => [...prev, newUploadingBackup]);
-
-      try {
-        await api.uploadBackup(
+      uploadItems.push({
+        input: {
           file,
-          (progressEvent) => {
-            const progress = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total ?? 1),
-            );
-            setUploadingBackups((prev) =>
-              prev.map((b) =>
-                b.id === uploadId ? { ...b, progress: progress } : b,
-              ),
-            );
-          },
-          serverId,
-        );
-      } catch (error) {
-        console.error(`Failed to upload backup ${file.name}:`, error);
-        await showAlert({
-          title: 'Upload Failed',
-          message: `Failed to upload backup ${file.name}.`,
-          variant: 'danger',
-        });
-        try {
-          await api.deleteBackup(file.name);
-        } catch (e) {
-          console.warn('Failed to cleanup failed backup upload:', e);
-        }
-      } finally {
-        setUploadingBackups((prev) => prev.filter((b) => b.id !== uploadId));
+          name: file.name,
+          target: { kind: 'backup', serverId },
+          contentType: file.type,
+        },
+      });
+    }
+
+    try {
+      if (uploadItems.length > 0) {
+        uploadItems[uploadItems.length - 1].callbacks = {
+          onComplete: () => void fetchBackups(),
+        };
       }
+      await enqueueUploads(uploadItems);
+    } catch (error) {
+      console.error('Failed to queue backups:', error);
+      await showAlert({
+        title: 'Upload Failed',
+        message: 'Failed to queue backups.',
+        variant: 'danger',
+      });
     }
-    fetchBackups();
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleFileChange = async (
@@ -350,7 +341,10 @@ const Backups: React.FC = () => {
   ) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      await uploadFiles(files, id && id !== 'all' ? id : undefined);
+      await uploadFiles(
+        getUploadEntries(files),
+        id && id !== 'all' ? id : undefined,
+      );
     }
   };
 
@@ -567,31 +561,6 @@ const Backups: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {uploadingBackups.map((upload) => (
-              <tr key={upload.id}>
-                <td data-label="Name">
-                  <div className="tw:flex tw:items-center tw:gap-2">
-                    <Loader2 className="tw:animate-spin" size={16} />
-                    <div>
-                      <div>{upload.name}</div>
-                      <div className="tw:text-[0.8em] tw:text-text-muted">
-                        Uploading...
-                      </div>
-                    </div>
-                  </div>
-                  <div className="tw:h-1 tw:w-full tw:overflow-hidden tw:rounded tw:bg-white/10">
-                    <div
-                      className="tw:h-full tw:rounded tw:bg-primary tw:transition-[width] tw:duration-300"
-                      style={{ width: `${upload.progress}%` }}
-                    />
-                  </div>
-                </td>
-                <td data-label="Server">-</td>
-                <td data-label="Date & Time">-</td>
-                <td data-label="Size">-</td>
-                <td data-label="Actions">-</td>
-              </tr>
-            ))}
             {visibleCreatingBackups.map((backup) => (
               <tr key={backup.requestId}>
                 <td data-label="Name">
@@ -698,18 +667,16 @@ const Backups: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {backups.length === 0 &&
-              visibleCreatingBackups.length === 0 &&
-              uploadingBackups.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="tw:!p-5 tw:!text-center tw:!text-text-muted"
-                  >
-                    No backups found.
-                  </td>
-                </tr>
-              )}
+            {backups.length === 0 && visibleCreatingBackups.length === 0 && (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="tw:!p-5 tw:!text-center tw:!text-text-muted"
+                >
+                  No backups found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -725,7 +692,7 @@ const Backups: React.FC = () => {
       <UploadBackupModal
         isOpen={isUploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
-        onUpload={(file, serverId) => uploadFiles([file], serverId)}
+        onUpload={(file, serverId) => uploadFiles([{ file }], serverId)}
         servers={servers}
         defaultServerId={!isGlobalView ? id : undefined}
       />
