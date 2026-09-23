@@ -1,6 +1,5 @@
 # Changelog
 
-- Web UI polish:
-    - Improve layout responsiveness of ServerListItem component for larger screens
-- Server management:
-    - Rename the server folder when its name changes, with name validation and duplicate-folder checks
+- Development tooling:
+    - Upgrade the web project to TypeScript 7.0.2
+    - Temporarily disable TypeScript-aware ESLint rules until the tooling supports TypeScript 7
